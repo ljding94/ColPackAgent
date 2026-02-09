@@ -7,14 +7,17 @@
 # Source code
 !src
 !src/**
+src/__pycache__/
 
 # plots
 !plots/
 !plots/*.py
 
+
 # test
 !tests/
 !tests/**
+tests/__pycache__/
 
 # Git and project files
 !.gitignore

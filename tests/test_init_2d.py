@@ -16,8 +16,8 @@ def _find_project_root(start: Path) -> Path:
 
 def test_create_initial_config_2d_disk():
     particle_specs = [
-        {"shape": "disk", "number": 10, "diameter": 2.0},
-        {"shape": "disk", "number": 5},
+        {"shape": "disk", "number": 30, "diameter": 2.0},
+        {"shape": "disk", "number": 20},
     ]
 
     project_root = _find_project_root(Path(__file__).resolve())
@@ -27,7 +27,7 @@ def test_create_initial_config_2d_disk():
     summary = create_initial_config(
         dimension=2,
         particle_specs=particle_specs,
-        initial_number_density=0.2,
+        initial_number_density=0.05,
         output_dir=str(output_dir),
         seed=42,
     )
@@ -41,14 +41,14 @@ def test_create_initial_config_2d_disk():
         debug=True,
     )
 
-    assert summary["total_particles"] == 15
-    assert summary["initial_number_density"] == 0.2
+    assert summary["total_particles"] == 50
+    assert summary["number_density"] == 0.05
 
 
 def test_create_initial_config_2d_ellipsoid():
     particle_specs = [
-        {"shape": "ellipsoid", "number": 10, "a": 1.0, "b": 0.8},
-        {"shape": "ellipsoid", "number": 5, "a": 1.0, "b": 0.4},
+        {"shape": "ellipsoid", "number": 20, "a": 1.0, "b": 0.8},
+        {"shape": "ellipsoid", "number": 10, "a": 1.0, "b": 0.4},
     ]
 
     project_root = _find_project_root(Path(__file__).resolve())
@@ -58,7 +58,7 @@ def test_create_initial_config_2d_ellipsoid():
     summary = create_initial_config(
         dimension=2,
         particle_specs=particle_specs,
-        initial_number_density=0.1,
+        initial_number_density=0.05,
         output_dir=str(output_dir),
         seed=42,
     )
@@ -71,13 +71,14 @@ def test_create_initial_config_2d_ellipsoid():
         preview=False,
     )
 
-    assert summary["total_particles"] == 15
+    assert summary["total_particles"] == 30
+    assert summary["number_density"] == 0.05
 
 
 def test_create_initial_config_2d_sphere_ellipsoid():
     particle_specs = [
-        {"shape": "sphere", "number": 8, "diameter": 1.2},
-        {"shape": "ellipsoid", "number": 4, "a": 1.0, "b": 0.6},
+        {"shape": "sphere", "number": 20, "diameter": 1.2},
+        {"shape": "ellipsoid", "number": 10, "a": 1.0, "b": 0.6},
     ]
 
     project_root = _find_project_root(Path(__file__).resolve())
@@ -87,7 +88,7 @@ def test_create_initial_config_2d_sphere_ellipsoid():
     summary = create_initial_config(
         dimension=2,
         particle_specs=particle_specs,
-        initial_number_density=0.15,
+        initial_number_density=0.05,
         output_dir=str(output_dir),
         seed=123,
     )
@@ -100,13 +101,14 @@ def test_create_initial_config_2d_sphere_ellipsoid():
         preview=False,
     )
 
-    assert summary["total_particles"] == 12
+    assert summary["total_particles"] == 30
+    assert summary["number_density"] == 0.05
 
 
 def test_create_initial_config_2d_sphere_rectangle():
     particle_specs = [
-        {"shape": "sphere", "number": 8, "diameter": 1.0},
-        {"shape": "rectangle", "number": 4, "length": 2.0, "width": 1.0},
+        {"shape": "sphere", "number": 20, "diameter": 1.0},
+        {"shape": "rectangle", "number": 10, "length": 2.0, "width": 1.0},
     ]
 
     project_root = _find_project_root(Path(__file__).resolve())
@@ -116,7 +118,7 @@ def test_create_initial_config_2d_sphere_rectangle():
     summary = create_initial_config(
         dimension=2,
         particle_specs=particle_specs,
-        initial_number_density=0.15,
+        initial_number_density=0.05,
         output_dir=str(output_dir),
         seed=321,
     )
@@ -129,13 +131,14 @@ def test_create_initial_config_2d_sphere_rectangle():
         preview=False,
     )
 
-    assert summary["total_particles"] == 12
+    assert summary["total_particles"] == 30
+    assert summary["number_density"] == 0.05
 
 
 def test_create_initial_config_2d_sphere_capsule():
     particle_specs = [
-        {"shape": "sphere", "number": 8, "diameter": 1.0},
-        {"shape": "capsule", "number": 4, "length": 2.0, "diameter": 0.6},
+        {"shape": "sphere", "number": 10, "diameter": 1.0},
+        {"shape": "capsule", "number": 20, "length": 2.0, "diameter": 0.6},
     ]
 
     project_root = _find_project_root(Path(__file__).resolve())
@@ -145,7 +148,7 @@ def test_create_initial_config_2d_sphere_capsule():
     summary = create_initial_config(
         dimension=2,
         particle_specs=particle_specs,
-        initial_number_density=0.15,
+        initial_number_density=0.05,
         output_dir=str(output_dir),
         seed=456,
     )
@@ -158,13 +161,14 @@ def test_create_initial_config_2d_sphere_capsule():
         preview=False,
     )
 
-    assert summary["total_particles"] == 12
+    assert summary["total_particles"] == 30
+    assert summary["number_density"] == 0.05
 
 
 def test_create_initial_config_2d_sphere_triangle():
     particle_specs = [
-        {"shape": "sphere", "number": 8, "diameter": 1.0},
-        {"shape": "triangle", "number": 4, "side": 1.5},
+        {"shape": "sphere", "number": 10, "diameter": 1.0},
+        {"shape": "triangle", "number": 20, "side": 1.5},
     ]
 
     project_root = _find_project_root(Path(__file__).resolve())
@@ -174,7 +178,7 @@ def test_create_initial_config_2d_sphere_triangle():
     summary = create_initial_config(
         dimension=2,
         particle_specs=particle_specs,
-        initial_number_density=0.15,
+        initial_number_density=0.05,
         output_dir=str(output_dir),
         seed=654,
     )
@@ -187,16 +191,17 @@ def test_create_initial_config_2d_sphere_triangle():
         preview=False,
     )
 
-    assert summary["total_particles"] == 12
+    assert summary["total_particles"] == 30
+    assert summary["number_density"] == 0.05
 
 
 
 def test_create_initial_config_2d_multi_shapes():
     particle_specs = [
-        {"shape": "disk", "number": 5, "diameter": 1.5},
-        {"shape": "rectangle", "number": 5, "length": 2.0, "width": 1.0},
-        {"shape": "capsule", "number": 5, "length": 2.0, "diameter": 0.6},
-        {"shape": "triangle", "number": 5, "side": 1.5},
+        {"shape": "disk", "number": 10, "diameter": 1.5},
+        {"shape": "rectangle", "number": 10, "length": 2.0, "width": 1.0},
+        {"shape": "capsule", "number": 10, "length": 2.0, "diameter": 0.6},
+        {"shape": "triangle", "number": 10, "side": 1.5},
     ]
 
     project_root = _find_project_root(Path(__file__).resolve())
@@ -206,7 +211,7 @@ def test_create_initial_config_2d_multi_shapes():
     summary = create_initial_config(
         dimension=2,
         particle_specs=particle_specs,
-        initial_number_density=0.1,
+        initial_number_density=0.05,
         output_dir=str(output_dir),
         seed=789,
     )
@@ -219,7 +224,8 @@ def test_create_initial_config_2d_multi_shapes():
         preview=False,
     )
 
-    assert summary["total_particles"] == 20
+    assert summary["total_particles"] == 40
+    assert summary["number_density"] == 0.05
 
 
 def main():

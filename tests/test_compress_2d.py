@@ -14,10 +14,10 @@ def _find_project_root(start: Path) -> Path:
         current = current.parent
 
 
-def test_compress_3d_sphere():
+def test_compress_2d_disk():
     target_number_density = 0.3
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_sphere"
-    print("test_compress_3d_sphere: system_dir:", system_dir)
+    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_disk"
+    print("test_compress_2d_disk: system_dir:", system_dir)
     compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=42)
 
     # visualize the compressed system
@@ -30,10 +30,10 @@ def test_compress_3d_sphere():
     )
 
 
-def test_compress_3d_ellipsoid():
+def test_compress_2d_ellipsoid():
     target_number_density = 0.3
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_ellipsoid"
-    print("test_compress_3d_ellipsoid: system_dir:", system_dir)
+    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_ellipsoid"
+    print("test_compress_2d_ellipsoid: system_dir:", system_dir)
     compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=42)
 
     # visualize the compressed system
@@ -45,41 +45,12 @@ def test_compress_3d_ellipsoid():
         preview=False,
     )
 
-def test_compress_3d_sphere_capsule():
+
+def test_compress_2d_sphere_ellipsoid():
     target_number_density = 0.3
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_sphere_capsule"
-    print("test_compress_3d_sphere_capsule: system_dir:", system_dir)
-    compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=202)
-
-    # visualize the compressed system
-    compressed_gsd_path = system_dir / "compressed.gsd"
-    visualize_gsd(
-        gsd_path=compressed_gsd_path,
-        output_path=system_dir / "compressed_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-def test_compress_3d_sphere_cube():
-    target_number_density = 0.3
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_sphere_cube"
-    print("test_compress_3d_sphere_cube: system_dir:", system_dir)
-    compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=303)
-
-    # visualize the compressed system
-    compressed_gsd_path = system_dir / "compressed.gsd"
-    visualize_gsd(
-        gsd_path=compressed_gsd_path,
-        output_path=system_dir / "compressed_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-def test_compress_3d_sphere_octahedron():
-    target_number_density = 0.3
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_sphere_octahedron"
-    print("test_compress_3d_sphere_octahedron: system_dir:", system_dir)
-    compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=101)
+    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_sphere_ellipsoid"
+    print("test_compress_2d_sphere_ellipsoid: system_dir:", system_dir)
+    compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=123)
 
     # visualize the compressed system
     compressed_gsd_path = system_dir / "compressed.gsd"
@@ -91,11 +62,11 @@ def test_compress_3d_sphere_octahedron():
     )
 
 
-def test_compress_3d_sphere_tetrahedron():
+def test_compress_2d_sphere_rectangle():
     target_number_density = 0.3
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_sphere_tetrahedron"
-    print("test_compress_3d_sphere_tetrahedron: system_dir:", system_dir)
-    compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=101)
+    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_sphere_rectangle"
+    print("test_compress_2d_sphere_rectangle: system_dir:", system_dir)
+    compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=321)
 
     # visualize the compressed system
     compressed_gsd_path = system_dir / "compressed.gsd"
@@ -106,11 +77,12 @@ def test_compress_3d_sphere_tetrahedron():
         preview=False,
     )
 
-def test_compress_3d_multi_shapes():
+
+def test_compress_2d_sphere_capsule():
     target_number_density = 0.3
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_multi_shapes"
-    print("test_compress_3d_multi_shapes: system_dir:", system_dir)
-    compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=202)
+    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_sphere_capsule"
+    print("test_compress_2d_sphere_capsule: system_dir:", system_dir)
+    compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=456)
 
     # visualize the compressed system
     compressed_gsd_path = system_dir / "compressed.gsd"
@@ -120,29 +92,64 @@ def test_compress_3d_multi_shapes():
         frame_index=-1,
         preview=False,
     )
+
+
+def test_compress_2d_sphere_triangle():
+    target_number_density = 0.3
+    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_sphere_triangle"
+    print("test_compress_2d_sphere_triangle: system_dir:", system_dir)
+    compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=654)
+
+    # visualize the compressed system
+    compressed_gsd_path = system_dir / "compressed.gsd"
+    visualize_gsd(
+        gsd_path=compressed_gsd_path,
+        output_path=system_dir / "compressed_render.png",
+        frame_index=-1,
+        preview=False,
+    )
+
+
+def test_compress_2d_multi_shapes():
+    target_number_density = 0.3
+    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_multi_shapes"
+    print("test_compress_2d_multi_shapes: system_dir:", system_dir)
+    compress_system(target_number_density=target_number_density, system_dir=str(system_dir), seed=789)
+
+    # visualize the compressed system
+    compressed_gsd_path = system_dir / "compressed.gsd"
+    visualize_gsd(
+        gsd_path=compressed_gsd_path,
+        output_path=system_dir / "compressed_render.png",
+        frame_index=-1,
+        preview=False,
+    )
+
 
 def main():
-    print("testing compression of 3d systems...")
-    #test_compress_3d_sphere()
-    #print("test_compress_3d_sphere: OK")
+    print("testing compression of 2d systems...")
 
-    #test_compress_3d_ellipsoid()
-    #print("test_compress_3d_ellipsoid: OK")
+    test_compress_2d_disk()
+    print("test_compress_2d_disk: OK")
 
-    #test_compress_3d_sphere_capsule()
-    #print("test_compress_3d_sphere_capsule: OK")
+    test_compress_2d_ellipsoid()
+    print("test_compress_2d_ellipsoid: OK")
 
-    #test_compress_3d_sphere_cube()
-    #print("test_compress_3d_sphere_cube: OK")
+    test_compress_2d_sphere_ellipsoid()
+    print("test_compress_2d_sphere_ellipsoid: OK")
 
-    #test_compress_3d_sphere_octahedron()
-    #print("test_compress_3d_sphere_octahedron: OK")
+    test_compress_2d_sphere_rectangle()
+    print("test_compress_2d_sphere_rectangle: OK")
 
-    #test_compress_3d_sphere_tetrahedron()
-    #print("test_compress_3d_sphere_tetrahedron: OK")
+    test_compress_2d_sphere_capsule()
+    print("test_compress_2d_sphere_capsule: OK")
 
-    test_compress_3d_multi_shapes()
-    print("test_compress_3d_multi_shapes: OK")
+    test_compress_2d_sphere_triangle()
+    print("test_compress_2d_sphere_triangle: OK")
+
+    test_compress_2d_multi_shapes()
+    print("test_compress_2d_multi_shapes: OK")
+
 
 if __name__ == "__main__":
     main()
