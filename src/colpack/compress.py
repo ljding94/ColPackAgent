@@ -98,6 +98,8 @@ def compress_system(target_number_density, system_dir, seed=0):
             print(f"Reached n={target_n}, running equilibration...")
             sim.run(randomization_steps)  # Equilibrate at this density
         sim.operations.updaters.remove(compresser)
+        gsd_path = os.path.join(system_dir, f"compressed_{i}.gsd")
+        save_system_state_to_gsd(sim, particle_list, gsd_path)
 
     # some post compression randomization
     sim.run(randomization_steps)
