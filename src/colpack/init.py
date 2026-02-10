@@ -4,7 +4,7 @@ import hoomd
 import numpy as np
 import math
 import json
-
+from colpack.helper import save_state
 
 def create_initial_config(dimension, particle_specs, initial_number_density, output_dir, seed=0):
     dim = dimension
@@ -114,7 +114,9 @@ def create_initial_config(dimension, particle_specs, initial_number_density, out
         json.dump(resolved_particle_list, f, indent=4)
 
     gsd_path = os.path.join(output_dir, "init.gsd")
-    save_system_state_to_gsd(sim, resolved_particle_list, gsd_path)
+    #save_system_state_to_gsd(sim, resolved_particle_list, gsd_path)
+    # TODO: may clean up previous save_system_state_to_gsd() function
+    save_state(sim, resolved_particle_list, gsd_path)
 
     # create initialization summary
     summary = {"particle_specs": particle_specs, "particle_list": particle_list, "total_particles": total_N, "number_density": initial_n, "box_length": initial_box_L, "overlaps": mc.overlaps}

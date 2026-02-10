@@ -1,7 +1,9 @@
 import os
+import math
 from pathlib import Path
 from ovito.io import import_file
 from ovito.vis import Viewport, OpenGLRenderer
+
 
 def visualize_gsd(
     gsd_path,
@@ -80,11 +82,31 @@ def visualize_gsd(
     vp = Viewport()
     if is_2d:
         vp.type = Viewport.Type.Top
+        vp.zoom_all()
     else:
         vp.type = Viewport.Type.Ortho
 
-    # Configure camera
-    vp.zoom_all()
+        # Manual configuration for 3D to ensure consistent scaling based on box size
+        mat = cell.matrix
+        lx = mat[0,0]
+        ly = mat[1,1]
+        lz = mat[2,2]
+        max_dim = max(lx, ly, lz) if max(lx, ly, lz) > 0 else 10.0
+
+        # Direction vector (normalized)
+        dx, dy, dz = -1.0, -0.8, -0.6
+        norm = math.sqrt(dx*dx + dy*dy + dz*dz)
+        dx, dy, dz = dx/norm, dy/norm, dz/norm
+
+        vp.camera_dir = (dx, dy, dz)
+        vp.camera_up = (0.0, 0.0, 1.0)
+
+        # Position camera at a distance scaled by system size
+        dist = max_dim * 4.0
+        vp.camera_pos = (-dx * dist, -dy * dist, -dz * dist)
+
+        # Orthographic FOV
+        vp.fov = max_dim * 0.8
 
     # Add a modifier to rotate particles for visualization if they are 2D capsules being rendered as Z-capsules
     # But we can't easily detect this mismatch generically without inspecting shapes.

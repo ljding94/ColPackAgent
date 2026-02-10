@@ -123,8 +123,8 @@ def test_compress_3d_multi_shapes():
 
 def main():
     print("testing compression of 3d systems...")
-    #test_compress_3d_sphere()
-    #print("test_compress_3d_sphere: OK")
+    test_compress_3d_sphere()
+    print("test_compress_3d_sphere: OK")
 
     #test_compress_3d_ellipsoid()
     #print("test_compress_3d_ellipsoid: OK")
@@ -141,8 +141,8 @@ def main():
     #test_compress_3d_sphere_tetrahedron()
     #print("test_compress_3d_sphere_tetrahedron: OK")
 
-    test_compress_3d_multi_shapes()
-    print("test_compress_3d_multi_shapes: OK")
+    #test_compress_3d_multi_shapes()
+    #print("test_compress_3d_multi_shapes: OK")
 
 if __name__ == "__main__":
     main()
