@@ -6,6 +6,7 @@ import math
 import json
 from colpack.helper import save_state
 
+
 def create_initial_config(dimension, particle_specs, initial_number_density, output_dir, seed=0):
     dim = dimension
     """
@@ -13,7 +14,6 @@ def create_initial_config(dimension, particle_specs, initial_number_density, out
     parameters is more "natual language", which is be translated to hoomd shape parameters in generate_particle_list function
     for example:
     type: "sphere", number: 1000, parameters: diameter:1.0 # https://hoomd-blue.readthedocs.io/en/v6.0.0/hoomd/hpmc/integrate/sphere.html#hoomd.hpmc.integrate.Sphere
-
     """
 
     # get particle list
@@ -21,7 +21,7 @@ def create_initial_config(dimension, particle_specs, initial_number_density, out
 
     # set up HPMC integrator
     integrator, resolved_particle_list = resolve_hpmc_integrator_and_shapes(dimension=dim, particle_list=particle_list)
-    particle_list = resolved_particle_list # update particle list accordingly
+    particle_list = resolved_particle_list  # update particle list accordingly
     mc = integrator(default_d=1.0, default_a=0.1)
 
     if integrator is None:
@@ -44,9 +44,7 @@ def create_initial_config(dimension, particle_specs, initial_number_density, out
     snapshot = hoomd.Snapshot()
     snapshot.particles.N = total_N
     snapshot.particles.types = [particle["pType"] for particle in particle_list]
-    snapshot.particles.typeid[:] = np.concatenate(
-        [np.full(particle["pNum"], i, dtype=np.int32) for i, particle in enumerate(particle_list)]
-    )  # create a map from id to type
+    snapshot.particles.typeid[:] = np.concatenate([np.full(particle["pNum"], i, dtype=np.int32) for i, particle in enumerate(particle_list)])  # create a map from id to type
 
     if dim == 2:
         snapshot.configuration.box = [initial_box_L, initial_box_L, 0, 0, 0, 0]
@@ -69,7 +67,9 @@ def create_initial_config(dimension, particle_specs, initial_number_density, out
     rng.shuffle(positions)
     snapshot.particles.position[:] = positions
 
+    snapshot.particles.orientation[:] = [[1, 0, 0, 0]] * total_N  # default orientation (no rotation), can be randomized if needed
     # Initialize orientations randomly
+    """
     if dim == 2:
         # Random rotation around Z axis
         thetas = rng.uniform(0, 2 * np.pi, total_N)
@@ -88,6 +88,8 @@ def create_initial_config(dimension, particle_specs, initial_number_density, out
         # Normalize
         norms = np.linalg.norm(u, axis=1, keepdims=True)
         snapshot.particles.orientation[:] = u / norms
+    """
+
     sim.create_state_from_snapshot(snapshot)
 
     sim.operations.integrator = mc
@@ -101,8 +103,8 @@ def create_initial_config(dimension, particle_specs, initial_number_density, out
         print(f"  Type: {particle['pType']}, Number: {particle['pNum']}, Integrator: {particle['pIntegrator']}, Shape: {particle['pShape']}")
 
     # some randomization
-    #sim.run(1000)
-    #print(f"After randomization, overlaps: {mc.overlaps}")
+    # sim.run(1000)
+    # print(f"After randomization, overlaps: {mc.overlaps}")
 
     # save the state to gsd
     if not os.path.exists(output_dir):
@@ -114,8 +116,6 @@ def create_initial_config(dimension, particle_specs, initial_number_density, out
         json.dump(resolved_particle_list, f, indent=4)
 
     gsd_path = os.path.join(output_dir, "init.gsd")
-    #save_system_state_to_gsd(sim, resolved_particle_list, gsd_path)
-    # TODO: may clean up previous save_system_state_to_gsd() function
     save_state(sim, resolved_particle_list, gsd_path)
 
     # create initialization summary
@@ -126,28 +126,6 @@ def create_initial_config(dimension, particle_specs, initial_number_density, out
         json.dump(summary, f, indent=4)
 
     return summary
-
-
-def save_system_state_to_gsd(sim, particle_list, output_path):
-    shape_metadata = []
-    for particle in particle_list:
-        shape_dict = dict(particle["pShape"])
-        shape_dict["type"] = particle["pIntegrator"]
-        shape_metadata.append(shape_dict)
-
-    frame = gsd.hoomd.Frame()
-    state_snapshot = sim.state.get_snapshot()
-    frame.configuration.box = state_snapshot.configuration.box
-    frame.particles.N = state_snapshot.particles.N
-    frame.particles.position = state_snapshot.particles.position
-    frame.particles.orientation = state_snapshot.particles.orientation
-    frame.particles.types = state_snapshot.particles.types
-    frame.particles.typeid = state_snapshot.particles.typeid
-    frame.particles.type_shapes = shape_metadata
-    print("shape_metadata", shape_metadata)
-
-    with gsd.hoomd.open(name=output_path, mode="w") as gsd_file:
-        gsd_file.append(frame)
 
 
 def create_minimal_particle_list(dimension, particle_specs):
@@ -225,6 +203,7 @@ def create_minimal_particle_list_2d(particle_specs):
         ptype = _next_name(shape)
         pintegrator = None
         pshape = None
+        pdirector = None
 
         if shape in {"disk", "circle", "sphere"}:
             diameter = spec.get("diameter", spec.get("sigma"))
@@ -240,8 +219,11 @@ def create_minimal_particle_list_2d(particle_specs):
             b = spec.get("b", 0.5)
             # Default c to 0.25 (total thickness 0.5) for proper 2D visualization
             c = spec.get("c", 0.25)
+            # make sure a>b>c
+            a, b, c = sorted([float(a), float(b), float(c)], reverse=True)
             pintegrator = "Ellipsoid"
-            pshape = {"a": float(a), "b": float(b), "c": float(c)}
+            pshape = {"a": float(a), "b": float(b), "c": float(c)}  # define long axis along x direction for consistent orientation
+            pdirector = [1, 0, 0]  # default director along x-axis
 
         elif shape in {"triangle"}:
             side = spec.get("side", spec.get("length", 1.0))
@@ -273,6 +255,7 @@ def create_minimal_particle_list_2d(particle_specs):
             width = spec.get("width", spec.get("W", 1.0))
             length = float(length)
             width = float(width)
+            length, width = max(length, width), min(length, width)  # ensure length is the longer side
             hl = length / 2.0
             hw = width / 2.0
             vertices = [
@@ -282,7 +265,8 @@ def create_minimal_particle_list_2d(particle_specs):
                 [-hl, hw],
             ]
             pintegrator = "ConvexSpheropolygon"
-            pshape = {"vertices": vertices, "sweep_radius": 0.0}
+            pshape = {"vertices": vertices, "sweep_radius": 0.0}  # define long axis along x direction
+            pdirector = [1, 0, 0]  # default director along x-axis
 
         elif shape in {"capsule", "rod"}:
             length = spec.get("length", spec.get("L", 2.0))
@@ -291,7 +275,8 @@ def create_minimal_particle_list_2d(particle_specs):
             diameter = float(diameter)
             vertices = [[-length / 2.0, 0.0], [length / 2.0, 0.0]]
             pintegrator = "ConvexSpheropolygon"
-            pshape = {"vertices": vertices, "sweep_radius": diameter / 2.0}
+            pshape = {"vertices": vertices, "sweep_radius": diameter / 2.0}  # define long axis along x direction for consistent orientation
+            pdirector = [1, 0, 0]  # default director along x-axis
 
         elif shape in {"polygon"}:
             default_vertices = [
@@ -314,6 +299,7 @@ def create_minimal_particle_list_2d(particle_specs):
             "pNum": number,
             "pIntegrator": pintegrator,
             "pShape": pshape,
+            "pDirector": pdirector,
         }
 
         particle_list.append(particle_entry)
@@ -374,6 +360,7 @@ def create_minimal_particle_list_3d(particle_specs):
         ptype = _next_name(shape)
         pintegrator = None
         pshape = None
+        pdirector = None
 
         if shape in {"sphere", "ball"}:
             diameter = spec.get("diameter", spec.get("sigma"))
@@ -388,8 +375,11 @@ def create_minimal_particle_list_3d(particle_specs):
             a = float(spec.get("a", 1.0))
             b = float(spec.get("b", 0.5))
             c = float(spec.get("c", 0.5))
+            # make sure a>b>c
+            a, b, c = sorted([a, b, c], reverse=True)
             pintegrator = "Ellipsoid"
             pshape = {"a": a, "b": b, "c": c}
+            pdirector = [1, 0, 0]  # default director along x-axis
 
         elif shape in {"capsule", "rod"}:
             length = float(spec.get("length", spec.get("L", 2.0)))
@@ -397,6 +387,7 @@ def create_minimal_particle_list_3d(particle_specs):
             vertices = [[-length / 2.0, 0.0, 0.0], [length / 2.0, 0.0, 0.0]]
             pintegrator = "ConvexSpheropolyhedron"
             pshape = {"vertices": vertices, "sweep_radius": diameter / 2.0}
+            pdirector = [1, 0, 0]  # default director along x-axis
 
         elif shape in {"tetrahedron", "tetra"}:
             side = float(spec.get("side", spec.get("length", 1.0)))
@@ -450,6 +441,7 @@ def create_minimal_particle_list_3d(particle_specs):
             "pNum": number,
             "pIntegrator": pintegrator,
             "pShape": pshape,
+            "pDirector": pdirector,
         }
 
         particle_list.append(particle_entry)
@@ -498,7 +490,6 @@ def select_optimal_integrator(dimension, particle_list):
 
 
 def resolve_hpmc_integrator_and_shapes(dimension, particle_list):
-
     """
     should return the best integrator
 

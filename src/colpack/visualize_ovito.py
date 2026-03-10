@@ -1,21 +1,11 @@
-import os
 import math
+import numpy as np
 from pathlib import Path
 from ovito.io import import_file
 from ovito.vis import Viewport, OpenGLRenderer
 
 
-def visualize_gsd(
-    gsd_path,
-    output_path=None,
-    frame_index=-1,
-    width=1000,
-    height=1000,
-    preview=False,
-    debug=False,
-    show_boundary=True,
-    **kwargs
-):
+def visualize_gsd(gsd_path, output_path=None, frame_index=-1, width=1000, height=1000, preview=False, debug=False, show_boundary=True, **kwargs):
     """
     Render a GSD file using OVITO.
 
@@ -62,17 +52,51 @@ def visualize_gsd(
     # Add to scene to visualize
     pipeline.add_to_scene()
 
+    # Define a modifier to set custom colors (skipping the first silver color)
+    def assign_colors(frame, data):
+        if 'Particle Type' in data.particles:
+            type_prop = data.particles['Particle Type']
+            colors = [
+                (0.12, 0.47, 0.71),  # Blue
+                (1.0, 0.50, 0.05),   # Orange
+                (0.17, 0.63, 0.17),  # Green
+                (0.84, 0.15, 0.16),  # Red
+                (0.58, 0.40, 0.74),  # Purple
+                (0.55, 0.34, 0.29),  # Brown
+                (0.89, 0.47, 0.76),  # Pink
+                (0.50, 0.50, 0.50),  # Gray
+                (0.74, 0.74, 0.13),  # Yellow
+                (0.09, 0.75, 0.81),  # Cyan
+            ]
+
+            # Get type indices
+            ptypes = np.array(type_prop)
+
+            # Map types to colors
+            # Use modulo to cycle through colors if there are more types than colors
+            # We map the type ID directly to a color index
+            color_indices = ptypes % len(colors)
+            color_data = np.array(colors)[color_indices]
+
+            # Create 'Color' property which overrides type colors
+            # Using create_property is valid on the data object passed to modifier
+            data.particles_.create_property('Color', data=color_data)
+
+    pipeline.modifiers.append(assign_colors)
+
     # Evaluate at the requested frame to inspect data (e.g. for dimensions)
     data = pipeline.compute(frame_index)
+
+    # Determine dimensionality based on cell
 
     # Determine dimensionality based on cell
     # Typically 2D sims have 0 length in Z or specific flags.
     # We can check data.cell.is_2D if available or check matrix
     cell = data.cell
     is_2d = False
-    if hasattr(cell, 'is2D') and cell.is2D:
+    if hasattr(cell, "is2D") and cell.is2D:
         is_2d = True
-    elif cell.matrix[2,2] == 0: # Flat box
+    elif cell.matrix[2, 2] == 0:  # Flat box
         is_2d = True
 
     if debug:
@@ -88,15 +112,15 @@ def visualize_gsd(
 
         # Manual configuration for 3D to ensure consistent scaling based on box size
         mat = cell.matrix
-        lx = mat[0,0]
-        ly = mat[1,1]
-        lz = mat[2,2]
+        lx = mat[0, 0]
+        ly = mat[1, 1]
+        lz = mat[2, 2]
         max_dim = max(lx, ly, lz) if max(lx, ly, lz) > 0 else 10.0
 
         # Direction vector (normalized)
         dx, dy, dz = -1.0, -0.8, -0.6
-        norm = math.sqrt(dx*dx + dy*dy + dz*dz)
-        dx, dy, dz = dx/norm, dy/norm, dz/norm
+        norm = math.sqrt(dx * dx + dy * dy + dz * dz)
+        dx, dy, dz = dx / norm, dy / norm, dz / norm
 
         vp.camera_dir = (dx, dy, dz)
         vp.camera_up = (0.0, 0.0, 1.0)
@@ -124,13 +148,7 @@ def visualize_gsd(
         if debug:
             print(f"visualize_gsd: rendering to {output_path}")
 
-        vp.render_image(
-            filename=str(output_path),
-            size=(width, height),
-            frame=frame_index,
-            renderer=renderer,
-            background=(1.0, 1.0, 1.0)  # White background
-        )
+        vp.render_image(filename=str(output_path), size=(width, height), frame=frame_index, renderer=renderer, background=(1.0, 1.0, 1.0))  # White background
 
     if preview:
         print("Note: Ovito 'preview' not supported in headless usage. Check output file.")

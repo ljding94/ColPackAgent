@@ -1,6 +1,4 @@
 from pathlib import Path
-
-# from colpack.visualize_fresnel import visualize_gsd
 from colpack.visualize_ovito import visualize_gsd
 from colpack.sample import sample_system
 
@@ -15,144 +13,69 @@ def _find_project_root(start: Path) -> Path:
         current = current.parent
 
 
-def test_sample_3d_sphere():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_sphere"
-    print("test_sample_3d_sphere: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=42)
+def test_run(system_subdir, number_density, seed):
+    sample_steps = 300000
+    project_root = _find_project_root(Path(__file__).resolve())
+    system_dir = project_root / "data" / "test" / system_subdir
+    print(f"test_run: system_dir: {system_dir}")
 
-    # visualize the sample system
+    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), density=number_density, seed=seed)
 
-    sample_gsd_path = system_dir / "sample_final.gsd"
+    # visualize the sampled system
+    sampled_gsd_path = system_dir / f"sample_final_n{number_density:.3f}.gsd"
     visualize_gsd(
-        gsd_path=sample_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_3d_ellipsoid():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_ellipsoid"
-    print("test_sample_3d_ellipsoid: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=42)
-
-    # visualize the sample system
-
-    sample_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sample_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_3d_sphere_capsule():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_sphere_capsule"
-    print("test_sample_3d_sphere_capsule: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=202)
-
-    # visualize the sample system
-
-    sample_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sample_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_3d_sphere_cube():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_sphere_cube"
-    print("test_sample_3d_sphere_cube: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=303)
-
-    # visualize the sample system
-    sample_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sample_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_3d_sphere_octahedron():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_sphere_octahedron"
-    print("test_sample_3d_sphere_octahedron: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=101)
-
-    # visualize the sample system
-    sample_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sample_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_3d_sphere_tetrahedron():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_sphere_tetrahedron"
-    print("test_sample_3d_sphere_tetrahedron: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=101)
-
-    # visualize the sample system
-    sample_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sample_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_3d_multi_shapes():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_3d_multi_shapes"
-    print("test_sample_3d_multi_shapes: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=202)
-
-    # visualize the sample system
-    sample_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sample_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
+        gsd_path=sampled_gsd_path,
+        output_path=system_dir / f"sample_final_render_n{number_density:.3f}.png",
         frame_index=-1,
         preview=False,
     )
 
 
 def main():
-    print("testing sample of 3d systems...")
+    print("testing sample of 3d systems...\n")
 
-    test_sample_3d_sphere()
-    print("test_sample_3d_sphere: OK")
+    # test_sample_3d_sphere
+    test_run(system_subdir="3d_sphere", number_density=0.3, seed=42)
+    print("test_sample_3d_sphere: OK\n")
 
-    test_sample_3d_ellipsoid()
-    print("test_sample_3d_ellipsoid: OK")
+    test_run(system_subdir="3d_sphere_sphere", number_density=0.3, seed=42)
+    print("test_sample_3d_sphere_sphere: OK\n")
 
-    test_sample_3d_sphere_capsule()
-    print("test_sample_3d_sphere_capsule: OK")
+    # test_sample_3d_ellipsoid
+    test_run(system_subdir="3d_ellipsoid", number_density=0.3, seed=42)
+    print("test_sample_3d_ellipsoid: OK\n")
 
-    test_sample_3d_sphere_cube()
-    print("test_sample_3d_sphere_cube: OK")
+    test_run(system_subdir="3d_capsule", number_density=0.25, seed=202)
+    print("test_sample_3d_capsule (n=0.25): OK\n")
 
-    test_sample_3d_sphere_octahedron()
-    print("test_sample_3d_sphere_octahedron: OK")
+    test_run(system_subdir="3d_capsule", number_density=0.3, seed=202)
+    print("test_sample_3d_capsule (n=0.3): OK\n")
 
-    test_sample_3d_sphere_tetrahedron()
-    print("test_sample_3d_sphere_tetrahedron: OK")
+    test_run(system_subdir="3d_capsule", number_density=0.35, seed=202)
+    print("test_sample_3d_capsule (n=0.35): OK\n")
 
-    test_sample_3d_multi_shapes()
-    print("test_sample_3d_multi_shapes: OK")
+    test_run(system_subdir="3d_capsule", number_density=0.4, seed=202)
+    print("test_sample_3d_capsule (n=0.4): OK\n")
+
+    # test_sample_3d_sphere_capsule
+    test_run(system_subdir="3d_sphere_capsule", number_density=0.3, seed=202)
+    print("test_sample_3d_sphere_capsule: OK\n")
+
+    # test_sample_3d_sphere_cube
+    test_run(system_subdir="3d_sphere_cube", number_density=0.3, seed=303)
+    print("test_sample_3d_sphere_cube: OK\n")
+
+    # test_sample_3d_sphere_octahedron
+    test_run(system_subdir="3d_sphere_octahedron", number_density=0.3, seed=101)
+    print("test_sample_3d_sphere_octahedron: OK\n")
+
+    # test_sample_3d_sphere_tetrahedron
+    test_run(system_subdir="3d_sphere_tetrahedron", number_density=0.3, seed=101)
+    print("test_sample_3d_sphere_tetrahedron: OK\n")
+
+    # test_sample_3d_multi_shapes
+    test_run(system_subdir="3d_multi_shapes", number_density=0.3, seed=202)
+    print("test_sample_3d_multi_shapes: OK\n")
 
 
 if __name__ == "__main__":

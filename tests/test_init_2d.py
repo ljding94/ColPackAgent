@@ -1,7 +1,6 @@
 from pathlib import Path
-
 from colpack.init import create_initial_config
-from colpack.visualize_fresnel import visualize_gsd
+from colpack.visualize_ovito import visualize_gsd
 
 
 def _find_project_root(start: Path) -> Path:
@@ -14,14 +13,9 @@ def _find_project_root(start: Path) -> Path:
         current = current.parent
 
 
-def test_create_initial_config_2d_disk():
-    particle_specs = [
-        {"shape": "disk", "number": 30, "diameter": 2.0},
-        {"shape": "disk", "number": 20},
-    ]
-
+def test_run(particle_specs, output_subdir, seed):
     project_root = _find_project_root(Path(__file__).resolve())
-    output_dir = project_root / "data" / "test" / "init_2d_disk"
+    output_dir = project_root / "data" / "test" / output_subdir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     summary = create_initial_config(
@@ -29,7 +23,7 @@ def test_create_initial_config_2d_disk():
         particle_specs=particle_specs,
         initial_number_density=0.05,
         output_dir=str(output_dir),
-        seed=42,
+        seed=seed,
     )
 
     gsd_path = output_dir / "init.gsd"
@@ -41,214 +35,109 @@ def test_create_initial_config_2d_disk():
         debug=True,
     )
 
-    assert summary["total_particles"] == 50
-    assert summary["number_density"] == 0.05
-
-
-def test_create_initial_config_2d_ellipsoid():
-    particle_specs = [
-        {"shape": "ellipsoid", "number": 20, "a": 1.0, "b": 0.8},
-        {"shape": "ellipsoid", "number": 10, "a": 1.0, "b": 0.4},
-    ]
-
-    project_root = _find_project_root(Path(__file__).resolve())
-    output_dir = project_root / "data" / "test" / "init_2d_ellipsoid"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    summary = create_initial_config(
-        dimension=2,
-        particle_specs=particle_specs,
-        initial_number_density=0.05,
-        output_dir=str(output_dir),
-        seed=42,
-    )
-
-    gsd_path = output_dir / "init.gsd"
-    visualize_gsd(
-        gsd_path=gsd_path,
-        output_path=output_dir / "init_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-    assert summary["total_particles"] == 30
-    assert summary["number_density"] == 0.05
-
-
-def test_create_initial_config_2d_sphere_ellipsoid():
-    particle_specs = [
-        {"shape": "sphere", "number": 20, "diameter": 1.2},
-        {"shape": "ellipsoid", "number": 10, "a": 1.0, "b": 0.6},
-    ]
-
-    project_root = _find_project_root(Path(__file__).resolve())
-    output_dir = project_root / "data" / "test" / "init_2d_sphere_ellipsoid"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    summary = create_initial_config(
-        dimension=2,
-        particle_specs=particle_specs,
-        initial_number_density=0.05,
-        output_dir=str(output_dir),
-        seed=123,
-    )
-
-    gsd_path = output_dir / "init.gsd"
-    visualize_gsd(
-        gsd_path=gsd_path,
-        output_path=output_dir / "init_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-    assert summary["total_particles"] == 30
-    assert summary["number_density"] == 0.05
-
-
-def test_create_initial_config_2d_sphere_rectangle():
-    particle_specs = [
-        {"shape": "sphere", "number": 20, "diameter": 1.0},
-        {"shape": "rectangle", "number": 10, "length": 2.0, "width": 1.0},
-    ]
-
-    project_root = _find_project_root(Path(__file__).resolve())
-    output_dir = project_root / "data" / "test" / "init_2d_sphere_rectangle"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    summary = create_initial_config(
-        dimension=2,
-        particle_specs=particle_specs,
-        initial_number_density=0.05,
-        output_dir=str(output_dir),
-        seed=321,
-    )
-
-    gsd_path = output_dir / "init.gsd"
-    visualize_gsd(
-        gsd_path=gsd_path,
-        output_path=output_dir / "init_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-    assert summary["total_particles"] == 30
-    assert summary["number_density"] == 0.05
-
-
-def test_create_initial_config_2d_sphere_capsule():
-    particle_specs = [
-        {"shape": "sphere", "number": 10, "diameter": 1.0},
-        {"shape": "capsule", "number": 20, "length": 2.0, "diameter": 0.6},
-    ]
-
-    project_root = _find_project_root(Path(__file__).resolve())
-    output_dir = project_root / "data" / "test" / "init_2d_sphere_capsule"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    summary = create_initial_config(
-        dimension=2,
-        particle_specs=particle_specs,
-        initial_number_density=0.05,
-        output_dir=str(output_dir),
-        seed=456,
-    )
-
-    gsd_path = output_dir / "init.gsd"
-    visualize_gsd(
-        gsd_path=gsd_path,
-        output_path=output_dir / "init_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-    assert summary["total_particles"] == 30
-    assert summary["number_density"] == 0.05
-
-
-def test_create_initial_config_2d_sphere_triangle():
-    particle_specs = [
-        {"shape": "sphere", "number": 10, "diameter": 1.0},
-        {"shape": "triangle", "number": 20, "side": 1.5},
-    ]
-
-    project_root = _find_project_root(Path(__file__).resolve())
-    output_dir = project_root / "data" / "test" / "init_2d_sphere_triangle"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    summary = create_initial_config(
-        dimension=2,
-        particle_specs=particle_specs,
-        initial_number_density=0.05,
-        output_dir=str(output_dir),
-        seed=654,
-    )
-
-    gsd_path = output_dir / "init.gsd"
-    visualize_gsd(
-        gsd_path=gsd_path,
-        output_path=output_dir / "init_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-    assert summary["total_particles"] == 30
-    assert summary["number_density"] == 0.05
-
-
-
-def test_create_initial_config_2d_multi_shapes():
-    particle_specs = [
-        {"shape": "disk", "number": 10, "diameter": 1.5},
-        {"shape": "rectangle", "number": 10, "length": 2.0, "width": 1.0},
-        {"shape": "capsule", "number": 10, "length": 2.0, "diameter": 0.6},
-        {"shape": "triangle", "number": 10, "side": 1.5},
-    ]
-
-    project_root = _find_project_root(Path(__file__).resolve())
-    output_dir = project_root / "data" / "test" / "init_2d_multi_shapes"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    summary = create_initial_config(
-        dimension=2,
-        particle_specs=particle_specs,
-        initial_number_density=0.05,
-        output_dir=str(output_dir),
-        seed=789,
-    )
-
-    gsd_path = output_dir / "init.gsd"
-    visualize_gsd(
-        gsd_path=gsd_path,
-        output_path=output_dir / "init_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-    assert summary["total_particles"] == 40
+    assert summary["total_particles"] == sum(spec["number"] for spec in particle_specs)
     assert summary["number_density"] == 0.05
 
 
 def main():
-    test_create_initial_config_2d_disk()
-    print("test_create_initial_config_2d_disk: OK")
+    # test_create_initial_config_2d_disk
+    test_run(
+        particle_specs=[
+            {"shape": "disk", "number": 100, "diameter": 1.0},
+        ],
+        output_subdir="2d_disk",
+        seed=42,
+    )
+    print("test_create_initial_config_2d_disk: OK\n")
 
-    test_create_initial_config_2d_ellipsoid()
-    print("test_create_initial_config_2d_ellipsoid: OK")
+    # test_create_initial_config_2d_disk_disk
+    test_run(
+        particle_specs=[
+            {"shape": "disk", "number": 30, "diameter": 2.0},
+            {"shape": "disk", "number": 20},
+        ],
+        output_subdir="2d_disk_disk",
+        seed=42,
+    )
+    print("test_create_initial_config_2d_disk_disk: OK\n")
 
-    test_create_initial_config_2d_sphere_ellipsoid()
-    print("test_create_initial_config_2d_sphere_ellipsoid: OK")
+    # test_create_initial_config_2d_ellipse_ellipse
+    test_run(
+        particle_specs=[
+            {"shape": "ellipse", "number": 20, "a": 1.0, "b": 0.8},
+            {"shape": "ellipse", "number": 10, "a": 1.0, "b": 0.4},
+        ],
+        output_subdir="2d_ellipse_ellipse",
+        seed=42,
+    )
+    print("test_create_initial_config_2d_ellipse_ellipse: OK\n")
 
-    test_create_initial_config_2d_sphere_rectangle()
-    print("test_create_initial_config_2d_sphere_rectangle: OK")
+    # test_create_initial_config_2d_disk_ellipsoid
+    test_run(
+        particle_specs=[
+            {"shape": "disk", "number": 20, "diameter": 1.2},
+            {"shape": "ellipse", "number": 10, "a": 1.0, "b": 0.6},
+        ],
+        output_subdir="2d_disk_ellipse",
+        seed=123,
+    )
+    print("test_create_initial_config_2d_disk_ellipsoid: OK\n")
 
-    test_create_initial_config_2d_sphere_capsule()
-    print("test_create_initial_config_2d_sphere_capsule: OK")
+    # test_create_initial_config_2d_disk_rectangle
+    test_run(
+        particle_specs=[
+            {"shape": "disk", "number": 20, "diameter": 1.0},
+            {"shape": "rectangle", "number": 10, "length": 2.0, "width": 1.0},
+        ],
+        output_subdir="2d_disk_rectangle",
+        seed=321,
+    )
+    print("test_create_initial_config_2d_disk_rectangle: OK\n")
 
-    test_create_initial_config_2d_sphere_triangle()
-    print("test_create_initial_config_2d_sphere_triangle: OK")
 
-    test_create_initial_config_2d_multi_shapes()
-    print("test_create_initial_config_2d_multi_shapes: OK")
+    # test_create_initial_config_2d_capsule
+    test_run(
+        particle_specs=[
+            {"shape": "capsule", "number": 50, "length": 2.0, "diameter": 1.0},
+        ],
+        output_subdir="2d_capsule",
+        seed=456,
+    )
+
+    # test_create_initial_config_2d_disk_capsule
+    test_run(
+        particle_specs=[
+            {"shape": "disk", "number": 10, "diameter": 1.0},
+            {"shape": "capsule", "number": 20, "length": 2.0, "diameter": 0.6},
+        ],
+        output_subdir="2d_disk_capsule",
+        seed=456,
+    )
+    print("test_create_initial_config_2d_disk_capsule: OK\n")
+
+    # test_create_initial_config_2d_disk_triangle
+    test_run(
+        particle_specs=[
+            {"shape": "disk", "number": 10, "diameter": 1.0},
+            {"shape": "triangle", "number": 20, "side": 1.5},
+        ],
+        output_subdir="2d_disk_triangle",
+        seed=654,
+    )
+    print("test_create_initial_config_2d_disk_triangle: OK\n")
+
+    # test_create_initial_config_2d_multi_shapes
+    test_run(
+        particle_specs=[
+            {"shape": "disk", "number": 10, "diameter": 1.5},
+            {"shape": "rectangle", "number": 10, "length": 2.0, "width": 1.0},
+            {"shape": "capsule", "number": 10, "length": 2.0, "diameter": 0.6},
+            {"shape": "triangle", "number": 10, "side": 1.5},
+        ],
+        output_subdir="2d_multi_shapes",
+        seed=789,
+    )
+    print("test_create_initial_config_2d_multi_shapes: OK\n")
 
 
 if __name__ == "__main__":

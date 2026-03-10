@@ -22,7 +22,7 @@ def mapping_shape_dict_to_gsd(shape_dict):
         if len(vertices) == 2:
             # it's actually capsule, we can represent it as a rectangle with rounding radius in gsd
             vertices = vertices + [[0.00, 0.001], [0.00, -0.001]]
-            #return {"type": "Polygon", "vertices": vertices, "rounding_radius": shape_dict["sweep_radius"]}
+            # return {"type": "Polygon", "vertices": vertices, "rounding_radius": shape_dict["sweep_radius"]}
         return {"type": "Polygon", "vertices": vertices, "rounding_radius": shape_dict["sweep_radius"]}
 
     elif shape_dict["type"] == "ConvexSpheropolyhedron":
@@ -36,6 +36,7 @@ def mapping_shape_dict_to_gsd(shape_dict):
         # FIX: Handle the Capsule (2 vertices) by "inflating" it into a 3D sliver
         if len(vertices) == 2:
             import numpy as np
+
             v0 = np.array(vertices[0])
             v1 = np.array(vertices[1])
 
@@ -83,7 +84,7 @@ def create_gsd_frame(hoomd_snapshot, shape_metadata, timestep=0):
 
     # Inject your calculated shapes
     frame.particles.type_shapes = shape_metadata
-    print("shape_metadata", shape_metadata)
+    #print("shape_metadata", shape_metadata)
 
     return frame
 
@@ -99,6 +100,52 @@ def save_state(sim, particle_list, output_path):
     with gsd.hoomd.open(name=output_path, mode="w") as gsd_file:
         gsd_file.append(frame)
     print(f"Saved system state to {output_path}")
+
+
+class CustomGSDWriter(hoomd.custom.Action):
+    def __init__(self, particle_list, filename="trajectory.gsd", directory=".", mode="w"):
+        super().__init__()
+        self.directory = directory
+        self.filename = filename
+        self.path = os.path.join(directory, filename)
+        self.shape_metadata = get_shape_meta_data(particle_list)
+
+        # Store user preference ('w' = overwrite start, 'a' = append always)
+        self.user_mode = mode
+
+        # Track if this is the very first time act() is called
+        self._is_first_call = True
+
+    def act(self, timestep):
+        # 1. Get snapshot
+        snap = self._state.get_snapshot()
+
+        if snap.communicator.rank == 0:
+            # 2. Create the GSD frame (using your helper)
+            gsd_frame = create_gsd_frame(snap, self.shape_metadata, timestep)
+
+            # 3. Determine the file mode dynamically
+            #    Default is 'r+' (read/write) which allows appending
+            file_mode = "r+"
+
+            if self._is_first_call:
+                # If user wants to overwrite ('w'), use 'w' mode ONCE to clear file
+                if self.user_mode == "w":
+                    file_mode = "w"
+                # If user wants append ('a') but file doesn't exist, must use 'w' to create it
+                elif not os.path.exists(self.path):
+                    file_mode = "w"
+
+                self._is_first_call = False
+
+            # Safety check: if file was deleted mid-run, recreate it
+            elif not os.path.exists(self.path):
+                file_mode = "w"
+
+            # 4. Open, Append, Close
+            with gsd.hoomd.open(name=self.path, mode=file_mode) as f:
+                f.append(gsd_frame)
+                # print(f"Appended frame {timestep} to {self.path}")
 
 
 class GSDSplitter(hoomd.custom.Action):
@@ -164,108 +211,3 @@ def read_state(summary_file_path, gsd_file_path):
     sim.operations.integrator = mc
 
     return sim, mc, summary
-
-
-# TODO: add measurement functions here
-
-
-class MeasureLiquidCrystalOrder(hoomd.custom.Action):
-    """Compute nematic order parameter S, smectic order parameter τ, and optimal layer spacing d."""
-
-    def __init__(self, subfolder, system_params, label, num_d=100):
-        self.filename = f"{subfolder}/{label}_LC_order.csv"
-        self.meanL = system_params["meanL"]  # For d range; D=1 fixed
-        self.num_d = num_d  # Resolution for d optimization
-        data = np.load(f"{subfolder}/particle_data.npz")
-        self.total_volume = data["total_V"]
-        self._header_written = False
-        self.nematicS = []
-        self.smecticTau = []
-        self.opt_d = []
-        self.phi = []
-
-        # other simulation info
-        self.system_params = system_params  # e.g., {'pd_type': "uniform", 'N': 100, 'phi': 0.5, 'mean_ld': 2.0, 'sigma': 0.1}
-
-    def act(self, timestep):
-        snap = self._state.get_snapshot()
-        if snap.communicator.rank != 0:
-            return
-
-        orientation = snap.particles.orientation
-        # Transform to quaternion [x, y, z, w] for scipy
-        quat_scipy = orientation[:, [1, 2, 3, 0]]
-        rot = Rotation.from_quat(quat_scipy)
-
-        # Rod directors (body-frame axis along z)
-        local_axis = np.array([0.0, 0.0, 1.0])  # TODO: need to generalize for different particle types, currently assume the local director is along z axis and
-        # TODO: also need to generalize to 2d
-        directors = rot.apply(local_axis)
-
-        # Nematic tensor Q
-        N = directors.shape[0]
-        Q = (3.0 / (2.0 * N)) * directors.T @ directors - 0.5 * np.eye(3)
-
-        # Nematic order S (largest eigenvalue)
-        S = np.linalg.eigvalsh(Q).max()
-
-        # Global director n (largest eigenvector)
-        eigvals, eigvecs = np.linalg.eigh(Q)
-        n = eigvecs[:, np.argmax(eigvals)]
-
-        # Project positions along n for smectic order
-        positions = snap.particles.position
-        s = positions @ n
-
-        # Optimize d over plausible range (around mean total length ± margin)
-        d_min = 0.5 * self.meanL + 1
-        d_max = 1.5 * self.meanL + 1
-        d_values = np.linspace(d_min, d_max, self.num_d)
-
-        tau_max = 0.0
-        d_opt = 0.0
-        for d in d_values:
-            phase = np.exp(1j * 2 * np.pi * s / d)
-            tau = np.abs(np.mean(phase))
-            if tau > tau_max:
-                tau_max = tau
-                d_opt = d
-
-        # Compute current phi
-        box = snap.configuration.box
-        box_volume = box[0] * box[1] * box[2]
-        phi = self.total_volume / box_volume
-
-        # Append to file
-        mode = "w" if not self._header_written else "a"
-        with open(f"{self.filename}", mode) as f:
-            if not self._header_written:
-                f.write("pd_type," + f"{self.system_params['pd_type']}\n")
-                f.write("N," + f"{self.system_params['N']}\n")
-                f.write("phi," + f"{self.system_params['phi']}\n")
-                f.write("meanL," + f"{self.system_params['meanL']}\n")
-                f.write("sigmaL," + f"{self.system_params['sigmaL']}\n")
-                f.write("sigmaD," + f"{self.system_params['sigmaD']}\n")
-                f.write("step,S,tau,d,phi\n")
-                self._header_written = True
-            f.write(f"{timestep},{S},{tau_max},{d_opt},{phi}\n")
-
-        # add to list
-        self.nematicS.append(S)
-        self.smecticTau.append(tau_max)
-        self.opt_d.append(d_opt)
-        self.phi.append(phi)
-
-    def act_end(self):
-        # append statistics, mean, std, to file
-        if self.nematicS and self.smecticTau:
-            mean_S = np.mean(self.nematicS)
-            std_S = np.std(self.nematicS)
-            mean_tau = np.mean(self.smecticTau)
-            std_tau = np.std(self.smecticTau)
-            mean_d = np.mean(self.opt_d)
-            std_d = np.std(self.opt_d)
-
-            with open(f"{self.filename}", "a") as f:
-                f.write(f"Mean, {mean_S}, {mean_tau}, {mean_d}, {self.phi[-1]} \n")
-                f.write(f"Std, {std_S}, {std_tau}, {std_d}, 0 \n")

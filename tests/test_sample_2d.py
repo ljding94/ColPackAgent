@@ -13,148 +13,68 @@ def _find_project_root(start: Path) -> Path:
         current = current.parent
 
 
-def test_sample_2d_disk():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_disk"
-    print("test_sample_2d_disk: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=42)
+def test_run(system_subdir, number_density, seed):
+    sample_steps = 300000
+    project_root = _find_project_root(Path(__file__).resolve())
+    system_dir = project_root / "data" / "test" / system_subdir
+    print(f"test_run: system_dir: {system_dir}")
+
+    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), density=number_density, seed=seed)
 
     # visualize the sampled system
-    sampled_gsd_path = system_dir / "sample_final.gsd"
+    sampled_gsd_path = system_dir / f"sample_final_n{number_density:.3f}.gsd"
     visualize_gsd(
         gsd_path=sampled_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-    visualize_gsd(
-        gsd_path=system_dir / "sampling" / "trajectory.gsd",
-        output_path=system_dir / "sampling" / "trajectory.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_2d_ellipsoid():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_ellipsoid"
-    print("test_sample_2d_ellipsoid: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=42)
-
-    # visualize the sampled system
-    sampled_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sampled_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_2d_sphere_ellipsoid():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_sphere_ellipsoid"
-    print("test_sample_2d_sphere_ellipsoid: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=123)
-
-    # visualize the sampled system
-    sampled_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sampled_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_2d_sphere_rectangle():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_sphere_rectangle"
-    print("test_sample_2d_sphere_rectangle: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=321)
-
-    # visualize the sampled system
-    sampled_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sampled_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_2d_sphere_capsule():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_sphere_capsule"
-    print("test_sample_2d_sphere_capsule: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=456)
-
-    # visualize the sampled system
-    sampled_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sampled_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_2d_sphere_triangle():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_sphere_triangle"
-    print("test_sample_2d_sphere_triangle: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=654)
-
-    # visualize the sampled system
-    sampled_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sampled_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-    )
-
-
-def test_sample_2d_multi_shapes():
-    sample_steps = 30000
-    system_dir = _find_project_root(Path(__file__).resolve()) / "data" / "test" / "init_2d_multi_shapes"
-    print("test_sample_2d_multi_shapes: system_dir:", system_dir)
-    sample_system(sample_steps=sample_steps, system_dir=str(system_dir), seed=789)
-
-    # visualize the sampled system
-    sampled_gsd_path = system_dir / "sample_final.gsd"
-    visualize_gsd(
-        gsd_path=sampled_gsd_path,
-        output_path=system_dir / "sample_final_render.png",
+        output_path=system_dir / f"sample_final_render_n{number_density:.3f}.png",
         frame_index=-1,
         preview=False,
     )
 
 
 def main():
-    print("testing thermalization of 2d systems...")
+    print("testing thermalization of 2d systems...\n")
 
-    test_sample_2d_disk()
-    print("test_sample_2d_disk: OK")
+    # test_sample_2d_disk
+    test_run(system_subdir="2d_disk", number_density=0.5, seed=42)
+    print("test_sample_2d_disk: OK\n")
 
-    test_sample_2d_ellipsoid()
-    print("test_sample_2d_ellipsoid: OK")
+    test_run(system_subdir="2d_disk_disk", number_density=0.5, seed=42)
+    print("test_sample_2d_disk_disk: OK\n")
 
-    test_sample_2d_sphere_ellipsoid()
-    print("test_sample_2d_sphere_ellipsoid: OK")
+    # test_sample_2d_ellipsoid (renamed to 2d_ellipse_ellipse)
+    test_run(system_subdir="2d_ellipse_ellipse", number_density=0.3, seed=42)
+    print("test_sample_2d_ellipse_ellipse: OK\n")
 
-    test_sample_2d_sphere_rectangle()
-    print("test_sample_2d_sphere_rectangle: OK")
+    test_run(system_subdir="2d_disk_ellipse", number_density=0.3, seed=123)
+    print("test_sample_2d_disk_ellipse: OK\n")
 
-    test_sample_2d_sphere_capsule()
-    print("test_sample_2d_sphere_capsule: OK")
+    # test_sample_2d_sphere_rectangle (renamed to 2d_disk_rectangle)
+    test_run(system_subdir="2d_disk_rectangle", number_density=0.5, seed=321)
+    print("test_sample_2d_disk_rectangle: OK\n")
 
-    test_sample_2d_sphere_triangle()
-    print("test_sample_2d_sphere_triangle: OK")
+    test_run(system_subdir="2d_capsule", number_density=0.2, seed=456)
+    print("test_sample_2d_capsule (n=0.2): OK\n")
 
-    test_sample_2d_multi_shapes()
-    print("test_sample_2d_multi_shapes: OK")
+    test_run(system_subdir="2d_capsule", number_density=0.25, seed=456)
+    print("test_sample_2d_capsule (n=0.25): OK\n")
+
+    test_run(system_subdir="2d_capsule", number_density=0.3, seed=456)
+    print("test_sample_2d_capsule (n=0.3): OK\n")
+
+    test_run(system_subdir="2d_capsule", number_density=0.35, seed=456)
+    print("test_sample_2d_capsule (n=0.35): OK\n")
+
+    # test_sample_2d_sphere_capsule (renamed to 2d_disk_capsule)
+    test_run(system_subdir="2d_disk_capsule", number_density=0.4, seed=456)
+    print("test_sample_2d_disk_capsule: OK\n")
+
+    # test_sample_2d_sphere_triangle (renamed to 2d_disk_triangle)
+    test_run(system_subdir="2d_disk_triangle", number_density=0.3, seed=654)
+    print("test_sample_2d_disk_triangle: OK\n")
+
+    # test_sample_2d_multi_shapes
+    test_run(system_subdir="2d_multi_shapes", number_density=0.3, seed=789)
+    print("test_sample_2d_multi_shapes: OK\n")
 
 
 if __name__ == "__main__":
