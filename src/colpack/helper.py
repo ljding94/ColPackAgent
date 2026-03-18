@@ -2,7 +2,6 @@ import json
 import gsd.hoomd
 import hoomd
 import numpy as np
-from scipy.spatial.transform import Rotation
 import os
 
 
@@ -35,7 +34,6 @@ def mapping_shape_dict_to_gsd(shape_dict):
 
         # FIX: Handle the Capsule (2 vertices) by "inflating" it into a 3D sliver
         if len(vertices) == 2:
-            import numpy as np
 
             v0 = np.array(vertices[0])
             v1 = np.array(vertices[1])
@@ -84,7 +82,7 @@ def create_gsd_frame(hoomd_snapshot, shape_metadata, timestep=0):
 
     # Inject your calculated shapes
     frame.particles.type_shapes = shape_metadata
-    #print("shape_metadata", shape_metadata)
+    # print("shape_metadata", shape_metadata)
 
     return frame
 

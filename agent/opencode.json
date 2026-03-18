@@ -1,0 +1,5 @@
+{
+  "skills_dir": "./agent/skills",
+  "workspace_dir": "./data",
+  "tools_dir": "./agent/tools",
+}

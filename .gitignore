@@ -4,10 +4,16 @@
 # Then allow specific files and folders
 !README.md
 
+!doc
+!doc/**
+
 # Source code
 !src
 !src/**
 src/__pycache__/
+
+!agent
+!agent/**
 
 # plots
 !plots/

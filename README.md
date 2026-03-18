@@ -1,6 +1,11 @@
 # ColPackAgent
 
 
-# set-up
+## set-up
 
 
+## use opencode
+
+```
+opencode --config agent/opencode.json
+```

@@ -66,7 +66,6 @@ def _plot_shape_order(results, title, filename):
     ax1.legend(frameon=False, fontsize=7, loc="best")
 
     plt.tight_layout(pad=0.2)
-    #filename = filename.split(".")[0]
     plt.savefig(filename + ".png", dpi=300)
     plt.savefig(filename + ".pdf", dpi=300, format="pdf")
     plt.close()
@@ -84,7 +83,6 @@ def _plot_rdf(results, title, filename):
     ax1.set_title(title, fontsize=9)
     ax1.legend(frameon=False, fontsize=7, loc="upper left", ncol=2, columnspacing=0.5, handlelength=1, handletextpad=0.2, labelspacing=0.1)
     plt.tight_layout(pad=0.2)
-    #filename = filename.split(".")[0]
     plt.savefig(filename + ".png", dpi=600)
     plt.savefig(filename + ".pdf", dpi=600, format="pdf")
     plt.close()
