@@ -1,0 +1,152 @@
+{
+    "workflow": {
+        "placeholder": "Nan",
+        "compression_defaults": {
+            "max_steps_per_stage": 2000,
+            "randomization_steps": 1000,
+            "stages": 5,
+            "npt_precompress_volume_fraction": 0.3,
+            "npt_boxmc_steps": 20000,
+            "npt_boxmc_volume_delta": 0.01,
+            "npt_boxmc_trigger_period": 10
+        },
+        "particle_required_fields": [
+            "relative_volume_fraction"
+        ],
+        "relative_volume_fraction_first_particle": 1,
+        "relative_volume_fraction_other_particles": 0.5,
+        "common_system_fields": {
+            "sampling_steps": 200000
+        },
+        "status_fieldnames": [
+            "run_number",
+            "dimension",
+            "total_particle_number",
+            "ensemble",
+            "initialize",
+            "compress",
+            "sample",
+            "analyze",
+            "status",
+            "started_at",
+            "finished_at",
+            "output_dir",
+            "error"
+        ],
+        "ensemble_requirements": {
+            "NVT": {
+                "system_fields": {
+                    "volume_fraction": 0.3
+                }
+            },
+            "NPT": {
+                "system_fields": {
+                    "P": 1.0
+                }
+            }
+        }
+    },
+    "dimensions": {
+        "2": {
+            "allowed_shapes": [
+                "disk",
+                "ellipse",
+                "triangle",
+                "square",
+                "rectangle",
+                "capsule"
+            ],
+            "aliases": {
+                "circle": "disk",
+                "sphere": "disk",
+                "rod": "capsule"
+            },
+            "shape_parameters": {
+                "disk": {
+                    "defaults": {
+                        "diameter": 1.0
+                    }
+                },
+                "ellipse": {
+                    "defaults": {
+                        "a": 1.0,
+                        "b": 0.5,
+                        "c": 0.25
+                    }
+                },
+                "triangle": {
+                    "defaults": {
+                        "side": 1.0
+                    }
+                },
+                "square": {
+                    "defaults": {
+                        "side": 1.0
+                    }
+                },
+                "rectangle": {
+                    "defaults": {
+                        "length": 2.0,
+                        "width": 1.0
+                    }
+                },
+                "capsule": {
+                    "defaults": {
+                        "length": 2.0,
+                        "diameter": 0.5
+                    }
+                }
+            }
+        },
+        "3": {
+            "allowed_shapes": [
+                "sphere",
+                "ellipsoid",
+                "cube",
+                "octahedron",
+                "tetrahedron",
+                "capsule"
+            ],
+            "aliases": {
+                "ball": "sphere",
+                "rod": "capsule",
+                "tetra": "tetrahedron"
+            },
+            "shape_parameters": {
+                "sphere": {
+                    "defaults": {
+                        "diameter": 1.0
+                    }
+                },
+                "ellipsoid": {
+                    "defaults": {
+                        "a": 1.0,
+                        "b": 0.5,
+                        "c": 0.5
+                    }
+                },
+                "capsule": {
+                    "defaults": {
+                        "length": 2.0,
+                        "diameter": 0.5
+                    }
+                },
+                "tetrahedron": {
+                    "defaults": {
+                        "side": 1.0
+                    }
+                },
+                "cube": {
+                    "defaults": {
+                        "side": 1.0
+                    }
+                },
+                "octahedron": {
+                    "defaults": {
+                        "side": 1.0
+                    }
+                }
+            }
+        }
+    }
+}

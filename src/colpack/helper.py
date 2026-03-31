@@ -209,3 +209,33 @@ def read_state(summary_file_path, gsd_file_path):
     sim.operations.integrator = mc
 
     return sim, mc, summary
+
+
+def read_state_from_run(simulation_config: dict, gsd_file_path: str):
+    particle_list = simulation_config["particle_list"]
+
+    # step up hoomd system
+    device = hoomd.device.GPU() if hoomd.device.GPU.is_available() else hoomd.device.CPU()
+    sim = hoomd.Simulation(device=device)
+    sim.create_state_from_gsd(filename=gsd_file_path)
+
+    # step 3: step up the integrator and mc
+    integrator = particle_list[0]["pIntegrator"]
+    if integrator == "Sphere":
+        mc = hoomd.hpmc.integrate.Sphere()
+    elif integrator == "Ellipsoid":
+        mc = hoomd.hpmc.integrate.Ellipsoid()
+    elif integrator == "ConvexSpheropolygon":
+        mc = hoomd.hpmc.integrate.ConvexSpheropolygon()
+    elif integrator == "ConvexSpheropolyhedron":
+        mc = hoomd.hpmc.integrate.ConvexSpheropolyhedron()
+    else:
+        raise ValueError(f"Unsupported integrator type: {integrator}")
+
+    print("Using integrator:", integrator)
+    for particle in particle_list:
+        print("particle type:", particle["pType"], "shape:", particle["pShape"])
+        mc.shape[particle["pType"]] = particle["pShape"]
+
+    sim.operations.integrator = mc
+    return sim, mc

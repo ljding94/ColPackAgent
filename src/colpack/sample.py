@@ -3,6 +3,7 @@ import hoomd
 import json
 from colpack.helper import read_state, save_state, get_shape_meta_data, GSDSplitter, CustomGSDWriter
 
+# TODO: add NPT sample
 
 def sample_system(sample_steps, system_dir, density=None, seed=0):
     """
