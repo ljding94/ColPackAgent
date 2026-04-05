@@ -1,67 +1,53 @@
 from pathlib import Path
+import importlib.util
+import json
 from colpack.analyze import analyze_main
 
 
 def _find_project_root(start: Path) -> Path:
     current = start
     while True:
-        if (current / "pyproject.toml").exists():
+        if (current / "environment.yml").exists() or (current / "src" / "pyproject.toml").exists():
             return current
         if current.parent == current:
-            raise RuntimeError("Could not locate project root (pyproject.toml not found).")
+            raise RuntimeError("Could not locate project root (environment.yml or src/pyproject.toml not found).")
         current = current.parent
 
 
-def run_analyze(system_subdir, number_density):
+def _has_hoomd() -> bool:
+    return importlib.util.find_spec("hoomd") is not None
+
+
+def run_analyze(output_subdir):
     project_root = _find_project_root(Path(__file__).resolve())
-    system_dir = project_root / "data" / "test" / system_subdir
-    print(f"run_analyze: system_dir: {system_dir}")
-    analyze_main(system_dir=str(system_dir), density=number_density)
+    run_dir = project_root / "data" / "test" / output_subdir / "run_0"
+    print(f"run_analyze: run_dir: {run_dir}")
+    analyze_main(run_dir=str(run_dir))
+
+    assert (run_dir / "simulation_config_analysis.json").exists()
+    assert (run_dir / "analysis_results.json").exists()
+
+    with (run_dir / "simulation_config_analysis.json").open("r", encoding="utf-8") as f:
+        analyzed_config = json.load(f)
+
+    assert analyzed_config["analysis_results_path"].endswith("analysis_results.json")
 
 
 def main():
+    if not _has_hoomd():
+        print("Skipping test_analyze_3d.py: 'hoomd' is not installed in the current Python environment.")
+        return
+
     print("testing analysis of 3d systems...\n")
 
-    # test_analyze_3d_sphere
-    #run_analyze(system_subdir="3d_sphere", number_density=0.3)
+    run_analyze(output_subdir="3d_sphere")
     print("test_analyze_3d_sphere: OK\n")
 
-    #run_analyze(system_subdir="3d_sphere_sphere", number_density=0.3)
-    print("test_analyze_3d_sphere_sphere: OK\n")
-
-    # test_analyze_3d_ellipsoid
-    #run_analyze(system_subdir="3d_ellipsoid", number_density=0.3)
-    print("test_analyze_3d_ellipsoid: OK\n")
-
-    # test_analyze_3d_capsule
-    run_analyze(system_subdir="3d_capsule", number_density=0.25)
-    print("test_analyze_3d_capsule (n=0.25): OK\n")
-    run_analyze(system_subdir="3d_capsule", number_density=0.3)
-    print("test_analyze_3d_capsule (n=0.3): OK\n")
-    run_analyze(system_subdir="3d_capsule", number_density=0.35)
-    print("test_analyze_3d_capsule (n=0.35): OK\n")
-    #run_analyze(system_subdir="3d_capsule", number_density=0.4)
-    print("test_analyze_3d_capsule (n=0.4): OK\n")
-
-    # test_analyze_3d_sphere_capsule
-    #run_analyze(system_subdir="3d_sphere_capsule", number_density=0.3)
+    run_analyze(output_subdir="3d_sphere_capsule")
     print("test_analyze_3d_sphere_capsule: OK\n")
 
-    # test_analyze_3d_sphere_cube
-    #run_analyze(system_subdir="3d_sphere_cube", number_density=0.3)
-    print("test_analyze_3d_sphere_cube: OK\n")
-
-    # test_analyze_3d_sphere_octahedron
-    #run_analyze(system_subdir="3d_sphere_octahedron", number_density=0.3)
-    print("test_analyze_3d_sphere_octahedron: OK\n")
-
-    # test_analyze_3d_sphere_tetrahedron
-    #run_analyze(system_subdir="3d_sphere_tetrahedron", number_density=0.3)
-    print("test_analyze_3d_sphere_tetrahedron: OK\n")
-
-    # test_analyze_3d_multi_shapes
-    #run_analyze(system_subdir="3d_multi_shapes", number_density=0.3)
-    print("test_analyze_3d_multi_shapes: OK\n")
+    run_analyze(output_subdir="3d_sphere_capsule_npt")
+    print("test_analyze_3d_npt: OK\n")
 
 
 if __name__ == "__main__":

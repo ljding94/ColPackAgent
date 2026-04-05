@@ -1,0 +1,2 @@
+[console_scripts]
+colpack-mcp = colpack.mcp.server:main

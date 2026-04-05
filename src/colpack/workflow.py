@@ -1,6 +1,7 @@
 import os
 import json
 import copy
+import csv
 from datetime import datetime, timezone
 from colpack.initialize import create_initial_config
 from colpack.compress import compress_system
@@ -216,7 +217,7 @@ def plan_simulaiton_runs(baseline_parameters: dict, tunable_parameters: dict, wo
 
 # TODO: only drafted version, needs lots of checking and refining
 # excute simulation workflow for each simulation run
-def excute_simulation_workflow(working_dir: str | None = None, continue_on_error: bool = True):
+def execute_simulation_workflow(working_dir: str | None = None, continue_on_error: bool = True):
     """
     this function will excute the simulation workflow for every entry of the planned simulation parameters,
     1. read the planned simulation json files, create a status csv file to keep track of the simulation run.
@@ -248,9 +249,20 @@ def excute_simulation_workflow(working_dir: str | None = None, continue_on_error
     if not isinstance(status_fieldnames, list) or len(status_fieldnames) == 0:
         raise ValueError("workflow.status_fieldnames must be configured as a non-empty list in colpack_config.json.")
 
-    # initialize status file
+    # Initialize or resume status tracking.
     status_records = []
-    _initialize_status_csv(status_path, status_fieldnames)
+    existing_records_by_run = {}
+    if os.path.exists(status_path) and os.path.getsize(status_path) > 0:
+        with open(status_path, "r", newline="") as status_file:
+            reader = csv.DictReader(status_file)
+            for row in reader:
+                if not row:
+                    continue
+                status_records.append(row)
+                run_number_key = str(row.get("run_number", ""))
+                existing_records_by_run[run_number_key] = row
+    else:
+        _initialize_status_csv(status_path, status_fieldnames)
 
     for idx, run in enumerate(planned_runs):
         run_number = run.get("run_number", idx)
@@ -260,6 +272,11 @@ def excute_simulation_workflow(working_dir: str | None = None, continue_on_error
         os.makedirs(run_dir, exist_ok=True)
 
         run_record = _build_run_status_record(run, run_number, run_dir)
+        previous_record = existing_records_by_run.get(str(run_number))
+        if previous_record:
+            for step_name in ["initialize", "compress", "sample", "analyze"]:
+                if previous_record.get(step_name) == "O":
+                    run_record[step_name] = "O"
 
         try:
             # Required run parameters for current lower-level APIs.
@@ -268,46 +285,37 @@ def excute_simulation_workflow(working_dir: str | None = None, continue_on_error
             if "dimension" not in run:
                 raise ValueError("Missing 'dimension' in run configuration.")
 
-            target_number_density = run.get("target_number_density", run.get("number_density", run.get("n")))
-            if target_number_density is None:
-                raise ValueError("Missing compression target density. Provide 'target_number_density' (or alias 'number_density'/'n') in planned runs.")
-
-            sampling_steps = int(run.get("sampling_steps", 200000))
-            seed = int(run.get("seed", 0))
-
             # 1. initialize
-            create_initial_config(run_dir=run_dir)
-            run_record["initialize"] = "O"
+            if run_record["initialize"] != "O":
+                create_initial_config(run_dir=run_dir)
+                run_record["initialize"] = "O"
 
             # 2. compress
-            compress_system(run_dir=run_dir)
-            run_record["compress"] = "O"
+            if run_record["compress"] != "O":
+                compress_system(run_dir=run_dir)
+                run_record["compress"] = "O"
 
             # 3. sample
-            sample_system(
-                sample_steps=sampling_steps,
-                system_dir=run_dir,
-                density=float(target_number_density),
-                seed=seed,
-            )
-            run_record["sample"] = "O"
+            if run_record["sample"] != "O":
+                sample_system(run_dir=run_dir)
+                run_record["sample"] = "O"
 
             # 4. analyze
-            analyze_main(
-                system_dir=run_dir,
-                density=float(target_number_density),
-            )
-            run_record["analyze"] = "O"
+            if run_record["analyze"] != "O":
+                analyze_main(run_dir=run_dir)
+                run_record["analyze"] = "O"
 
             run_record["status"] = "success"
             run_record["finished_at"] = datetime.now(timezone.utc).isoformat()
             _append_status(status_path, status_records, status_fieldnames, run_record)
+            existing_records_by_run[str(run_number)] = run_record
 
         except Exception as exc:
             run_record["status"] = "failed"
             run_record["finished_at"] = datetime.now(timezone.utc).isoformat()
             run_record["error"] = str(exc)
             _append_status(status_path, status_records, status_fieldnames, run_record)
+            existing_records_by_run[str(run_number)] = run_record
             if not continue_on_error:
                 break
 

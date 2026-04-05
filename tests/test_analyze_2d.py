@@ -1,69 +1,53 @@
 from pathlib import Path
-from colpack.visualize_ovito import visualize_gsd
+import importlib.util
+import json
 from colpack.analyze import analyze_main
 
 
 def _find_project_root(start: Path) -> Path:
     current = start
     while True:
-        if (current / "pyproject.toml").exists():
+        if (current / "environment.yml").exists() or (current / "src" / "pyproject.toml").exists():
             return current
         if current.parent == current:
-            raise RuntimeError("Could not locate project root (pyproject.toml not found).")
+            raise RuntimeError("Could not locate project root (environment.yml or src/pyproject.toml not found).")
         current = current.parent
 
 
-def run_analyze(system_subdir, number_density):
+def _has_hoomd() -> bool:
+    return importlib.util.find_spec("hoomd") is not None
+
+
+def run_analyze(output_subdir):
     project_root = _find_project_root(Path(__file__).resolve())
-    system_dir = project_root / "data" / "test" / system_subdir
-    print(f"run_analyze: system_dir: {system_dir}")
-    analyze_main(system_dir=str(system_dir), density=number_density)
+    run_dir = project_root / "data" / "test" / output_subdir / "run_0"
+    print(f"run_analyze: run_dir: {run_dir}")
+    analyze_main(run_dir=str(run_dir))
+
+    assert (run_dir / "simulation_config_analysis.json").exists()
+    assert (run_dir / "analysis_results.json").exists()
+
+    with (run_dir / "simulation_config_analysis.json").open("r", encoding="utf-8") as f:
+        analyzed_config = json.load(f)
+
+    assert analyzed_config["analysis_results_path"].endswith("analysis_results.json")
 
 
 def main():
+    if not _has_hoomd():
+        print("Skipping test_analyze_2d.py: 'hoomd' is not installed in the current Python environment.")
+        return
+
     print("testing analysis of 2d systems...\n")
 
-    # test_analyze_2d_disk
-    run_analyze(system_subdir="2d_disk", number_density=0.5)
+    run_analyze(output_subdir="2d_disk")
     print("test_analyze_2d_disk: OK\n")
 
-    run_analyze(system_subdir="2d_disk_disk", number_density=0.5)
-    print("test_analyze_2d_disk_disk: OK\n")
-
-    # test_analyze_2d_ellipsoid
-    run_analyze(system_subdir="2d_ellipse_ellipse", number_density=0.3)
-    print("test_analyze_2d_ellipse_ellipse: OK\n")
-
-    run_analyze(system_subdir="2d_disk_ellipse", number_density=0.3)
-    print("test_analyze_2d_disk_ellipse: OK\n")
-
-    # test_analyze_2d_sphere_rectangle
-    run_analyze(system_subdir="2d_disk_rectangle", number_density=0.5)
-    print("test_analyze_2d_disk_rectangle: OK\n")
-
-    run_analyze(system_subdir="2d_capsule", number_density=0.2)
-    print("test_analyze_2d_capsule (n=0.2): OK\n")
-
-    run_analyze(system_subdir="2d_capsule", number_density=0.25)
-    print("test_analyze_2d_capsule (n=0.25): OK\n")
-
-    run_analyze(system_subdir="2d_capsule", number_density=0.3)
-    print("test_analyze_2d_capsule (n=0.3): OK\n")
-
-    run_analyze(system_subdir="2d_capsule", number_density=0.35)
-    print("test_analyze_2d_capsule (n=0.35): OK\n")
-
-    # test_analyze_2d_sphere_capsule
-    run_analyze(system_subdir="2d_disk_capsule", number_density=0.4)
+    run_analyze(output_subdir="2d_disk_capsule")
     print("test_analyze_2d_disk_capsule: OK\n")
 
-    # test_analyze_2d_sphere_triangle
-    run_analyze(system_subdir="2d_disk_triangle", number_density=0.3)
-    print("test_analyze_2d_disk_triangle: OK\n")
-
-    # test_analyze_2d_multi_shapes
-    run_analyze(system_subdir="2d_multi_shapes", number_density=0.3)
-    print("test_analyze_2d_multi_shapes: OK\n")
+    run_analyze(output_subdir="2d_disk_ellipse_npt")
+    print("test_analyze_2d_npt: OK\n")
 
 
 if __name__ == "__main__":

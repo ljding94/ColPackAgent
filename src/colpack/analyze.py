@@ -8,17 +8,94 @@ import matplotlib.pyplot as plt
 from colpack.analyze_plot import analyze_plot
 
 
-def analyze_main(system_dir, density=None):
+def analyze_main(run_dir):
     """
     Main function to analyze the compressed system.
     It will read the compress_summary.json and sample_trajectory.gsd from the system_dir,
     then perform analysis based on the particle types and shapes, and save the results to analysis_results.json
     """
-    # 1. compute and save the analysis results
-    analyze_compute(system_dir, density)
 
+    # 0 some error handling and check the required files
+    simulation_config_path = os.path.join(run_dir, "simulation_config_sample.json")
+    if not os.path.exists(simulation_config_path):
+        print(f"Error: Missing simulation_config_sample.json in {run_dir}. Cannot perform analysis.")
+        return
+
+    with open(simulation_config_path, "r") as f:
+        simulation_config = json.load(f)
+
+    # 1. compute and save the analysis results
+    analyze_compute(run_dir, simulation_config)
+
+    # 2.0 find the post analysis simulation config path
+    simulation_config_path = os.path.join(run_dir, "simulation_config_analysis.json")
+    if not os.path.exists(simulation_config_path):
+        print(f"Error: Missing simulation_config_analysis.json in {run_dir}. Cannot perform plotting.")
+        return
+
+    with open(simulation_config_path, "r") as f:
+        simulation_config = json.load(f)
     # 2. plot the analysis results and save the figures
-    analyze_plot(system_dir, density)
+    analyze_plot(run_dir, simulation_config)
+
+
+def analyze_compute(run_dir, simulation_config):
+    particle_list = simulation_config.get("particle_list")
+    if not particle_list:
+        print(f"Error: No particle_list found in simulation_config_sample.json in {run_dir}. Cannot perform analysis.")
+        return
+
+    print(f"--- Starting Analysis for {run_dir} --- ")
+
+    trajectory_gsd_path = os.path.join(run_dir, "sample_trajectory.gsd")
+    if not os.path.exists(trajectory_gsd_path):
+        print(f"Error: Missing sample_trajectory.gsd in {run_dir}. Cannot perform analysis.")
+        return
+
+    traj = gsd.hoomd.open(trajectory_gsd_path)
+
+    # 1. load analysis config
+    dimensions = simulation_config.get("dimensions")
+    analysis_config = get_analyze_config(dimensions)
+
+    results = {}
+
+    # 2 analysis loop: type-specific and global
+    # 2.1 type specific analysis loop
+    for p_info in particle_list:
+        pType = p_info["pType"]
+        pTypeShape = pType.split("_")[0]  # e.g. "disk" from "disk_1"
+        if pTypeShape in analysis_config:
+            instructions = analysis_config[pTypeShape]
+            # Execute all configured order parameters
+            type_results = _compute_shape_orders(traj, p_info, instructions["order_params"])
+            results[f"{pType}"] = type_results
+        else:
+            print(f"Warning: No analysis config found for shape {pType}")
+
+    # 2.2. rdf analysis loop
+    if len(particle_list) > 1:
+        # Simple loop for pairs
+        for i in range(len(particle_list)):
+            for j in range(i, len(particle_list)):
+                t1 = particle_list[i]["pType"]
+                t2 = particle_list[j]["pType"]
+                key = f"rdf_{t1}_{t2}"
+                results[key] = _compute_rdf(traj, query_type=t1, target_type=t2)
+
+    # save results to json
+    result_path = os.path.join(run_dir, "analysis_results.json")
+    with open(result_path, "w") as f:
+        json.dump(_make_serializable(results), f, indent=4)
+
+    simulation_config_analysis = simulation_config.copy()
+    simulation_config_analysis["analysis_results_path"] = result_path
+
+    with open(os.path.join(run_dir, "simulation_config_analysis.json"), "w") as f:
+        json.dump(simulation_config_analysis, f, indent=4)
+
+    return results
+
 
 
 def get_analyze_config(particle_list):
@@ -42,7 +119,10 @@ def get_analyze_config(particle_list):
     return config
 
 
-def analyze_compute(system_dir, density=None):
+
+
+
+def analyze_compute_old(system_dir, density=None):
     """
     Wrapper function that directs the analysis based on the number of particle components.
     """
@@ -86,7 +166,7 @@ def analyze_compute(system_dir, density=None):
         else:
             print(f"Warning: No analysis config found for shape {pType}")
 
-    # 2.1. rdf analysis loop
+    # 2.2. rdf analysis loop
     if len(particle_list) > 1:
         # Simple loop for pairs
         for i in range(len(particle_list)):
@@ -182,9 +262,16 @@ def _compute_rdf(traj, r_max=None, bins=100, query_type=None, target_type=None):
     # Determine r_max from the first frame if not provided
     if r_max is None:
         box = traj[0].configuration.box
-        # Use half the smallest box dimension, with a small buffer
-        min_dim = min(box[:3])  # Lx, Ly, Lz
+        # Use half the smallest non-zero box dimension (2D boxes have Lz == 0)
+        valid_dims = [d for d in box[:3] if d > 0]
+        if not valid_dims:
+            print("Skipping RDF: invalid box dimensions in first frame.")
+            return {"r": [], "g_r": []}
+        min_dim = min(valid_dims)  # Lx, Ly, (and Lz if 3D)
         r_max = min(5.0, min_dim / 2.0 * 0.99)
+        if r_max <= 0:
+            print("Skipping RDF: computed non-positive r_max.")
+            return {"r": [], "g_r": []}
         print(f"Auto-determined r_max for RDF: {r_max:.3f}")
 
     rdf = freud.density.RDF(bins=bins, r_max=r_max, r_min=0.1)
@@ -212,7 +299,10 @@ def _compute_rdf(traj, r_max=None, bins=100, query_type=None, target_type=None):
             target_points = points[type_ids == t_id]
 
         # Double check box constraints for safety
-        box_min_dim = min(box[:3])
+        valid_dims = [d for d in box[:3] if d > 0]
+        if not valid_dims:
+            continue
+        box_min_dim = min(valid_dims)
         if r_max > box_min_dim / 2.0:
             print(f"Skipping frame for RDF: box too small ({box_min_dim:.3f}) for r_max ({r_max:.3f})")
             continue

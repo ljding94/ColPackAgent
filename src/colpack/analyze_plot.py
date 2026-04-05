@@ -4,7 +4,28 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def analyze_plot(system_dir, density=None):
+def analyze_plot(run_dir, simulation_config):
+    results_path = simulation_config.get("analysis_results_path")
+    if not results_path or not os.path.exists(results_path):
+        print(f"Analysis results not found at {results_path}. Cannot perform plotting.")
+        return
+    with open(results_path, "r") as f:
+        results = json.load(f)
+
+    rdf_data = {}
+
+    for key, data in results.items():
+        if key.startswith("rdf_"):
+            rdf_data[key] = data
+            plot_filename = os.path.join(run_dir, f"plot_order_{key}")
+            _plot_shape_order(data, f"Order Parameters for {key}", plot_filename)
+
+    if rdf_data:
+        plot_filename = os.path.join(run_dir, "plot_rdf")
+        _plot_rdf(rdf_data, "Radial Distribution Function", plot_filename)
+
+
+def analyze_plot_old(system_dir, density=None):
     """
     Plots the analysis results stored in analysis_results.json in the system directory.
     """

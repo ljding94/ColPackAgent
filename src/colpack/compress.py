@@ -5,9 +5,6 @@ import json
 from colpack.helper import save_state, read_state_from_run
 from colpack.config_reading import get_workflow_config
 
-# TODO: add NPT compression
-# TODO: implement under the new workflow framework, reading the simulation_config_initial.json for further compression processing
-
 
 def compress_system(run_dir: str):
     if not run_dir:
