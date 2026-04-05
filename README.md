@@ -1,6 +1,23 @@
 # ColPackAgent
 
-ColPackAgent is a soft-matter simulation workflow package with an MCP server interface.
+ColPackAgent is an AI agent for Hard Particle Monte Carlo simulations.
+
+## 🚀 How to Use ColPackAgent
+
+ColPackAgent provides two ways to run the AI physics assistant: as a standalone terminal app, or as a native skill inside your favorite AI IDE (Claude Code, OpenCode, Cursor, etc.).
+
+### Route 1: Standalone Terminal App (Recommended for standard users)
+Run the AI directly from your terminal. The app will automatically connect the physics engine to the AI.
+1. Install the physics package and tools: `pip install -e ./src/`
+2. Install the agent dependencies: `pip install -r agent/requirements.txt`
+3. Launch the agent: `python agent/app.py`
+
+### Route 2: Bring Your Own Agent (For AI IDE users)
+If you already use an AI coding assistant, you can give it the ColPack skill directly.
+1. Install the tools to your environment: `pip install -e ./src/`
+2. Add the FastMCP server to your IDE's tool registry. For example, in OpenCode or Claude Code, run:
+   `mcp add colpack-tools command colpack-mcp`
+3. Point your AI to the skill instructions: Tell your agent to read `agent/skills/colpack/SKILL.md` and begin the workflow.
 
 ## Setup
 
