@@ -1,36 +1,36 @@
-# Ignore everything first
-*
+# Ignore everything first (root-level whitelist strategy)
+/*
 
 # Then allow specific files and folders
-!README.md
+!/README.md
 
-!doc
-!doc/**
+!/doc/
+!/doc/**
+
 # Explicitly include src tree needed for MCP
-!src/
-!src/colpack/
-!src/colpack/mcp/
-!src/colpack/mcp/**
+!/src/
+!/src/colpack/
+!/src/colpack/mcp/
+!/src/colpack/mcp/**
 
 # Keep Python cache ignored
-src/**/__pycache__/
-src/__pycache__/
+/src/**/__pycache__/
 
-!agent
-!agent/**
+!/agent/
+!/agent/**
 
 # plots
-!plots/
-!plots/*.py
+!/plots/
+!/plots/*.py
 
 
 # test
-!tests/
-!tests/**
-tests/__pycache__/
+!/tests/
+!/tests/**
+/tests/**/__pycache__/
 
 # Git and project files
-!.gitignore
+!/.gitignore
 
 # Python cache
 __pycache__/
