@@ -1,7 +1,7 @@
 from pathlib import Path
 import importlib.util
 import json
-from colpack.visualize_ovito import visualize_gsd
+import shutil
 
 
 def _find_project_root(start: Path) -> Path:
@@ -20,21 +20,23 @@ def _has_hoomd() -> bool:
 
 def _prepare_single_run_config(output_subdir, total_particle_number, particle_shape_list, baseline_parameters, seed, ensemble="NVT", target_volume_fraction=None, target_pressure=None):
     from colpack.workflow import setup_simulation_problem, plan_simulaiton_runs
+    from unittest.mock import patch
 
     project_root = _find_project_root(Path(__file__).resolve())
-    working_dir = project_root / "data" / "test" / output_subdir
-    working_dir.mkdir(parents=True, exist_ok=True)
+    case_root = project_root / "data" / "test" / output_subdir
+    shutil.rmtree(case_root, ignore_errors=True)
+    case_root.mkdir(parents=True, exist_ok=True)
 
-    setup_simulation_problem(
-        dimension=2,
-        total_particle_number=total_particle_number,
-        particle_shape_list=particle_shape_list,
-        ensemble=str(ensemble),
-        working_dir=str(working_dir),
-    )
+    with patch("colpack.workflow.resolve_working_dir_from_setup", return_value=str(case_root)):
+        problem = setup_simulation_problem(
+            dimension=2,
+            total_particle_number=total_particle_number,
+            particle_shape_list=particle_shape_list,
+            ensemble=str(ensemble),
+        )
+    working_dir = Path(problem["working_dir"])
 
     baseline = dict(baseline_parameters)
-    baseline["seed"] = int(seed)
 
     if ensemble == "NVT":
         if target_volume_fraction is None:
@@ -90,13 +92,105 @@ def test_run(total_particle_number, particle_shape_list, baseline_parameters, ou
     if ensemble == "NPT":
         assert float(sample_config["P"]) == float(target_pressure)
 
-    visualize_gsd(
-        gsd_path=run_dir / "sample_final.gsd",
-        output_path=run_dir / "sample_final_render.png",
-        frame_index=-1,
-        preview=False,
-        debug=False,
-    )
+
+def test_get_sample_trajectory_trigger_period():
+    from colpack.sample import _get_sample_trajectory_trigger_period
+
+    cases = [
+        (1, 1),
+        (49, 1),
+        (50, 1),
+        (51, 2),
+        (999, 20),
+        (49999, 1000),
+        (50000, 1000),
+        (200000, 1000),
+    ]
+
+    for sample_steps, expected_period in cases:
+        assert _get_sample_trajectory_trigger_period(sample_steps) == expected_period
+
+
+def test_get_sample_trajectory_trigger_period_rejects_non_positive_steps():
+    from colpack.sample import _get_sample_trajectory_trigger_period
+
+    try:
+        _get_sample_trajectory_trigger_period(0)
+    except ValueError as exc:
+        assert "sample_steps must be positive" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for non-positive sample_steps.")
+
+
+def test_get_move_tune_period():
+    from colpack.sample import _get_move_tune_period
+
+    cases = [
+        ((20000, 100, 10), 100),
+        ((1000, 100, 10), 100),
+        ((999, 100, 10), 100),
+        ((501, 100, 10), 51),
+        ((100, 100, 10), 10),
+        ((99, 100, 10), 10),
+        ((9, 100, 10), 1),
+        ((100, 7, 10), 7),
+    ]
+
+    for args, expected_period in cases:
+        assert _get_move_tune_period(*args) == expected_period
+
+
+def test_get_move_tune_period_rejects_invalid_inputs():
+    from colpack.sample import _get_move_tune_period
+
+    invalid_cases = [
+        (0, 100, 10, "sample_steps must be positive"),
+        (100, 0, 10, "configured_period must be positive"),
+        (100, 100, 0, "min_move_tune_updates must be positive"),
+    ]
+
+    for sample_steps, configured_period, min_move_tune_updates, expected_message in invalid_cases:
+        try:
+            _get_move_tune_period(sample_steps, configured_period, min_move_tune_updates)
+        except ValueError as exc:
+            assert expected_message in str(exc)
+        else:
+            raise AssertionError("Expected ValueError for invalid move tune period inputs.")
+
+
+def test_get_npt_boxmc_trigger_period():
+    from colpack.sample import _get_npt_boxmc_trigger_period
+
+    cases = [
+        ((20000, 10, 10), 10),
+        ((1000, 10, 10), 10),
+        ((99, 10, 10), 10),
+        ((51, 10, 10), 6),
+        ((50, 10, 10), 5),
+        ((9, 10, 10), 1),
+        ((100, 3, 10), 3),
+    ]
+
+    for args, expected_period in cases:
+        assert _get_npt_boxmc_trigger_period(*args) == expected_period
+
+
+def test_get_npt_boxmc_trigger_period_rejects_invalid_inputs():
+    from colpack.sample import _get_npt_boxmc_trigger_period
+
+    invalid_cases = [
+        (0, 10, 10, "sample_steps must be positive"),
+        (100, 0, 10, "configured_period must be positive"),
+        (100, 10, 0, "min_npt_boxmc_updates must be positive"),
+    ]
+
+    for sample_steps, configured_period, min_npt_boxmc_updates, expected_message in invalid_cases:
+        try:
+            _get_npt_boxmc_trigger_period(sample_steps, configured_period, min_npt_boxmc_updates)
+        except ValueError as exc:
+            assert expected_message in str(exc)
+        else:
+            raise AssertionError("Expected ValueError for invalid NPT BoxMC trigger inputs.")
 
 
 def main():

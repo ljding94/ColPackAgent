@@ -1,11 +1,54 @@
 import os
-import hoomd
 import json
-from colpack.helper import read_state, read_state_from_run, save_state, get_shape_meta_data, CustomGSDWriter
+from colpack.helper import read_state_from_run, save_state, get_shape_meta_data, CustomGSDWriter
 from colpack.config_reading import get_workflow_config
+from colpack.visualize_ovito import visualize_gsd
+
+
+MAX_SAMPLE_TRAJECTORY_TRIGGER_PERIOD = 1000
+TARGET_SAMPLE_TRAJECTORY_FRAMES = 50
+
+
+def _get_sample_trajectory_trigger_period(sample_steps: int) -> int:
+    if sample_steps <= 0:
+        raise ValueError("sample_steps must be positive.")
+
+    if sample_steps < TARGET_SAMPLE_TRAJECTORY_FRAMES:
+        return 1
+
+    return min(
+        MAX_SAMPLE_TRAJECTORY_TRIGGER_PERIOD,
+        max(1, (sample_steps + TARGET_SAMPLE_TRAJECTORY_FRAMES - 1) // TARGET_SAMPLE_TRAJECTORY_FRAMES),
+    )
+
+
+def _get_move_tune_period(sample_steps: int, configured_period: int, min_move_tune_updates: int) -> int:
+    if sample_steps <= 0:
+        raise ValueError("sample_steps must be positive.")
+    if configured_period <= 0:
+        raise ValueError("configured_period must be positive.")
+    if min_move_tune_updates <= 0:
+        raise ValueError("min_move_tune_updates must be positive.")
+
+    adaptive_period = max(1, (sample_steps + min_move_tune_updates - 1) // min_move_tune_updates)
+    return min(configured_period, adaptive_period)
+
+
+def _get_npt_boxmc_trigger_period(sample_steps: int, configured_period: int, min_npt_boxmc_updates: int) -> int:
+    if sample_steps <= 0:
+        raise ValueError("sample_steps must be positive.")
+    if configured_period <= 0:
+        raise ValueError("configured_period must be positive.")
+    if min_npt_boxmc_updates <= 0:
+        raise ValueError("min_npt_boxmc_updates must be positive.")
+
+    adaptive_period = max(1, (sample_steps + min_npt_boxmc_updates - 1) // min_npt_boxmc_updates)
+    return min(configured_period, adaptive_period)
 
 
 def sample_system(run_dir: str):
+    import hoomd
+
     if not run_dir:
         raise ValueError("run_dir must be provided.")
 
@@ -36,11 +79,24 @@ def sample_system(run_dir: str):
 
     workflow_config = get_workflow_config()
     sample_defaults = workflow_config.get("sample_defaults", {})
-    sample_steps = int(simulation_config.get("sample_steps", sample_defaults.get("sample_steps", 200000)))
-    move_tune_period = int(simulation_config.get("move_tune_period", sample_defaults.get("move_tune_period", 100)))
+    sample_steps = int(simulation_config.get("sample_steps", sample_defaults.get("sample_steps", 50000)))
+    configured_move_tune_period = int(simulation_config.get("move_tune_period", sample_defaults.get("move_tune_period", 100)))
+    min_move_tune_updates = int(simulation_config.get("min_move_tune_updates", sample_defaults.get("min_move_tune_updates", 10)))
+    move_tune_period = _get_move_tune_period(sample_steps, configured_move_tune_period, min_move_tune_updates)
     move_tune_target = float(simulation_config.get("move_tune_target", sample_defaults.get("move_tune_target", 0.2)))
     box_tune_target = float(simulation_config.get("box_tune_target", sample_defaults.get("box_tune_target", 0.3)))
     tune_warmup_steps = int(simulation_config.get("tune_warmup_steps", sample_defaults.get("tune_warmup_steps", 2000)))
+    configured_npt_boxmc_trigger_period = int(
+        simulation_config.get("npt_boxmc_trigger_period", sample_defaults.get("npt_boxmc_trigger_period", 10))
+    )
+    min_npt_boxmc_updates = int(
+        simulation_config.get("min_npt_boxmc_updates", sample_defaults.get("min_npt_boxmc_updates", 10))
+    )
+    npt_boxmc_trigger_period = _get_npt_boxmc_trigger_period(
+        sample_steps,
+        configured_npt_boxmc_trigger_period,
+        min_npt_boxmc_updates,
+    )
     npt_boxmc_volume_weight = float(simulation_config.get("npt_boxmc_volume_weight", sample_defaults.get("npt_boxmc_volume_weight", 1.0)))
     npt_boxmc_volume_mode = simulation_config.get("npt_boxmc_volume_mode", sample_defaults.get("npt_boxmc_volume_mode", "standard"))
     npt_boxmc_volume_delta = float(simulation_config.get("npt_boxmc_volume_delta", sample_defaults.get("npt_boxmc_volume_delta", 0.01)))
@@ -63,11 +119,11 @@ def sample_system(run_dir: str):
     compress_gsd_path = os.path.join(run_dir, "compress.gsd")
     if not os.path.exists(compress_gsd_path):
         raise FileNotFoundError(f"compress.gsd not found in {run_dir}")
-    sim, mc = read_state_from_run(simulation_config, gsd_file_path=os.path.join(run_dir, compress_gsd_path))
+    sim, mc = read_state_from_run(simulation_config, gsd_file_path=compress_gsd_path)
     particle_list = simulation_config.get("particle_list")
     # add NPT box updater
     if is_npt:
-        box_mc = hoomd.hpmc.update.BoxMC(trigger=hoomd.trigger.Periodic(10), P=P)
+        box_mc = hoomd.hpmc.update.BoxMC(trigger=hoomd.trigger.Periodic(npt_boxmc_trigger_period), P=P)
         box_mc.volume = dict(weight=npt_boxmc_volume_weight, mode=npt_boxmc_volume_mode, delta=npt_boxmc_volume_delta)
         sim.operations.updaters.append(box_mc)
 
@@ -94,8 +150,12 @@ def sample_system(run_dir: str):
 
     # sample and save trajectory
     traj_path = os.path.join(run_dir, "sample_trajectory.gsd")
+    trajectory_trigger_period = _get_sample_trajectory_trigger_period(sample_steps)
     gsd_writer_action = CustomGSDWriter(particle_list=particle_list, filename=traj_path, directory=run_dir, mode="w")
-    gsd_writer = hoomd.write.CustomWriter(action=gsd_writer_action, trigger=hoomd.trigger.Periodic(1000))
+    gsd_writer = hoomd.write.CustomWriter(
+        action=gsd_writer_action,
+        trigger=hoomd.trigger.Periodic(trajectory_trigger_period),
+    )
 
     sim.operations.writers.append(gsd_writer)
 
@@ -117,84 +177,17 @@ def sample_system(run_dir: str):
     simulation_config_sample["sample_translation_moves"] = mc.translate_moves
     simulation_config_sample["sample_rotation_moves"] = mc.rotate_moves
     simulation_config_sample["sample_overlaps"] = mc.overlaps
+    simulation_config_sample["sample_trajectory_trigger_period"] = trajectory_trigger_period
+    simulation_config_sample["sample_move_tune_period"] = move_tune_period
+    simulation_config_sample["min_move_tune_updates"] = min_move_tune_updates
+    if is_npt:
+        simulation_config_sample["sample_npt_boxmc_trigger_period"] = npt_boxmc_trigger_period
+        simulation_config_sample["min_npt_boxmc_updates"] = min_npt_boxmc_updates
+        simulation_config_sample["sample_box_moves"] = getattr(box_mc, "volume_moves", None)
     simulation_config_sample_path = os.path.join(run_dir, "simulation_config_sample.json")
     with open(simulation_config_sample_path, "w") as f:
         json.dump(simulation_config_sample, f, indent=4)
 
+    visualize_gsd(gsd_path=gsd_path, output_path=os.path.join(run_dir, "sample_final_render.png"), frame_index=-1)
+
     return simulation_config_sample
-
-
-def sample_system_old(sample_steps, system_dir, density=None, seed=0):
-    """
-    particle_list_json, compressed_gsd files are expected in system_dir
-    then perform thermalization for a given number of steps
-    finally save the thermalized system to system_dir/thermalized.gsd
-    """
-    # load particle list and initial gsd
-    if density is not None:
-        compress_summar_path = os.path.join(system_dir, f"compress_summary_n{density:.3f}.json")
-        compress_gsd_path = os.path.join(system_dir, f"compressed_n{density:.3f}.gsd")
-    else:
-        compress_summar_path = os.path.join(system_dir, "compress_summary.json")
-        compress_gsd_path = os.path.join(system_dir, "compressed.gsd")
-
-    sim, mc, compress_summary = read_state(compress_summar_path, compress_gsd_path)
-
-    # tune the trial size at the begining, before sampling
-    tune = hoomd.hpmc.tune.MoveSize.scale_solver(
-        moves=["a", "d"],
-        target=0.2,
-        trigger=hoomd.trigger.And([hoomd.trigger.Periodic(100), hoomd.trigger.Before(sim.timestep + 2000)]),
-    )
-    sim.operations.tuners.append(tune)
-    sim.run(2000)  # run some steps for tuning
-
-    # add shape metadata to sim
-    sim.state.type_shapes = get_shape_meta_data(compress_summary["particle_list"])
-
-    # save the sampling trajectories
-    # sampling_folder = os.path.join(system_dir, "sampling")
-    # os.makedirs(sampling_folder, exist_ok=True)
-    # gsd_writer = hoomd.write.GSD(filename=gsd_writer_path, trigger=hoomd.trigger.Periodic(1000), mode="wb")
-    # splitter = GSDSplitter(particle_list=compress_summary["particle_list"], directory=sampling_folder, prefix="sample_frame")
-    # gsd_writer = hoomd.write.CustomWriter(action=splitter, trigger=hoomd.trigger.Periodic(1000))
-
-    if density is not None:
-        traj_path = os.path.join(system_dir, f"sample_trajectory_n{density:.3f}.gsd")
-    else:
-        traj_path = os.path.join(system_dir, "sample_trajectory.gsd")
-
-    gsd_writer_action = CustomGSDWriter(particle_list=compress_summary["particle_list"], filename=traj_path, directory=system_dir, mode="w")
-    gsd_writer = hoomd.write.CustomWriter(action=gsd_writer_action, trigger=hoomd.trigger.Periodic(1000))
-
-    sim.operations.writers.append(gsd_writer)
-
-    sim.run(sample_steps)
-    print(f"sampling completed after {sample_steps} steps.")
-    print("sample overlaps:", mc.overlaps)
-    print(f"sample move size: {mc.translate_moves}, rotation move size: {mc.rotate_moves}")
-
-    # remove writer after sampling
-    sim.operations.writers.remove(gsd_writer)
-
-    # save final state
-    if density is not None:
-        gsd_path = os.path.join(system_dir, f"sample_final_n{density:.3f}.gsd")
-    else:
-        gsd_path = os.path.join(system_dir, "sample_final.gsd")
-
-    save_state(sim, compress_summary["particle_list"], gsd_path)
-
-    summary = compress_summary.copy()
-    summary["sample_steps"] = sample_steps
-    summary["overlaps"] = mc.overlaps
-
-    if density is not None:
-        summary_path = os.path.join(system_dir, f"sample_summary_n{density:.3f}.json")
-    else:
-        summary_path = os.path.join(system_dir, "sample_summary.json")
-
-    with open(summary_path, "w") as f:
-        json.dump(summary, f, indent=4)
-
-    return summary

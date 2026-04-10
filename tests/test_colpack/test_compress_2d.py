@@ -2,6 +2,7 @@ from pathlib import Path
 import importlib.util
 import math
 import json
+import shutil
 from colpack.visualize_ovito import visualize_gsd
 
 
@@ -21,21 +22,23 @@ def _has_hoomd() -> bool:
 
 def _prepare_single_run_config(output_subdir, total_particle_number, particle_shape_list, baseline_parameters, seed, ensemble="NVT", target_volume_fraction=None, target_pressure=None):
     from colpack.workflow import setup_simulation_problem, plan_simulaiton_runs
+    from unittest.mock import patch
 
     project_root = _find_project_root(Path(__file__).resolve())
-    working_dir = project_root / "data" / "test" / output_subdir
-    working_dir.mkdir(parents=True, exist_ok=True)
+    case_root = project_root / "data" / "test" / output_subdir
+    shutil.rmtree(case_root, ignore_errors=True)
+    case_root.mkdir(parents=True, exist_ok=True)
 
-    setup_simulation_problem(
-        dimension=3,
-        total_particle_number=total_particle_number,
-        particle_shape_list=particle_shape_list,
-        ensemble=str(ensemble),
-        working_dir=str(working_dir),
-    )
+    with patch("colpack.workflow.resolve_working_dir_from_setup", return_value=str(case_root)):
+        problem = setup_simulation_problem(
+            dimension=2,
+            total_particle_number=total_particle_number,
+            particle_shape_list=particle_shape_list,
+            ensemble=str(ensemble),
+        )
+    working_dir = Path(problem["working_dir"])
 
     baseline = dict(baseline_parameters)
-    baseline["seed"] = int(seed)
 
     if ensemble == "NVT":
         if target_volume_fraction is None:
@@ -103,170 +106,170 @@ def test_run(total_particle_number, particle_shape_list, baseline_parameters, ou
 
 def main():
     if not _has_hoomd():
-        print("Skipping test_compress_3d.py: 'hoomd' is not installed in the current Python environment.")
+        print("Skipping test_compress_2d.py: 'hoomd' is not installed in the current Python environment.")
         return
 
-    print("testing compression of 3d systems...\n")
+    print("testing compression of 2d systems...\n")
 
-    '''
     test_run(
         total_particle_number=100,
-        particle_shape_list=["sphere"],
+        particle_shape_list=["disk"],
         baseline_parameters={
             "particle_specs.0.diameter": 1.0,
         },
-        output_subdir="3d_sphere",
+        output_subdir="2d_disk",
         seed=42,
         ensemble="NVT",
         target_volume_fraction=0.30,
     )
-    print("test_compress_3d_sphere: OK\n")
-
-    test_run(
-        total_particle_number=60,
-        particle_shape_list=["sphere", "sphere"],
-        baseline_parameters={
-            "particle_specs.0.diameter": 1.0,
-            "particle_specs.1.diameter": 0.5,
-            "particle_specs.1.relative_volume_fraction": 0.5,
-        },
-        output_subdir="3d_sphere_sphere",
-        seed=42,
-        ensemble="NVT",
-        target_volume_fraction=0.30,
-    )
-    print("test_compress_3d_sphere_sphere: OK\n")
+    print("test_compress_2d_disk: OK\n")
 
     test_run(
         total_particle_number=50,
-        particle_shape_list=["ellipsoid", "ellipsoid"],
+        particle_shape_list=["disk", "disk"],
         baseline_parameters={
-            "particle_specs.0.a": 1.0,
-            "particle_specs.0.b": 0.8,
-            "particle_specs.0.c": 0.6,
-            "particle_specs.1.a": 1.0,
-            "particle_specs.1.b": 0.5,
-            "particle_specs.1.c": 0.4,
-            "particle_specs.1.relative_volume_fraction": 0.7,
+            "particle_specs.0.diameter": 2.0,
+            "particle_specs.1.diameter": 1.0,
+            "particle_specs.1.relative_volume_fraction": 1.0,
         },
-        output_subdir="3d_ellipsoid",
-        seed=123,
+        output_subdir="2d_disk_disk",
+        seed=42,
         ensemble="NVT",
         target_volume_fraction=0.30,
     )
-    print("test_compress_3d_ellipsoid: OK\n")
+    print("test_compress_2d_disk_disk: OK\n")
 
     test_run(
-        total_particle_number=100,
+        total_particle_number=30,
+        particle_shape_list=["ellipse", "ellipse"],
+        baseline_parameters={
+            "particle_specs.0.a": 1.0,
+            "particle_specs.0.b": 0.8,
+            "particle_specs.1.a": 1.0,
+            "particle_specs.1.b": 0.4,
+            "particle_specs.1.relative_volume_fraction": 0.5,
+        },
+        output_subdir="2d_ellipse_ellipse",
+        seed=42,
+        ensemble="NVT",
+        target_volume_fraction=0.25,
+    )
+    print("test_compress_2d_ellipse_ellipse: OK\n")
+
+    test_run(
+        total_particle_number=30,
+        particle_shape_list=["disk", "ellipse"],
+        baseline_parameters={
+            "particle_specs.0.diameter": 1.2,
+            "particle_specs.1.a": 1.0,
+            "particle_specs.1.b": 0.6,
+            "particle_specs.1.relative_volume_fraction": 0.5,
+        },
+        output_subdir="2d_disk_ellipse",
+        seed=123,
+        ensemble="NVT",
+        target_volume_fraction=0.25,
+    )
+    print("test_compress_2d_disk_ellipse: OK\n")
+
+    test_run(
+        total_particle_number=30,
+        particle_shape_list=["disk", "rectangle"],
+        baseline_parameters={
+            "particle_specs.0.diameter": 1.0,
+            "particle_specs.1.length": 2.0,
+            "particle_specs.1.width": 1.0,
+            "particle_specs.1.relative_volume_fraction": 0.5,
+        },
+        output_subdir="2d_disk_rectangle",
+        seed=321,
+        ensemble="NVT",
+        target_volume_fraction=0.30,
+    )
+    print("test_compress_2d_disk_rectangle: OK\n")
+
+    test_run(
+        total_particle_number=50,
         particle_shape_list=["capsule"],
         baseline_parameters={
             "particle_specs.0.length": 2.0,
             "particle_specs.0.diameter": 1.0,
         },
-        output_subdir="3d_capsule",
-        seed=303,
+        output_subdir="2d_capsule",
+        seed=456,
         ensemble="NVT",
-        target_volume_fraction=0.28,
+        target_volume_fraction=0.25,
     )
-    print("test_compress_3d_capsule: OK\n")
+    print("test_compress_2d_capsule: OK\n")
 
     test_run(
-        total_particle_number=50,
-        particle_shape_list=["sphere", "capsule"],
+        total_particle_number=30,
+        particle_shape_list=["disk", "capsule"],
         baseline_parameters={
             "particle_specs.0.diameter": 1.0,
             "particle_specs.1.length": 2.0,
             "particle_specs.1.diameter": 0.6,
-            "particle_specs.1.relative_volume_fraction": 0.8,
+            "particle_specs.1.relative_volume_fraction": 1.0,
         },
-        output_subdir="3d_sphere_capsule",
-        seed=303,
-        ensemble="NVT",
-        target_volume_fraction=0.28,
-    )
-    print("test_compress_3d_sphere_capsule: OK\n")
-
-    test_run(
-        total_particle_number=50,
-        particle_shape_list=["sphere", "cube"],
-        baseline_parameters={
-            "particle_specs.0.diameter": 1.0,
-            "particle_specs.1.side": 1.0,
-            "particle_specs.1.relative_volume_fraction": 0.8,
-        },
-        output_subdir="3d_sphere_cube",
-        seed=202,
+        output_subdir="2d_disk_capsule",
+        seed=456,
         ensemble="NVT",
         target_volume_fraction=0.30,
     )
-    print("test_compress_3d_sphere_cube: OK\n")
+    print("test_compress_2d_disk_capsule: OK\n")
 
     test_run(
-        total_particle_number=50,
-        particle_shape_list=["sphere", "tetrahedron"],
+        total_particle_number=30,
+        particle_shape_list=["disk", "triangle"],
         baseline_parameters={
             "particle_specs.0.diameter": 1.0,
-            "particle_specs.1.side": 1.2,
-            "particle_specs.1.relative_volume_fraction": 0.8,
+            "particle_specs.1.side": 1.5,
+            "particle_specs.1.relative_volume_fraction": 1.0,
         },
-        output_subdir="3d_sphere_tetrahedron",
-        seed=42,
+        output_subdir="2d_disk_triangle",
+        seed=654,
         ensemble="NVT",
         target_volume_fraction=0.30,
     )
-    print("test_compress_3d_sphere_tetrahedron: OK\n")
-
-    test_run(
-        total_particle_number=50,
-        particle_shape_list=["sphere", "octahedron"],
-        baseline_parameters={
-            "particle_specs.0.diameter": 1.0,
-            "particle_specs.1.side": 1.2,
-            "particle_specs.1.relative_volume_fraction": 0.8,
-        },
-        output_subdir="3d_sphere_octahedron",
-        seed=101,
-        ensemble="NVT",
-        target_volume_fraction=0.30,
-    )
-    print("test_compress_3d_sphere_octahedron: OK\n")
+    print("test_compress_2d_disk_triangle: OK\n")
 
     test_run(
         total_particle_number=40,
-        particle_shape_list=["sphere", "capsule", "tetrahedron", "cube"],
+        particle_shape_list=["disk", "rectangle", "capsule", "triangle"],
         baseline_parameters={
-            "particle_specs.0.diameter": 1.0,
+            "particle_specs.0.diameter": 1.5,
             "particle_specs.1.length": 2.0,
-            "particle_specs.1.diameter": 0.6,
-            "particle_specs.2.side": 1.2,
-            "particle_specs.3.side": 1.0,
+            "particle_specs.1.width": 1.0,
+            "particle_specs.2.length": 2.0,
+            "particle_specs.2.diameter": 0.6,
+            "particle_specs.3.side": 1.5,
             "particle_specs.1.relative_volume_fraction": 1.0,
             "particle_specs.2.relative_volume_fraction": 1.0,
             "particle_specs.3.relative_volume_fraction": 1.0,
         },
-        output_subdir="3d_multi_shapes",
-        seed=555,
+        output_subdir="2d_multi_shapes",
+        seed=789,
         ensemble="NVT",
         target_volume_fraction=0.30,
     )
-    print("test_compress_3d_multi_shapes: OK\n")
-    '''
+    print("test_compress_2d_multi_shapes: OK\n")
+
     test_run(
-        total_particle_number=50,
-        particle_shape_list=["sphere", "capsule"],
+        total_particle_number=40,
+        particle_shape_list=["disk", "ellipse"],
         baseline_parameters={
             "particle_specs.0.diameter": 1.0,
-            "particle_specs.1.length": 2.0,
-            "particle_specs.1.diameter": 0.6,
-            "particle_specs.1.relative_volume_fraction": 0.8,
-            "P": 1.5,
+            "particle_specs.1.a": 1.0,
+            "particle_specs.1.b": 0.6,
+            "particle_specs.1.relative_volume_fraction": 0.7,
+            "P": 1.2,
         },
-        output_subdir="3d_sphere_capsule_npt",
-        seed=912,
+        output_subdir="2d_disk_ellipse_npt",
+        seed=911,
         ensemble="NPT",
-        target_pressure=1.5,
+        target_pressure=1.2,
     )
-    print("test_compress_3d_npt: OK\n")
+    print("test_compress_2d_npt: OK\n")
 
 
 if __name__ == "__main__":

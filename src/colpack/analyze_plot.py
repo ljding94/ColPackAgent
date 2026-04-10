@@ -1,28 +1,62 @@
 import os
 import json
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib
+
+# ColPack plotting runs in batch workflow threads on macOS; GUI backends crash there.
+matplotlib.use("Agg", force=True)
+
+
+def _get_pyplot():
+    import matplotlib.pyplot as plt
+
+    return plt
+
+
+def _resolve_results_path(run_dir, results_path):
+    if not results_path:
+        return ""
+    if os.path.isabs(results_path):
+        return results_path
+
+    candidates = [
+        os.path.abspath(results_path),
+        os.path.abspath(os.path.join(run_dir, results_path)),
+        os.path.abspath(os.path.join(run_dir, os.path.basename(results_path))),
+    ]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    return candidates[-1]
 
 
 def analyze_plot(run_dir, simulation_config):
-    results_path = simulation_config.get("analysis_results_path")
+    run_dir = os.path.abspath(os.path.expanduser(run_dir))
+    results_path = _resolve_results_path(run_dir, simulation_config.get("analysis_results_path"))
     if not results_path or not os.path.exists(results_path):
         print(f"Analysis results not found at {results_path}. Cannot perform plotting.")
-        return
+        return {"generated_files": [], "n_generated_files": 0}
     with open(results_path, "r") as f:
         results = json.load(f)
 
     rdf_data = {}
+    generated_files = []
 
     for key, data in results.items():
         if key.startswith("rdf_"):
             rdf_data[key] = data
+        else:
             plot_filename = os.path.join(run_dir, f"plot_order_{key}")
-            _plot_shape_order(data, f"Order Parameters for {key}", plot_filename)
+            generated_files.extend(_plot_shape_order(data, f"Order Parameters for {key}", plot_filename))
 
     if rdf_data:
         plot_filename = os.path.join(run_dir, "plot_rdf")
-        _plot_rdf(rdf_data, "Radial Distribution Function", plot_filename)
+        generated_files.extend(_plot_rdf(rdf_data, "Radial Distribution Function", plot_filename))
+
+    return {
+        "generated_files": generated_files,
+        "n_generated_files": len(generated_files),
+    }
 
 
 def analyze_plot_old(system_dir, density=None):
@@ -63,6 +97,7 @@ def analyze_plot_old(system_dir, density=None):
 
 
 def _plot_shape_order(results, title, filename):
+    plt = _get_pyplot()
     fig = plt.figure(figsize=(10.0 / 3 * 1.2, 10.0 / 3 * 1.0))
     ax1 = fig.add_subplot(111)
 
@@ -87,12 +122,16 @@ def _plot_shape_order(results, title, filename):
     ax1.legend(frameon=False, fontsize=7, loc="best")
 
     plt.tight_layout(pad=0.2)
-    plt.savefig(filename + ".png", dpi=300)
-    plt.savefig(filename + ".pdf", dpi=300, format="pdf")
+    png_path = filename + ".png"
+    pdf_path = filename + ".pdf"
+    plt.savefig(png_path, dpi=300)
+    plt.savefig(pdf_path, dpi=300, format="pdf")
     plt.close()
+    return [png_path, pdf_path]
 
 
 def _plot_rdf(results, title, filename):
+    plt = _get_pyplot()
     fig = plt.figure(figsize=(10.0 / 3 * 1.0, 10.0 / 3 * 0.8))
     ax1 = fig.add_subplot(111)
     for label, data in results.items():
@@ -104,6 +143,9 @@ def _plot_rdf(results, title, filename):
     ax1.set_title(title, fontsize=9)
     ax1.legend(frameon=False, fontsize=7, loc="upper left", ncol=2, columnspacing=0.5, handlelength=1, handletextpad=0.2, labelspacing=0.1)
     plt.tight_layout(pad=0.2)
-    plt.savefig(filename + ".png", dpi=600)
-    plt.savefig(filename + ".pdf", dpi=600, format="pdf")
+    png_path = filename + ".png"
+    pdf_path = filename + ".pdf"
+    plt.savefig(png_path, dpi=600)
+    plt.savefig(pdf_path, dpi=600, format="pdf")
     plt.close()
+    return [png_path, pdf_path]

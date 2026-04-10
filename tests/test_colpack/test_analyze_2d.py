@@ -22,10 +22,13 @@ def run_analyze(output_subdir):
     project_root = _find_project_root(Path(__file__).resolve())
     run_dir = project_root / "data" / "test" / output_subdir / "run_0"
     print(f"run_analyze: run_dir: {run_dir}")
-    analyze_main(run_dir=str(run_dir))
+    summary = analyze_main(run_dir=str(run_dir))
 
     assert (run_dir / "simulation_config_analysis.json").exists()
     assert (run_dir / "analysis_results.json").exists()
+    assert summary["n_generated_plot_files"] > 0
+    for path in summary["generated_plot_files"]:
+        assert Path(path).exists()
 
     with (run_dir / "simulation_config_analysis.json").open("r", encoding="utf-8") as f:
         analyzed_config = json.load(f)
@@ -35,19 +38,19 @@ def run_analyze(output_subdir):
 
 def main():
     if not _has_hoomd():
-        print("Skipping test_analyze_3d.py: 'hoomd' is not installed in the current Python environment.")
+        print("Skipping test_analyze_2d.py: 'hoomd' is not installed in the current Python environment.")
         return
 
-    print("testing analysis of 3d systems...\n")
+    print("testing analysis of 2d systems...\n")
 
-    run_analyze(output_subdir="3d_sphere")
-    print("test_analyze_3d_sphere: OK\n")
+    run_analyze(output_subdir="2d_disk")
+    print("test_analyze_2d_disk: OK\n")
 
-    run_analyze(output_subdir="3d_sphere_capsule")
-    print("test_analyze_3d_sphere_capsule: OK\n")
+    run_analyze(output_subdir="2d_disk_capsule")
+    print("test_analyze_2d_disk_capsule: OK\n")
 
-    run_analyze(output_subdir="3d_sphere_capsule_npt")
-    print("test_analyze_3d_npt: OK\n")
+    run_analyze(output_subdir="2d_disk_ellipse_npt")
+    print("test_analyze_2d_npt: OK\n")
 
 
 if __name__ == "__main__":

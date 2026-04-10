@@ -1,5 +1,6 @@
 from pathlib import Path
 import importlib.util
+import shutil
 from colpack.visualize_ovito import visualize_gsd
 
 
@@ -19,24 +20,26 @@ def _has_hoomd() -> bool:
 
 def _prepare_single_run_config(output_subdir, total_particle_number, particle_shape_list, baseline_parameters, seed, ensemble="NVT"):
     from colpack.workflow import setup_simulation_problem, plan_simulaiton_runs
+    from unittest.mock import patch
 
     project_root = _find_project_root(Path(__file__).resolve())
-    working_dir = project_root / "data" / "test" / output_subdir
-    working_dir.mkdir(parents=True, exist_ok=True)
+    case_root = project_root / "data" / "test" / output_subdir
+    shutil.rmtree(case_root, ignore_errors=True)
+    case_root.mkdir(parents=True, exist_ok=True)
 
-    setup_simulation_problem(
-        dimension=3,
-        total_particle_number=total_particle_number,
-        particle_shape_list=particle_shape_list,
-        ensemble=str(ensemble),
-        working_dir=str(working_dir),
-    )
+    with patch("colpack.workflow.resolve_working_dir_from_setup", return_value=str(case_root)):
+        problem = setup_simulation_problem(
+            dimension=3,
+            total_particle_number=total_particle_number,
+            particle_shape_list=particle_shape_list,
+            ensemble=str(ensemble),
+        )
+    working_dir = Path(problem["working_dir"])
 
     baseline = dict(baseline_parameters)
-    baseline["seed"] = int(seed)
     planning = plan_simulaiton_runs(
         baseline_parameters=baseline,
-        tunable_parameters={"seed": [int(seed)]},
+        tunable_parameters={"volume_fraction": [0.3]},
         working_dir=str(working_dir),
     )
     run_dir = Path(planning["simulation_runs"][0]["run_dir"])

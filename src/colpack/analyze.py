@@ -4,8 +4,22 @@ import numpy as np
 import freud
 import rowan
 import gsd.hoomd
-import matplotlib.pyplot as plt
 from colpack.analyze_plot import analyze_plot
+
+
+def _normalize_run_dir(run_dir):
+    if not run_dir:
+        raise ValueError("run_dir must be provided.")
+    return os.path.abspath(os.path.expanduser(run_dir))
+
+
+def _resolve_dimension(simulation_config):
+    dimension = simulation_config.get("dimension")
+    if dimension is None:
+        dimension = simulation_config.get("dimensions")
+    if dimension is None:
+        return None
+    return int(dimension)
 
 
 def analyze_main(run_dir):
@@ -14,12 +28,12 @@ def analyze_main(run_dir):
     It will read the compress_summary.json and sample_trajectory.gsd from the system_dir,
     then perform analysis based on the particle types and shapes, and save the results to analysis_results.json
     """
+    run_dir = _normalize_run_dir(run_dir)
 
     # 0 some error handling and check the required files
     simulation_config_path = os.path.join(run_dir, "simulation_config_sample.json")
     if not os.path.exists(simulation_config_path):
-        print(f"Error: Missing simulation_config_sample.json in {run_dir}. Cannot perform analysis.")
-        return
+        raise FileNotFoundError(f"Missing simulation_config_sample.json in {run_dir}. Cannot perform analysis.")
 
     with open(simulation_config_path, "r") as f:
         simulation_config = json.load(f)
@@ -30,33 +44,45 @@ def analyze_main(run_dir):
     # 2.0 find the post analysis simulation config path
     simulation_config_path = os.path.join(run_dir, "simulation_config_analysis.json")
     if not os.path.exists(simulation_config_path):
-        print(f"Error: Missing simulation_config_analysis.json in {run_dir}. Cannot perform plotting.")
-        return
+        raise FileNotFoundError(f"Missing simulation_config_analysis.json in {run_dir}. Cannot perform plotting.")
 
     with open(simulation_config_path, "r") as f:
         simulation_config = json.load(f)
     # 2. plot the analysis results and save the figures
-    analyze_plot(run_dir, simulation_config)
+    plot_summary = analyze_plot(run_dir, simulation_config)
+
+    # 3. validate plotting outputs so workflow status does not silently pass on partial analysis.
+    generated_files = plot_summary.get("generated_files", []) if isinstance(plot_summary, dict) else []
+    if not generated_files:
+        raise RuntimeError(f"No analysis plots were generated for {run_dir}.")
+
+    missing_files = [path for path in generated_files if not os.path.exists(path)]
+    if missing_files:
+        raise FileNotFoundError(f"Expected analysis plot files were not created: {missing_files}")
+
+    return {
+        "generated_plot_files": generated_files,
+        "n_generated_plot_files": len(generated_files),
+    }
 
 
 def analyze_compute(run_dir, simulation_config):
+    run_dir = _normalize_run_dir(run_dir)
     particle_list = simulation_config.get("particle_list")
     if not particle_list:
-        print(f"Error: No particle_list found in simulation_config_sample.json in {run_dir}. Cannot perform analysis.")
-        return
+        raise ValueError(f"No particle_list found in simulation_config_sample.json in {run_dir}. Cannot perform analysis.")
 
     print(f"--- Starting Analysis for {run_dir} --- ")
 
     trajectory_gsd_path = os.path.join(run_dir, "sample_trajectory.gsd")
     if not os.path.exists(trajectory_gsd_path):
-        print(f"Error: Missing sample_trajectory.gsd in {run_dir}. Cannot perform analysis.")
-        return
+        raise FileNotFoundError(f"Missing sample_trajectory.gsd in {run_dir}. Cannot perform analysis.")
 
     traj = gsd.hoomd.open(trajectory_gsd_path)
 
     # 1. load analysis config
-    dimensions = simulation_config.get("dimensions")
-    analysis_config = get_analyze_config(dimensions)
+    dimension = _resolve_dimension(simulation_config)
+    analysis_config = get_analyze_config(dimension)
 
     results = {}
 
@@ -84,7 +110,7 @@ def analyze_compute(run_dir, simulation_config):
                 results[key] = _compute_rdf(traj, query_type=t1, target_type=t2)
 
     # save results to json
-    result_path = os.path.join(run_dir, "analysis_results.json")
+    result_path = os.path.abspath(os.path.join(run_dir, "analysis_results.json"))
     with open(result_path, "w") as f:
         json.dump(_make_serializable(results), f, indent=4)
 
@@ -97,29 +123,50 @@ def analyze_compute(run_dir, simulation_config):
     return results
 
 
-
-def get_analyze_config(particle_list):
+def get_analyze_config(dimension=None):
     """
     Dynamically builds analysis config based on particle geometry.
     """
+    if dimension is not None and int(dimension) not in (2, 3):
+        raise ValueError(f"Unsupported dimension for analysis: {dimension}")
+
     config = {
         # --- 2D SHAPES ---
         "disk": {"order_params": [{"name": "hexatic_6", "func": freud.order.Hexatic(k=6)}]},
-        "triangle": {"order_params": [{"name": "hexatic_6", "func": freud.order.Hexatic(k=6)}]},
-        "square": {"order_params": [{"name": "hexatic_4", "func": freud.order.Hexatic(k=6)}]},
+        "triangle": {"order_params": [{"name": "hexatic_6", "func": freud.order.Hexatic(k=6)}, {"name": "hexatic_3", "func": freud.order.Hexatic(k=3)}]},  # checks for 3-fold symmetry
+        "square": {"order_params": [{"name": "hexatic_4", "func": freud.order.Hexatic(k=4)}]},
         "rectangle": {"order_params": [{"name": "nematic", "func": freud.order.Nematic()}, {"name": "hexatic_2", "func": freud.order.Hexatic(k=2)}]},  # smectic-like checks
         "ellipse": {"order_params": [{"name": "nematic", "func": freud.order.Nematic()}]},
         # --- 3D SHAPES ---
         "sphere": {"order_params": [{"name": "steinhardt_q6", "func": freud.order.Steinhardt(l=6)}, {"name": "steinhardt_q4", "func": freud.order.Steinhardt(l=4)}]},
         "ellipsoid": {"order_params": [{"name": "nematic", "func": freud.order.Nematic()}]},
         "capsule": {"order_params": [{"name": "nematic", "func": freud.order.Nematic()}]},
-        "tedrahedron": {"order_params": [{"name": "steinhardt_q3", "func": freud.order.Steinhardt(l=3)}]},
+        "tetrahedron": {"order_params": [{"name": "steinhardt_q3", "func": freud.order.Steinhardt(l=3)}]},
         "cube": {"order_params": [{"name": "steinhardt_q4", "func": freud.order.Steinhardt(l=4)}]},  # No args needed for Cubatic usually
     }
     return config
 
 
+def _determine_rdf_r_max(traj, max_cap=5.0):
+    min_dim = None
+    for frame in traj:
+        valid_dims = [d for d in frame.configuration.box[:3] if d > 0]
+        if not valid_dims:
+            continue
+        frame_min_dim = min(valid_dims)
+        min_dim = frame_min_dim if min_dim is None else min(min_dim, frame_min_dim)
 
+    if min_dim is None:
+        print("Skipping RDF: invalid box dimensions across trajectory.")
+        return None
+
+    r_max = min(max_cap, min_dim / 2.0 * 0.99)
+    if r_max <= 0:
+        print("Skipping RDF: computed non-positive r_max.")
+        return None
+
+    print(f"Auto-determined r_max for RDF: {r_max:.3f}")
+    return r_max
 
 
 def analyze_compute_old(system_dir, density=None):
@@ -206,7 +253,7 @@ def _compute_shape_orders(traj, p_info, order_params_list):
         box = frame.configuration.box
         positions = frame.particles.position
         orientations_0 = frame.particles.orientation
-        #update orientation based on the long axis from the p_info
+        # Update orientation based on the long axis from p_info.
         director = p_info.get("pDirector")
         if director is None:
             director = [1, 0, 0]
@@ -261,20 +308,13 @@ def _compute_rdf(traj, r_max=None, bins=100, query_type=None, target_type=None):
     """
     # Determine r_max from the first frame if not provided
     if r_max is None:
-        box = traj[0].configuration.box
-        # Use half the smallest non-zero box dimension (2D boxes have Lz == 0)
-        valid_dims = [d for d in box[:3] if d > 0]
-        if not valid_dims:
-            print("Skipping RDF: invalid box dimensions in first frame.")
+        r_max = _determine_rdf_r_max(traj)
+        if r_max is None:
             return {"r": [], "g_r": []}
-        min_dim = min(valid_dims)  # Lx, Ly, (and Lz if 3D)
-        r_max = min(5.0, min_dim / 2.0 * 0.99)
-        if r_max <= 0:
-            print("Skipping RDF: computed non-positive r_max.")
-            return {"r": [], "g_r": []}
-        print(f"Auto-determined r_max for RDF: {r_max:.3f}")
 
     rdf = freud.density.RDF(bins=bins, r_max=r_max, r_min=0.1)
+    computed_frames = 0
+    skipped_frames = 0
 
     for frame in traj:
         box = frame.configuration.box
@@ -298,16 +338,30 @@ def _compute_rdf(traj, r_max=None, bins=100, query_type=None, target_type=None):
             query_points = points[type_ids == q_id]
             target_points = points[type_ids == t_id]
 
+        if len(query_points) == 0 or len(target_points) == 0:
+            continue
+
         # Double check box constraints for safety
         valid_dims = [d for d in box[:3] if d > 0]
         if not valid_dims:
             continue
         box_min_dim = min(valid_dims)
         if r_max > box_min_dim / 2.0:
-            print(f"Skipping frame for RDF: box too small ({box_min_dim:.3f}) for r_max ({r_max:.3f})")
+            skipped_frames += 1
             continue
 
         rdf.compute(system=(box, target_points), query_points=query_points, reset=False)
+        computed_frames += 1
+
+    if computed_frames == 0:
+        if skipped_frames:
+            print(
+                f"Skipping RDF: no frames satisfied the box-size requirement for r_max={r_max:.3f}."
+            )
+        return {"r": [], "g_r": []}
+
+    if skipped_frames:
+        print(f"Skipped {skipped_frames} frame(s) for RDF because the box became smaller than r_max={r_max:.3f}.")
 
     return {"r": rdf.bin_centers.tolist(), "g_r": rdf.rdf.tolist()}
 

@@ -5,6 +5,7 @@ import math
 import json
 from colpack.helper import save_state
 from colpack.config_reading import canonicalize_shape, get_allowed_shapes
+from colpack.visualize_ovito import visualize_gsd
 
 
 def create_initial_config(run_dir):
@@ -133,6 +134,12 @@ def create_initial_config(run_dir):
     # save the state to gsd
     gsd_path = os.path.join(run_dir, "initial.gsd")
     save_state(sim, resolved_particle_list, gsd_path)
+
+    visualize_gsd(
+        gsd_path=gsd_path,
+        output_path=os.path.join(run_dir, "initial_render.png"),
+        frame_index=-1,
+    )
 
     return simulation_config_initial
 

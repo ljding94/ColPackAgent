@@ -1,6 +1,7 @@
 from pathlib import Path
 import importlib.util
 import json
+import shutil
 from colpack.visualize_ovito import visualize_gsd
 
 
@@ -20,21 +21,23 @@ def _has_hoomd() -> bool:
 
 def _prepare_single_run_config(output_subdir, total_particle_number, particle_shape_list, baseline_parameters, seed, ensemble="NVT", target_volume_fraction=None, target_pressure=None):
     from colpack.workflow import setup_simulation_problem, plan_simulaiton_runs
+    from unittest.mock import patch
 
     project_root = _find_project_root(Path(__file__).resolve())
-    working_dir = project_root / "data" / "test" / output_subdir
-    working_dir.mkdir(parents=True, exist_ok=True)
+    case_root = project_root / "data" / "test" / output_subdir
+    shutil.rmtree(case_root, ignore_errors=True)
+    case_root.mkdir(parents=True, exist_ok=True)
 
-    setup_simulation_problem(
-        dimension=3,
-        total_particle_number=total_particle_number,
-        particle_shape_list=particle_shape_list,
-        ensemble=str(ensemble),
-        working_dir=str(working_dir),
-    )
+    with patch("colpack.workflow.resolve_working_dir_from_setup", return_value=str(case_root)):
+        problem = setup_simulation_problem(
+            dimension=3,
+            total_particle_number=total_particle_number,
+            particle_shape_list=particle_shape_list,
+            ensemble=str(ensemble),
+        )
+    working_dir = Path(problem["working_dir"])
 
     baseline = dict(baseline_parameters)
-    baseline["seed"] = int(seed)
 
     if ensemble == "NVT":
         if target_volume_fraction is None:

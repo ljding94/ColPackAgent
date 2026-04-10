@@ -4,6 +4,7 @@ import numpy as np
 import json
 from colpack.helper import save_state, read_state_from_run
 from colpack.config_reading import get_workflow_config
+from colpack.visualize_ovito import visualize_gsd
 
 
 def compress_system(run_dir: str):
@@ -35,11 +36,19 @@ def compress_system(run_dir: str):
 
     ensemble = simulation_config["ensemble"]
     if ensemble == "NVT":
-        return compress_system_NVT(run_dir, simulation_config)
+        simulation_config_compress = compress_system_NVT(run_dir, simulation_config)
     elif ensemble == "NPT":
-        return compress_system_NPT(run_dir, simulation_config)
+        simulation_config_compress = compress_system_NPT(run_dir, simulation_config)
     else:
         raise ValueError(f"Unsupported ensemble '{ensemble}'. Expected 'NVT' or 'NPT'.")
+
+    visualize_gsd(
+        gsd_path=simulation_config_compress["compress_gsd_path"],
+        output_path=os.path.join(run_dir, "compress_render.png"),
+        frame_index=-1,
+    )
+
+    return simulation_config_compress
 
 
 def compress_system_NVT(run_dir: str, simulation_config: dict):
@@ -121,14 +130,19 @@ def compress_system_NVT(run_dir: str, simulation_config: dict):
     print("translate acceptance rate:", mc.translate_moves[0] / max(sum(mc.translate_moves), 1))
     print("rotation acceptance rate:", mc.rotate_moves[0] / max(sum(mc.rotate_moves), 1))
 
+    achieved_box_volume = float(sim.state.box.volume)
+    achieved_volume_fraction = total_particle_volume / achieved_box_volume
+
     # save the compresses system
     gsd_path = os.path.join(run_dir, "compress.gsd")
     save_state(sim, simulation_config.get("particle_list"), gsd_path)
 
     simulation_config_compress = simulation_config.copy()
     simulation_config_compress["compress_gsd_path"] = gsd_path
-    simulation_config_compress["final_volume_fraction"] = total_particle_volume / target_box_volume
-    simulation_config_compress["final_box_volume"] = target_box_volume
+    simulation_config_compress["target_volume_fraction"] = target_volume_fraction
+    simulation_config_compress["target_box_volume"] = target_box_volume
+    simulation_config_compress["final_volume_fraction"] = achieved_volume_fraction
+    simulation_config_compress["final_box_volume"] = achieved_box_volume
 
     simulation_config_compress_path = os.path.join(run_dir, "simulation_config_compress.json")
     with open(simulation_config_compress_path, "w") as f:

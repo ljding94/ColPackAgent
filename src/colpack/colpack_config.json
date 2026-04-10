@@ -6,15 +6,18 @@
             "randomization_steps": 1000,
             "stages": 5,
             "npt_precompress_volume_fraction": 0.3,
-            "npt_boxmc_steps": 20000,
+            "npt_boxmc_steps": 2000,
             "npt_boxmc_volume_delta": 0.01,
             "npt_boxmc_trigger_period": 10
         },
         "sample_defaults": {
-            "sample_steps": 200000,
+            "sample_steps": 20000,
+            "npt_boxmc_trigger_period": 10,
             "npt_boxmc_volume_weight": 1.0,
             "npt_boxmc_volume_mode": "standard",
             "npt_boxmc_volume_delta": 0.01,
+            "min_move_tune_updates": 10,
+            "min_npt_boxmc_updates": 10,
             "move_tune_period": 100,
             "move_tune_target": 0.2,
             "box_tune_target": 0.3,
@@ -26,7 +29,7 @@
         "relative_volume_fraction_first_particle": 1,
         "relative_volume_fraction_other_particles": 0.5,
         "common_system_fields": {
-            "sampling_steps": 200000
+            "sampling_steps": 20000
         },
         "status_fieldnames": [
             "run_number",
@@ -38,6 +41,7 @@
             "sample",
             "analyze",
             "status",
+            "execution_state",
             "started_at",
             "finished_at",
             "output_dir",
@@ -103,7 +107,7 @@
                 "capsule": {
                     "defaults": {
                         "length": 2.0,
-                        "diameter": 0.5
+                        "diameter": 1.0
                     }
                 }
             }
@@ -138,7 +142,7 @@
                 "capsule": {
                     "defaults": {
                         "length": 2.0,
-                        "diameter": 0.5
+                        "diameter": 1.0
                     }
                 },
                 "tetrahedron": {
