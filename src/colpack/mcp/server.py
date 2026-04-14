@@ -1,4 +1,3 @@
-import asyncio
 import multiprocessing
 from pathlib import Path
 import csv
@@ -395,10 +394,6 @@ def plan_simulation_runs_tool(params: PlanSimulationRunsInput) -> dict[str, Any]
 class ExecuteSimulationWorkflowInput(BaseModel):
     working_dir: str = Field(..., description="Directory containing simulation_plan.json.")
     continue_on_error: bool = Field(default=True, description="If true, continue remaining runs when one run fails.")
-    wait: bool = Field(
-        default=False,
-        description="If true, run synchronously and wait for completion. If false, start background job and return immediately.",
-    )
 
 
 @mcp.tool()
@@ -406,108 +401,77 @@ async def execute_simulation_workflow_tool(
     params: ExecuteSimulationWorkflowInput,
     context: Context | None = None,
 ) -> dict[str, Any]:
-    """Execute planned simulation workflow synchronously or asynchronously."""
+    """
+    Launch the simulation workflow as a background job and return immediately.
+
+    Simulations can take minutes to hours; this tool always runs asynchronously.
+    After calling this tool, poll for completion using get_workflow_status_tool.
+    """
     resolved_dir = _normalize_working_dir(params.working_dir)
     print(
         "[mcp] execute_simulation_workflow_tool "
-        f"working_dir={resolved_dir} wait={params.wait} continue_on_error={params.continue_on_error}"
+        f"working_dir={resolved_dir} continue_on_error={params.continue_on_error}"
     )
     append_workflow_log(
         resolved_dir,
-        f"execute_simulation_workflow_tool invoked with wait={params.wait} continue_on_error={params.continue_on_error}",
+        f"execute_simulation_workflow_tool invoked with continue_on_error={params.continue_on_error}",
         source="mcp",
     )
 
     await _safe_context_info(
         context,
-        f"Workflow execution requested: wait={params.wait}, continue_on_error={params.continue_on_error}.",
+        f"Workflow execution requested (async): continue_on_error={params.continue_on_error}.",
     )
 
-    if not params.wait:
-        if _workflow_marked_running_in_csv(resolved_dir):
-            await _safe_context_info(context, "Workflow execution is already running; duplicate async execute call skipped.")
-            csv_counts = _count_status_from_csv(resolved_dir)
-            return {
-                "ok": True,
-                "mode": "async",
-                "working_dir": resolved_dir,
-                "job_id": None,
-                "job_status": "running",
-                "already_running": True,
-                "status_path": str(Path(resolved_dir) / "workflow_status.csv"),
-                "log_path": str(resolve_workflow_log_path(resolved_dir)),
-                "progress": _read_workflow_progress(resolved_dir),
-                **csv_counts,
-            }
-
-        launch = _start_workflow_job(
-            working_dir=resolved_dir,
-            continue_on_error=params.continue_on_error,
-        )
-        if launch["started"]:
-            await _safe_context_info(
-                context,
-                f"Started async workflow job {launch['job_id']}. Monitor progress via workflow_progress.json or workflow_monitor script.",
-            )
-        else:
-            await _safe_context_info(
-                context,
-                f"Workflow job {launch['job_id']} is already running. Reusing existing job.",
-            )
+    if _workflow_marked_running_in_csv(resolved_dir):
+        await _safe_context_info(context, "Workflow execution is already running; duplicate execute call skipped.")
         csv_counts = _count_status_from_csv(resolved_dir)
         return {
             "ok": True,
             "mode": "async",
             "working_dir": resolved_dir,
-            "job_id": launch["job_id"],
-            "job_status": launch["status"],
-            "already_running": not launch["started"],
+            "job_id": None,
+            "job_status": "running",
+            "already_running": True,
             "status_path": str(Path(resolved_dir) / "workflow_status.csv"),
             "log_path": str(resolve_workflow_log_path(resolved_dir)),
             "progress": _read_workflow_progress(resolved_dir),
             **csv_counts,
         }
 
-    await _safe_context_report_progress(context, progress=0, total=1, message="Preparing workflow execution.")
-
-    try:
-        result = await asyncio.to_thread(
-            execute_simulation_workflow,
-            working_dir=resolved_dir,
-            continue_on_error=params.continue_on_error,
+    launch = _start_workflow_job(
+        working_dir=resolved_dir,
+        continue_on_error=params.continue_on_error,
+    )
+    if launch["started"]:
+        await _safe_context_info(
+            context,
+            f"Started background workflow job {launch['job_id']}. "
+            "Use get_workflow_status_tool to poll for completion.",
         )
-    except Exception as exc:
-        await _safe_context_error(context, f"Workflow execution failed: {exc}")
-        raise
-
-    if result.get("already_running"):
-        await _safe_context_info(context, "Workflow execution is already running; duplicate execute call skipped.")
     else:
-        await _safe_context_report_progress(context, progress=1, total=1, message="Workflow execution completed.")
-        await _safe_context_info(context, "Workflow execution completed.")
-
+        await _safe_context_info(
+            context,
+            f"Workflow job {launch['job_id']} is already running. Reusing existing job.",
+        )
+    csv_counts = _count_status_from_csv(resolved_dir)
     return {
         "ok": True,
-        "mode": "sync",
+        "mode": "async",
         "working_dir": resolved_dir,
-        "status_path": result["status_path"],
-        "progress_path": result.get("progress_path"),
-        "log_path": result.get("log_path"),
+        "job_id": launch["job_id"],
+        "job_status": launch["status"],
+        "already_running": not launch["started"],
+        "status_path": str(Path(resolved_dir) / "workflow_status.csv"),
+        "log_path": str(resolve_workflow_log_path(resolved_dir)),
         "progress": _read_workflow_progress(resolved_dir),
-        "n_runs": result["n_runs"],
-        "n_success": result["n_success"],
-        "n_failed": result["n_failed"],
-        "already_running": bool(result.get("already_running", False)),
+        **csv_counts,
     }
 
 
 class AnalyzeSimulationRunsInput(BaseModel):
     working_dir: str = Field(..., description="Directory containing simulation_plan.json and completed simulation runs.")
     continue_on_error: bool = Field(default=True, description="If true, continue remaining runs when one fails analysis.")
-    wait: bool = Field(
-        default=False,
-        description="If true, run synchronously and wait for completion. If false, start background job and return immediately.",
-    )
 
 
 @mcp.tool()
@@ -515,94 +479,143 @@ async def analyze_simulation_runs_tool(
     params: AnalyzeSimulationRunsInput,
     context: Context | None = None,
 ) -> dict[str, Any]:
-    """Analyze simulation results for all planned runs in a workflow directory."""
+    """
+    Launch analysis of simulation results as a background job and return immediately.
+
+    Analysis can take significant time; this tool always runs asynchronously.
+    After calling this tool, poll for completion using get_workflow_status_tool.
+    """
     resolved_dir = _normalize_working_dir(params.working_dir)
     print(
         "[mcp] analyze_simulation_runs_tool "
-        f"working_dir={resolved_dir} wait={params.wait} continue_on_error={params.continue_on_error}"
+        f"working_dir={resolved_dir} continue_on_error={params.continue_on_error}"
     )
     append_workflow_log(
         resolved_dir,
-        f"analyze_simulation_runs_tool invoked with wait={params.wait} continue_on_error={params.continue_on_error}",
+        f"analyze_simulation_runs_tool invoked with continue_on_error={params.continue_on_error}",
         source="mcp",
     )
 
     await _safe_context_info(
         context,
-        f"Analysis requested: wait={params.wait}, continue_on_error={params.continue_on_error}.",
+        f"Analysis requested (async): continue_on_error={params.continue_on_error}.",
     )
 
-    if not params.wait:
-        if _workflow_marked_running_in_csv(resolved_dir):
-            await _safe_context_info(context, "A workflow job is already running in this directory; async analyze call skipped.")
-            csv_counts = _count_status_from_csv(resolved_dir)
-            return {
-                "ok": True,
-                "mode": "async",
-                "working_dir": resolved_dir,
-                "job_id": None,
-                "job_status": "running",
-                "already_running": True,
-                "status_path": str(Path(resolved_dir) / "workflow_status.csv"),
-                "log_path": str(resolve_workflow_log_path(resolved_dir)),
-                "progress": _read_workflow_progress(resolved_dir),
-                **csv_counts,
-            }
-
-        launch = _start_analyze_job(
-            working_dir=resolved_dir,
-            continue_on_error=params.continue_on_error,
-        )
-        if launch["started"]:
-            await _safe_context_info(
-                context,
-                f"Started async analyze job {launch['job_id']}. Monitor progress via workflow_progress.json or workflow_monitor script.",
-            )
-        else:
-            await _safe_context_info(
-                context,
-                f"Analyze job {launch['job_id']} is already running. Reusing existing job.",
-            )
+    if _workflow_marked_running_in_csv(resolved_dir):
+        await _safe_context_info(context, "A workflow job is already running in this directory; async analyze call skipped.")
         csv_counts = _count_status_from_csv(resolved_dir)
         return {
             "ok": True,
             "mode": "async",
             "working_dir": resolved_dir,
-            "job_id": launch["job_id"],
-            "job_status": launch["status"],
-            "already_running": not launch["started"],
+            "job_id": None,
+            "job_status": "running",
+            "already_running": True,
             "status_path": str(Path(resolved_dir) / "workflow_status.csv"),
             "log_path": str(resolve_workflow_log_path(resolved_dir)),
             "progress": _read_workflow_progress(resolved_dir),
             **csv_counts,
         }
 
-    await _safe_context_report_progress(context, progress=0, total=1, message="Preparing analysis.")
-
-    try:
-        result = await asyncio.to_thread(
-            analyze_simulation_runs,
-            working_dir=resolved_dir,
-            continue_on_error=params.continue_on_error,
+    launch = _start_analyze_job(
+        working_dir=resolved_dir,
+        continue_on_error=params.continue_on_error,
+    )
+    if launch["started"]:
+        await _safe_context_info(
+            context,
+            f"Started background analyze job {launch['job_id']}. "
+            "Use get_workflow_status_tool to poll for completion.",
         )
-    except Exception as exc:
-        await _safe_context_error(context, f"Analysis failed: {exc}")
-        raise
+    else:
+        await _safe_context_info(
+            context,
+            f"Analyze job {launch['job_id']} is already running. Reusing existing job.",
+        )
+    csv_counts = _count_status_from_csv(resolved_dir)
+    return {
+        "ok": True,
+        "mode": "async",
+        "working_dir": resolved_dir,
+        "job_id": launch["job_id"],
+        "job_status": launch["status"],
+        "already_running": not launch["started"],
+        "status_path": str(Path(resolved_dir) / "workflow_status.csv"),
+        "log_path": str(resolve_workflow_log_path(resolved_dir)),
+        "progress": _read_workflow_progress(resolved_dir),
+        **csv_counts,
+    }
 
-    await _safe_context_report_progress(context, progress=1, total=1, message="Analysis completed.")
-    await _safe_context_info(context, "Analysis completed.")
+
+class GetWorkflowStatusInput(BaseModel):
+    working_dir: str = Field(..., description="Workflow directory to check (same directory passed to execute or analyze tools).")
+
+
+@mcp.tool()
+async def get_workflow_status_tool(
+    params: GetWorkflowStatusInput,
+    context: Context | None = None,
+) -> dict[str, Any]:
+    """
+    Poll the status of a running or completed background workflow/analyze job.
+
+    Call this repeatedly after execute_simulation_workflow_tool or
+    analyze_simulation_runs_tool to check whether the job has finished.
+    Returns workflow_progress.json content, per-run CSV counts, and job status.
+    """
+    resolved_dir = _normalize_working_dir(params.working_dir)
+    progress = _read_workflow_progress(resolved_dir)
+    csv_counts = _count_status_from_csv(resolved_dir)
+
+    # Check both workflow and analyze job registries.
+    job_info: dict[str, Any] = {}
+    with _jobs_lock:
+        job_id = _jobs_by_working_dir.get(resolved_dir)
+    if job_id:
+        record = _refresh_job_record(job_id)
+        if record:
+            job_info = {
+                "job_type": "workflow",
+                "job_id": record["job_id"],
+                "job_status": record["status"],
+                "job_started_at": record.get("started_at"),
+                "job_finished_at": record.get("finished_at"),
+                "job_error": record.get("error"),
+            }
+
+    if not job_info:
+        with _analyze_lock:
+            az_job_id = _analyze_jobs_by_working_dir.get(resolved_dir)
+        if az_job_id:
+            record = _refresh_analyze_job_record(az_job_id)
+            if record:
+                job_info = {
+                    "job_type": "analyze",
+                    "job_id": record["job_id"],
+                    "job_status": record["status"],
+                    "job_started_at": record.get("started_at"),
+                    "job_finished_at": record.get("finished_at"),
+                    "job_error": record.get("error"),
+                }
+
+    # Derive a simple overall status for the agent to act on.
+    overall_status = "unknown"
+    if progress:
+        overall_status = progress.get("status", "unknown")
+    if job_info.get("job_status") == "running":
+        overall_status = "running"
+    elif job_info.get("job_status") in ("completed", "failed") and overall_status == "unknown":
+        overall_status = job_info["job_status"]
 
     return {
         "ok": True,
-        "mode": "sync",
         "working_dir": resolved_dir,
-        "status_path": result["status_path"],
-        "progress_path": result.get("progress_path"),
-        "log_path": result.get("log_path"),
-        "progress": _read_workflow_progress(resolved_dir),
-        "n_runs": result["n_runs"],
-        "n_success": result["n_success"],
-        "n_failed": result["n_failed"],
+        "overall_status": overall_status,
+        "progress": progress,
+        "log_path": str(resolve_workflow_log_path(resolved_dir)),
+        "status_path": str(Path(resolved_dir) / "workflow_status.csv"),
+        **csv_counts,
+        **job_info,
     }
 
 

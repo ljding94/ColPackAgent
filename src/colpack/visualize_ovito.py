@@ -1,7 +1,10 @@
 import numpy as np
 from pathlib import Path
 from ovito.io import import_file
-from ovito.vis import Viewport, OpenGLRenderer
+# ColPack visualization runs in headless MCP/batch environments; OpenGLRenderer requires a
+# display context and causes a hard native crash there. TachyonRenderer is a CPU software
+# renderer (headless-safe) — analogous to matplotlib.use("Agg") for plotting.
+from ovito.vis import Viewport, TachyonRenderer
 
 
 ORTHO_MARGIN_FACTOR = 0.575
@@ -125,8 +128,8 @@ def render_physical_size(
     """Render an OVITO viewport to a target physical size with DPI metadata."""
     width_px, height_px = _resolve_render_size(width_inch=width_inch, height_inch=height_inch, dpi=dpi)
 
-    renderer = OpenGLRenderer()
-    renderer.antialiasing_level = int(antialiasing_level)
+    renderer = TachyonRenderer()
+    renderer.ambient_occlusion = False  # faster, consistent with simple batch renders
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
