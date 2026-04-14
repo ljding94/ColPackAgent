@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from colpack.workflow import plan_simulaiton_runs, setup_simulation_problem
 from colpack.workflow_logging import append_workflow_log, resolve_workflow_log_path
+from colpack.config_reading import load_config
 from colpack.mcp.server_helper import (
     _count_status_from_csv,
     _normalize_working_dir,
@@ -243,18 +244,46 @@ def get_colpack_capabilities_tool() -> dict[str, Any]:
     Call this tool at the start of a session or whenever you need to understand
     what dimensions, shapes, ensembles, and workflow steps are supported.
     """
+    cfg = load_config()
+    dim_cfg = cfg.get("dimensions", {})
+    workflow_cfg = cfg.get("workflow", {})
+    ensemble_requirements = workflow_cfg.get("ensemble_requirements", {})
+    common_fields = workflow_cfg.get("common_system_fields", {})
+
+    # Shapes per dimension from config.
+    supported_shapes = {
+        f"{dim}d": dim_cfg[str(dim)]["allowed_shapes"]
+        for dim in (2, 3)
+        if str(dim) in dim_cfg
+    }
+
+    # Ensemble descriptions (human-readable) keyed to config-defined ensembles.
+    _ensemble_descriptions = {
+        "NVT": "Fixed volume; sweep packing fraction by varying box size at constant N.",
+        "NPT": "Fixed pressure; box volume fluctuates to reach target pressure.",
+    }
+    ensembles = {
+        name: _ensemble_descriptions.get(name, name)
+        for name in ensemble_requirements
+    }
+
+    # Key tunable parameters: one entry per ensemble-specific system field +
+    # shared fields from common_system_fields.
+    key_parameters: dict[str, str] = {}
+    for ens_name, ens_block in ensemble_requirements.items():
+        for field in ens_block.get("system_fields", {}):
+            key_parameters[field] = f"({ens_name}) tunable system-level parameter."
+    for field in common_fields:
+        key_parameters[field] = "Shared system-level parameter (all ensembles)."
+    key_parameters["particle_specs.N.length"] = "Shape-specific length parameter (capsule, ellipse, rectangle)."
+    key_parameters["particle_specs.N.width"] = "Shape-specific width parameter (rectangle)."
+
     return {
         "ok": True,
         "description": "ColPack: hard-particle Monte Carlo packing simulations via HOOMD-blue.",
-        "dimensions": [2, 3],
-        "supported_shapes": {
-            "2d": ["disk", "ellipse", "capsule", "triangle", "square", "rectangle"],
-            "3d": ["sphere", "ellipsoid", "capsule", "tetrahedron", "cube", "octahedron"],
-        },
-        "ensembles": {
-            "NVT": "Fixed volume; sweep packing fraction by varying box size at constant N.",
-            "NPT": "Fixed pressure; box volume fluctuates to reach target pressure.",
-        },
+        "dimensions": [int(d) for d in dim_cfg],
+        "supported_shapes": supported_shapes,
+        "ensembles": ensembles,
         "workflow_steps": [
             {
                 "step": 1,
@@ -283,13 +312,7 @@ def get_colpack_capabilities_tool() -> dict[str, Any]:
             "workflow_status_csv": "workflow_status.csv",
             "note": "Poll workflow_progress.json locally; no MCP polling tool is needed.",
         },
-        "key_parameters": {
-            "volume_fraction": "Target packing fraction (NVT); use as tunable sweep axis.",
-            "P": "Reduced pressure (NPT).",
-            "sampling_steps": "Number of MC steps for production sampling.",
-            "particle_specs.N.length": "Shape-specific length parameter (capsule, ellipse, rectangle).",
-            "particle_specs.N.width": "Shape-specific width parameter (rectangle).",
-        },
+        "key_parameters": key_parameters,
     }
 
 
