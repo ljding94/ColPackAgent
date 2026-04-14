@@ -2,11 +2,14 @@
 Integration tests for the ColPack MCP server tools.
 
 Tests the async execute/analyze pattern without running real simulations:
+  - get_colpack_capabilities_tool
   - setup_simulation_problem_tool
   - plan_simulation_runs_tool
   - execute_simulation_workflow_tool  → must return immediately (async)
-  - get_workflow_status_tool          → must poll job status
   - analyze_simulation_runs_tool      → must return immediately (async)
+
+Progress is monitored by reading workflow_progress.json locally (no MCP
+status-polling tool exists; get_workflow_status_tool was removed).
 
 Real HOOMD simulations are skipped; the workflow functions are patched to
 write the minimum files the tools / status tracker expect.
@@ -18,7 +21,6 @@ import json
 import sys
 import time
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
@@ -88,7 +90,7 @@ def temp_working_dir(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_list_tools_contains_expected():
-    """Server must expose the four workflow tools plus the status poller."""
+    """Server must expose the four workflow tools and the capabilities tool."""
 
     async def _run(session: ClientSession):
         result = await session.list_tools()
@@ -96,14 +98,18 @@ def test_list_tools_contains_expected():
 
     tool_names = _call(_run)
     expected = {
+        "get_colpack_capabilities_tool",
         "setup_simulation_problem_tool",
         "plan_simulation_runs_tool",
         "execute_simulation_workflow_tool",
         "analyze_simulation_runs_tool",
-        "get_workflow_status_tool",
     }
     assert expected.issubset(set(tool_names)), (
         f"Missing tools: {expected - set(tool_names)}"
+    )
+    assert "get_workflow_status_tool" not in tool_names, (
+        "get_workflow_status_tool should have been removed; agents must monitor "
+        "progress locally via workflow_progress.json."
     )
 
 
@@ -192,31 +198,30 @@ def test_execute_returns_immediately_with_job_id(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Test: get_workflow_status_tool
+# Test: get_colpack_capabilities_tool
 # ---------------------------------------------------------------------------
 
-def test_get_workflow_status_tool_returns_structure(tmp_path):
-    """get_workflow_status_tool must return ok=True plus expected keys even for
-    a directory with no running job."""
-
-    working_dir = str(tmp_path)
+def test_get_colpack_capabilities_tool():
+    """get_colpack_capabilities_tool must return supported shapes, ensembles,
+    and workflow steps without any input parameters."""
 
     async def _run(session: ClientSession):
-        result = await session.call_tool(
-            "get_workflow_status_tool",
-            arguments={"params": {"working_dir": working_dir}},
-        )
+        result = await session.call_tool("get_colpack_capabilities_tool", arguments={})
         return _tool_result_content(result)
 
     data = _call(_run)
 
     assert data["ok"] is True
-    assert "overall_status" in data
-    assert "status_path" in data
-    assert "log_path" in data
-    # CSV count keys
-    for key in ("n_success", "n_failed", "n_runs_seen"):
-        assert key in data, f"Missing key '{key}' in get_workflow_status_tool response"
+    assert set(data["dimensions"]) == {2, 3}
+    assert "disk" in data["supported_shapes"]["2d"]
+    assert "sphere" in data["supported_shapes"]["3d"]
+    assert "NVT" in data["ensembles"]
+    assert "NPT" in data["ensembles"]
+    assert len(data["workflow_steps"]) == 4
+    step_tools = [s["tool"] for s in data["workflow_steps"]]
+    assert "execute_simulation_workflow_tool" in step_tools
+    assert "analyze_simulation_runs_tool" in step_tools
+    assert "workflow_progress_file" in data["progress_monitoring"]
 
 
 # ---------------------------------------------------------------------------
@@ -278,12 +283,14 @@ def test_async_execute_then_poll_status(tmp_path):
     """
     End-to-end test of the async pattern agents should follow:
       1. Call execute_simulation_workflow_tool → returns job_id immediately
-      2. Poll get_workflow_status_tool until overall_status != 'running'
+      2. Poll workflow_progress.json locally until status != 'running'
       3. Verify final status is 'completed'
 
     The simulation itself is replaced with _fake_execute (no HOOMD needed).
+    Progress monitoring uses local file reads, not an MCP polling tool.
     """
     working_dir = str(tmp_path)
+    progress_path = tmp_path / "workflow_progress.json"
 
     plan = [
         {
@@ -309,29 +316,28 @@ def test_async_execute_then_poll_status(tmp_path):
         job_id = exec_data.get("job_id")
         assert job_id is not None
 
-        # Step 2: poll (max 30 seconds)
+        # Step 2: poll workflow_progress.json locally (max 30 seconds).
+        # This mirrors what an agent with workflow_monitor.py would do.
         deadline = time.monotonic() + 30
-        final_data = None
+        progress = None
         while time.monotonic() < deadline:
             await asyncio.sleep(1)
-            status_result = await session.call_tool(
-                "get_workflow_status_tool",
-                arguments={"params": {"working_dir": working_dir}},
-            )
-            status_data = _tool_result_content(status_result)
-            assert status_data["ok"] is True
-            if status_data["overall_status"] != "running":
-                final_data = status_data
-                break
+            if progress_path.exists():
+                try:
+                    progress = json.loads(progress_path.read_text(encoding="utf-8"))
+                    if progress.get("status") not in ("running", None):
+                        break
+                except Exception:
+                    pass
 
-        assert final_data is not None, "Timed out waiting for workflow to finish"
-        return final_data
+        assert progress is not None, "workflow_progress.json was never written"
+        return progress
 
-    # Patch the actual workflow function so no HOOMD is needed.
-    with patch("colpack.workflow.execute_simulation_workflow", side_effect=_fake_execute):
+    # Patch where execute_simulation_workflow is imported in server_helper.
+    with patch("colpack.mcp.server_helper.execute_simulation_workflow", side_effect=_fake_execute):
         final = _call(_run)
 
-    assert final["overall_status"] in ("completed", "failed"), (
-        f"Unexpected final status: {final['overall_status']}"
+    assert final["status"] in ("completed", "failed"), (
+        f"Unexpected final status: {final['status']}"
     )
-    assert final["n_success"] >= 1 or final["n_failed"] >= 0
+    assert final.get("n_success", 0) >= 1 or final.get("n_failed", 0) >= 0
