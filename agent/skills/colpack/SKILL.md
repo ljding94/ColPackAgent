@@ -4,13 +4,14 @@ description: "End-to-end ColPack colloidal packing simulation workflow. Use for 
 ---
 
 # Operating Rules
-1. Follow the workflow sequence exactly: Setup -> Plan -> Execute -> Analyze.
-2. Never skip a step when creating a new workflow from scratch.
-3. Before each tool call, read the corresponding reference file in `references/` and follow its schema and examples.
-4. Use one shared `working_dir` for the full workflow; keep it unchanged across all three tool calls. Let `setup_simulation_problem_tool` determine the canonical path; reuse the returned value verbatim in planning and execution.
-5. Keep tool payloads strict and minimal: only include required keys and valid values.
-6. If execution returns `n_failed > 0`, read `workflow_status.csv` before responding.
-7. Use ColPack MCP tools directly for simulation requests. Do not start with `glob`, `read`, or `bash` unless diagnosing a failure or answering a codebase question.
+1. **At the start of every session**, call `get_colpack_capabilities_tool` (no parameters) to retrieve supported dimensions, shapes, ensembles, key parameters, and workflow step descriptions from the live config. Use this output as ground truth — never hard-code shape names or ensemble keys.
+2. Follow the workflow sequence exactly: Setup -> Plan -> Execute -> Analyze.
+3. Never skip a step when creating a new workflow from scratch.
+4. Before each tool call, read the corresponding reference file in `references/` and follow its schema and examples.
+5. Use one shared `working_dir` for the full workflow; keep it unchanged across all three tool calls. Let `setup_simulation_problem_tool` determine the canonical path; reuse the returned value verbatim in planning and execution.
+6. Keep tool payloads strict and minimal: only include required keys and valid values.
+7. If execution returns `n_failed > 0`, read `workflow_status.csv` before responding.
+8. Use ColPack MCP tools directly for simulation requests. Do not start with `glob`, `read`, or `bash` unless diagnosing a failure or answering a codebase question.
 
 # Mode Contract
 The wrapper may append `AGENT_MODE = interactive` or `AGENT_MODE = autonomous`.
@@ -29,6 +30,7 @@ The wrapper may append `AGENT_MODE = interactive` or `AGENT_MODE = autonomous`.
 
 | Step | Tool | Reference | Output |
 |------|------|-----------|--------|
+| Capabilities | `get_colpack_capabilities_tool` | — | Supported shapes, ensembles, key parameters (call once at session start) |
 | Setup | `setup_simulation_problem_tool` | `references/1_setup_problem.md` | `simulation_problem.json` in `working_dir` |
 | Plan | `plan_simulation_runs_tool` | `references/2_plan_runs.md` | `simulation_baseline.json`, `simulation_plan.json`, `run_*/` |
 | Execute | `execute_simulation_workflow_tool` | `references/3_execute_simulation.md` | Completed initialize/compress/sample steps; `workflow_status.csv` |
