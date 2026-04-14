@@ -1,6 +1,6 @@
-# Guide: Execute Workflow And Troubleshoot
+# Guide: Execute Simulation Workflow
 
-Use `execute_simulation_workflow_tool` after setup and planning are complete.
+Use `execute_simulation_workflow_tool` after setup and planning are complete. This step runs initialize, compress, and sample for each planned run. Analysis is a separate subsequent step — see `4_analyze_simulation.md`.
 ## Payload Shape
 ```json
 {
@@ -38,37 +38,14 @@ Use `execute_simulation_workflow_tool` after setup and planning are complete.
 }
 ```
 
-## Polling Payload Shape
-```json
-{
-  "working_dir": "data/2d_nvt_disk_capsule"
-}
-```
-
-or
-
-```json
-{
-  "job_id": "wf_abc123def456"
-}
-```
 ## Expected Result Keys
-The tool returns:
-- `status_path`
-- `n_runs`
-- `n_success`
-- `n_failed`
 
-Async mode returns:
-- `mode: "async"`
-- `job_id`
-- `job_status`
-- `already_running`
+Sync mode (`wait=true`) returns:
+- `status_path`, `n_runs`, `n_success`, `n_failed`
+
+Async mode (`wait=false`) returns:
+- `mode: "async"`, `job_id`, `job_status`, `already_running`
 - `progress` (latest local progress snapshot if available)
-
-Polling returns:
-- `job` object with `status` in `running|completed|failed`
-- current `n_success` and `n_failed` from `workflow_status.csv`
 
 ## Mandatory Failure Handling
 If `n_failed > 0`:
@@ -77,16 +54,17 @@ If `n_failed > 0`:
 3. Extract at least:
   - `run_number`
   - `error`
-  - failed step markers (`initialize`, `compress`, `sample`, `analyze`)
+  - failed step markers (`initialize`, `compress`, `sample`)
 4. Report concise diagnosis and suggested correction.
+
 ## Preflight Consistency Check
-Before execution, verify:
+Before execution, verify that all stages used the same `working_dir`:
 
 ```json
 {
-  "setup_working_dir": "data/2d_nvt_disk_capsule",
-  "plan_working_dir": "data/2d_nvt_disk_capsule",
-  "execute_working_dir": "data/2d_nvt_disk_capsule",
+  "setup_working_dir": "<WORKING_DIR>",
+  "plan_working_dir": "<WORKING_DIR>",
+  "execute_working_dir": "<WORKING_DIR>",
   "all_match": true
 }
 ```
@@ -95,10 +73,10 @@ Only execute when `all_match` is true.
 
 ## Timeout-Safe Workflow Pattern
 1. Call `execute_simulation_workflow_tool` with `wait=false`.
-2. Let the wrapper's local monitor report progress from `workflow_progress.json`.
-3. If the user asks for a fresh status check, call `get_simulation_workflow_status_tool` once.
-4. If `job.status=completed`, report final summary.
-5. If `job.status=failed`, report `job.error` and inspect `workflow_status.csv`.
+2. The agent wrapper (`scripts/workflow_monitor.py`) polls `workflow_progress.json` and `workflow_events.log` automatically and prints live updates.
+3. If the user asks for a status check, read `workflow_progress.json` directly — do not call a status MCP tool.
+4. If execution completed, proceed to the Analyze step.
+
 ## Quick Diagnosis Patterns
 - `simulation_plan.json not found`: planning step did not run in this `working_dir`.
 - `Missing 'particle_specs'`: baseline/plan input was malformed.

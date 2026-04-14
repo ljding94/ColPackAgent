@@ -25,6 +25,44 @@ When calling `plan_simulation_runs_tool`, use this exact top-level payload:
 - For NPT workflows, pressure `P` belongs here in planning, not in setup.
 - Boundary conditions are not part of the normal planning payload.
 
+## Understanding `simulation_problem.json`
+
+Read `working_dir/simulation_problem.json` before building the payload. It defines the dot-paths available for `baseline_parameters` and `tunable_parameters`. Shape parameters start as `"Nan"` placeholders that must be filled during planning.
+
+Example (2D NVT, disk + capsule):
+```json
+{
+  "dimension": 2,
+  "total_particle_number": 200,
+  "ensemble": "NVT",
+  "working_dir": "data/2d_nvt_disk_capsule",
+  "sampling_steps": 20000,
+  "volume_fraction": 0.3,
+  "particle_specs": [
+    { "type": 0, "shape": "disk", "relative_volume_fraction": 1, "diameter": "Nan" },
+    { "type": 1, "shape": "capsule", "relative_volume_fraction": 0.5, "length": "Nan", "diameter": "Nan" }
+  ]
+}
+```
+
+Example (3D NPT, sphere + ellipsoid):
+```json
+{
+  "dimension": 3,
+  "total_particle_number": 512,
+  "ensemble": "NPT",
+  "working_dir": "data/3d_npt_sphere_ellipsoid",
+  "sampling_steps": 20000,
+  "P": 1.0,
+  "particle_specs": [
+    { "type": 0, "shape": "sphere", "relative_volume_fraction": 1, "diameter": "Nan" },
+    { "type": 1, "shape": "ellipsoid", "relative_volume_fraction": 0.5, "a": "Nan", "b": "Nan", "c": "Nan" }
+  ]
+}
+```
+
+Valid dot-paths from these examples: `volume_fraction`, `P`, `sampling_steps`, `particle_specs.0.diameter`, `particle_specs.1.length`, `particle_specs.1.a`, etc.
+
 ## Dot-Path Convention
 
 Use dot paths to address nested fields, including particle specs:
@@ -80,36 +118,6 @@ Planning rule:
 }
 ```
 
-## Invalid Example: Empty Tunable Parameters
-
-```json
-{
-  "baseline_parameters": {
-    "volume_fraction": 0.3
-  },
-  "tunable_parameters": {},
-  "working_dir": "/data/bad_case"
-}
-```
-
-Reason: `tunable_parameters` must be non-empty.
-
-## Invalid Example: Non-List Sweep Values
-
-```json
-{
-  "baseline_parameters": {
-    "volume_fraction": 0.3
-  },
-  "tunable_parameters": {
-    "volume_fraction": 0.4
-  },
-  "working_dir": "/data/bad_case"
-}
-```
-
-Reason: each tunable parameter value must be a list.
-
 ## Invalid Example: Top-Level Shape Parameters
 
 ```json
@@ -137,12 +145,12 @@ On success, the tool writes:
 
 ## Consistency Check Before Call
 
-Ensure:
+Verify that the planning `working_dir` matches the one returned by setup:
 
 ```json
 {
-  "setup_working_dir": "data/2d_nvt_disk_capsule",
-  "plan_working_dir": "data/2d_nvt_disk_capsule",
+  "setup_working_dir": "<WORKING_DIR>",
+  "plan_working_dir": "<WORKING_DIR>",
   "match": true
 }
 ```

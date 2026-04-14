@@ -5,6 +5,7 @@ import freud
 import rowan
 import gsd.hoomd
 from colpack.analyze_plot import analyze_plot
+from colpack.config_reading import get_analyze_config as _load_analyze_config
 
 
 def _normalize_run_dir(run_dir):
@@ -125,29 +126,37 @@ def analyze_compute(run_dir, simulation_config):
 
 def get_analyze_config(dimension=None):
     """
-    Dynamically builds analysis config based on particle geometry.
+    Builds analysis config from colpack_config.json, instantiating freud objects.
     """
     if dimension is not None and int(dimension) not in (2, 3):
         raise ValueError(f"Unsupported dimension for analysis: {dimension}")
 
-    config = {
-        # --- 2D SHAPES ---
-        "disk": {"order_params": [{"name": "hexatic_6", "func": freud.order.Hexatic(k=6)}]},
-        "triangle": {"order_params": [{"name": "hexatic_6", "func": freud.order.Hexatic(k=6)}, {"name": "hexatic_3", "func": freud.order.Hexatic(k=3)}]},  # checks for 3-fold symmetry
-        "square": {"order_params": [{"name": "hexatic_4", "func": freud.order.Hexatic(k=4)}]},
-        "rectangle": {"order_params": [{"name": "nematic", "func": freud.order.Nematic()}, {"name": "hexatic_2", "func": freud.order.Hexatic(k=2)}]},  # smectic-like checks
-        "ellipse": {"order_params": [{"name": "nematic", "func": freud.order.Nematic()}]},
-        # --- 3D SHAPES ---
-        "sphere": {"order_params": [{"name": "steinhardt_q6", "func": freud.order.Steinhardt(l=6)}, {"name": "steinhardt_q4", "func": freud.order.Steinhardt(l=4)}]},
-        "ellipsoid": {"order_params": [{"name": "nematic", "func": freud.order.Nematic()}]},
-        "capsule": {"order_params": [{"name": "nematic", "func": freud.order.Nematic()}]},
-        "tetrahedron": {"order_params": [{"name": "steinhardt_q3", "func": freud.order.Steinhardt(l=3)}]},
-        "cube": {"order_params": [{"name": "steinhardt_q4", "func": freud.order.Steinhardt(l=4)}]},  # No args needed for Cubatic usually
+    _freud_order_classes = {
+        "Hexatic": lambda p: freud.order.Hexatic(**p),
+        "Nematic": lambda p: freud.order.Nematic(**p),
+        "Steinhardt": lambda p: freud.order.Steinhardt(**p),
     }
+
+    raw = _load_analyze_config()
+    shape_order_params = raw.get("shape_order_params", {})
+
+    config = {}
+    for shape, param_list in shape_order_params.items():
+        order_params = []
+        for entry in param_list:
+            cls_name = entry["type"]
+            if cls_name not in _freud_order_classes:
+                raise ValueError(f"Unknown freud order class '{cls_name}' in analysis config.")
+            func = _freud_order_classes[cls_name](entry.get("params", {}))
+            order_params.append({"name": entry["name"], "func": func})
+        config[shape] = {"order_params": order_params}
+
     return config
 
 
-def _determine_rdf_r_max(traj, max_cap=5.0):
+def _determine_rdf_r_max(traj):
+    rdf_defaults = _load_analyze_config().get("rdf_defaults", {})
+    max_cap = rdf_defaults.get("max_cap", 5.0)
     min_dim = None
     for frame in traj:
         valid_dims = [d for d in frame.configuration.box[:3] if d > 0]
@@ -300,19 +309,22 @@ def _compute_shape_orders(traj, p_info, order_params_list):
     return frame_results
 
 
-def _compute_rdf(traj, r_max=None, bins=100, query_type=None, target_type=None):
+def _compute_rdf(traj, r_max=None, bins=None, query_type=None, target_type=None):
     """
     Computes RDF using Freud.
     If types are None, computes Global RDF.
     If types are specified, computes Partial RDF.
     """
-    # Determine r_max from the first frame if not provided
+    rdf_defaults = _load_analyze_config().get("rdf_defaults", {})
+    if bins is None:
+        bins = rdf_defaults.get("bins", 100)
+    r_min = rdf_defaults.get("r_min", 0.1)
     if r_max is None:
         r_max = _determine_rdf_r_max(traj)
         if r_max is None:
             return {"r": [], "g_r": []}
 
-    rdf = freud.density.RDF(bins=bins, r_max=r_max, r_min=0.1)
+    rdf = freud.density.RDF(bins=bins, r_max=r_max, r_min=r_min)
     computed_frames = 0
     skipped_frames = 0
 

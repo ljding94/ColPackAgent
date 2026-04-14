@@ -14,6 +14,14 @@ def get_workflow_config() -> dict:
     return dict(load_config().get("workflow", {}))
 
 
+def get_initialize_config() -> dict:
+    return dict(load_config().get("workflow", {}).get("initialize_defaults", {}))
+
+
+def get_analyze_config() -> dict:
+    return dict(load_config().get("analysis", {}))
+
+
 def _get_dimension_block(dimension: int) -> dict:
     dim_key = str(int(dimension))
     settings = load_config()

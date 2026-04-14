@@ -88,34 +88,6 @@ The setup tool resolves `working_dir` to `data/2d_nvt_disk_capsule` if that fold
 }
 ```
 
-## Invalid Example: Wrong Dimension
-
-```json
-{
-  "dimension": 4,
-  "total_particle_number": 200,
-  "particle_shape_list": ["sphere"],
-  "ensemble": "NVT",
-  "working_dir": "/data/bad_case"
-}
-```
-
-Reason: `dimension` must be `2` or `3`.
-
-## Invalid Example: Empty Shape List
-
-```json
-{
-  "dimension": 2,
-  "total_particle_number": 200,
-  "particle_shape_list": [],
-  "ensemble": "NVT",
-  "working_dir": "/data/bad_case"
-}
-```
-
-Reason: `particle_shape_list` must be non-empty.
-
 ## Expected Result
 
 On success, `simulation_problem.json` is written to `working_dir`.

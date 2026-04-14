@@ -4,7 +4,7 @@ import numpy as np
 import math
 import json
 from colpack.helper import save_state
-from colpack.config_reading import canonicalize_shape, get_allowed_shapes
+from colpack.config_reading import canonicalize_shape, get_allowed_shapes, get_initialize_config
 from colpack.visualize_ovito import visualize_gsd
 
 
@@ -52,16 +52,20 @@ def create_initial_config(run_dir):
     particle_list = resolved_particle_list  # update particle list accordingly
     if integrator is None:
         raise ValueError("No compatible HPMC integrator found for the given particle specifications.")
-    mc = integrator(default_d=1.0, default_a=0.1)
+    initialize_config = get_initialize_config()
+    mc = integrator(
+        default_d=initialize_config.get("default_d", 1.0),
+        default_a=initialize_config.get("default_a", 0.1),
+    )
 
     # insert particles
     for particle in particle_list:
         mc.shape[particle["pType"]] = particle["pShape"]
 
     # 3 ) Initial box: keep low density to minimize initial overlaps before compression.
-    initial_volume_fraction = 0.02  # hard code a small enough volume fraction
+    initial_volume_fraction = initialize_config.get("initial_volume_fraction", 0.02)
     overlap = 1
-    max_overlap_reduction_iters = 10
+    max_overlap_reduction_iters = initialize_config.get("max_overlap_reduction_iters", 10)
     for _ in range(max_overlap_reduction_iters):
         initial_volume_fraction *= 0.5  # make it smaller to avoid overlaps
         initial_box_volume = simulation_config_enhanced["total_particle_volume"] / initial_volume_fraction

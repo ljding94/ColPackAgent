@@ -1,6 +1,12 @@
 {
     "workflow": {
         "placeholder": "Nan",
+        "initialize_defaults": {
+            "initial_volume_fraction": 0.02,
+            "max_overlap_reduction_iters": 10,
+            "default_d": 1.0,
+            "default_a": 0.1
+        },
         "compression_defaults": {
             "max_steps_per_stage": 2000,
             "randomization_steps": 1000,
@@ -58,6 +64,30 @@
                     "P": 1.0
                 }
             }
+        }
+    },
+    "analysis": {
+        "rdf_defaults": {
+            "max_cap": 5.0,
+            "bins": 100,
+            "r_min": 0.1
+        },
+        "n_neighbors_2d": 6,
+        "n_neighbors_3d": 12,
+        "shape_order_params": {
+            "disk":      [{"name": "hexatic_6",     "type": "Hexatic",    "params": {"k": 6}}],
+            "triangle":  [{"name": "hexatic_6",     "type": "Hexatic",    "params": {"k": 6}},
+                          {"name": "hexatic_3",     "type": "Hexatic",    "params": {"k": 3}}],
+            "square":    [{"name": "hexatic_4",     "type": "Hexatic",    "params": {"k": 4}}],
+            "rectangle": [{"name": "nematic",       "type": "Nematic",    "params": {}},
+                          {"name": "hexatic_2",     "type": "Hexatic",    "params": {"k": 2}}],
+            "ellipse":   [{"name": "nematic",       "type": "Nematic",    "params": {}}],
+            "sphere":    [{"name": "steinhardt_q6", "type": "Steinhardt", "params": {"l": 6}},
+                          {"name": "steinhardt_q4", "type": "Steinhardt", "params": {"l": 4}}],
+            "ellipsoid": [{"name": "nematic",       "type": "Nematic",    "params": {}}],
+            "capsule":   [{"name": "nematic",       "type": "Nematic",    "params": {}}],
+            "tetrahedron":[{"name": "steinhardt_q3","type": "Steinhardt", "params": {"l": 3}}],
+            "cube":      [{"name": "steinhardt_q4", "type": "Steinhardt", "params": {"l": 4}}]
         }
     },
     "dimensions": {

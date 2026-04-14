@@ -4,31 +4,30 @@ from dataclasses import dataclass, field
 import json
 import logging
 from pathlib import Path
+import sys
 from typing import Any
 import contextlib
 
 from opencode_agent_sdk import AgentOptions, SDKClient
 from opencode_agent_sdk.types import AssistantMessage, ResultMessage, SystemMessage, TextBlock, ToolUseBlock
 
+# workflow_monitor lives in the colpack skill's scripts folder
+_COLPACK_SCRIPTS_DIR = str(Path(__file__).resolve().parent / "skills" / "colpack" / "scripts")
+if _COLPACK_SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _COLPACK_SCRIPTS_DIR)
+
+from workflow_monitor import (
+    BackgroundMonitorState,
+    _cleanup_completed_background_monitor,
+    _maybe_start_background_monitor,
+    _stop_background_monitor,
+    _tool_name_matches,
+    _tool_supports_local_monitor,
+)
+
 try:
-    from .workflow_monitor import (
-        BackgroundMonitorState,
-        _cleanup_completed_background_monitor,
-        _maybe_start_background_monitor,
-        _stop_background_monitor,
-        _tool_name_matches,
-        _tool_supports_local_monitor,
-    )
     from .workflow_routing import WorkflowRoutingContext, _route_user_message
 except ImportError:
-    from workflow_monitor import (
-        BackgroundMonitorState,
-        _cleanup_completed_background_monitor,
-        _maybe_start_background_monitor,
-        _stop_background_monitor,
-        _tool_name_matches,
-        _tool_supports_local_monitor,
-    )
     from workflow_routing import WorkflowRoutingContext, _route_user_message
 
 
@@ -56,12 +55,41 @@ class QueryResponseState:
     suppressed_status_polls: int = 0
 
 
+def _load_opencode_config() -> dict:
+    """Load opencode.json from the same directory as app.py."""
+    config_path = Path(__file__).resolve().parent / "opencode.json"
+    if not config_path.exists():
+        return {}
+    try:
+        return json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _default_mcp_command() -> str:
+    colpack_mcp = _load_opencode_config().get("mcp", {}).get("colpack", {})
+    cmd = colpack_mcp.get("command")
+    if isinstance(cmd, list) and cmd:
+        return " ".join(cmd)
+    if isinstance(cmd, str) and cmd:
+        return cmd
+    return "colpack-mcp"
+
+
 def _default_agent_path() -> Path:
-    return Path(__file__).resolve().parent / "agents" / "colpack_agent.md"
+    base = Path(__file__).resolve().parent
+    agent_name = _load_opencode_config().get("default_agent")
+    if agent_name:
+        return base / "agents" / f"{agent_name}.md"
+    return base / "agents" / "colpack_agent.md"
 
 
 def _default_skill_path() -> Path:
-    return Path(__file__).resolve().parent / "skills" / "colpack" / "SKILL.md"
+    base = Path(__file__).resolve().parent
+    instructions = _load_opencode_config().get("instructions", [])
+    if instructions:
+        return (base / instructions[0]).resolve()
+    return base / "skills" / "colpack" / "SKILL.md"
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -80,8 +108,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--mcp-command",
-        default="colpack-mcp",
-        help="Command used to start the ColPack FastMCP server (default: colpack-mcp).",
+        default=_default_mcp_command(),
+        help="Command used to start the ColPack FastMCP server (default: from opencode.json or 'colpack-mcp').",
     )
     parser.add_argument(
         "--model",

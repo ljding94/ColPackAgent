@@ -312,7 +312,6 @@ def execute_simulation_workflow(
     from colpack.initialize import create_initial_config
     from colpack.compress import compress_system
     from colpack.sample import sample_system
-    from colpack.analyze import analyze_main
 
     _write_workflow_progress(
         working_dir=working_dir,
@@ -425,29 +424,6 @@ def execute_simulation_workflow(
                     message=f"Completed sample for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
                 )
 
-            # 4. analyze
-            if run_record["analyze"] != "O":
-                _write_workflow_progress(
-                    working_dir=working_dir,
-                    n_runs=len(planned_runs),
-                    records_by_run=existing_records_by_run,
-                    status="running",
-                    message=f"Running analyze for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
-                )
-                analyze_main(run_dir=run_dir)
-                run_record["analyze"] = "O"
-                run_record["status"] = "running"
-                run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
-                existing_records_by_run[str(run_number)] = run_record.copy()
-                _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
-                _write_workflow_progress(
-                    working_dir=working_dir,
-                    n_runs=len(planned_runs),
-                    records_by_run=existing_records_by_run,
-                    status="running",
-                    message=f"Completed analyze for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
-                )
-
             run_record["status"] = "success"
             run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
             run_record["finished_at"] = datetime.now(timezone.utc).isoformat()
@@ -512,17 +488,157 @@ def execute_simulation_workflow(
     }
 
 
-# TODO: seperate analysis step from execution to be more flexible
-def analyze_simulation_runs(run_dirs: list[str]):
-    '''
-    this step is for analyzing the simulation results of all runs
-    '''
+def analyze_simulation_runs(
+    working_dir: str | None = None,
+    continue_on_error: bool = True,
+):
+    """
+    Analyze simulation results for all planned runs in working_dir.
+
+    Reads simulation_plan.json to find run directories, skips runs where
+    the analyze step is already marked complete, and updates workflow_status.csv
+    and workflow_progress.json to track progress.
+
+    Intended to be called after execute_simulation_workflow has completed the
+    initialize, compress, and sample steps.
+    """
+    if not working_dir:
+        raise ValueError("working_dir must be provided.")
+
+    append_workflow_log(
+        working_dir,
+        f"analyze_simulation_runs started with continue_on_error={continue_on_error}",
+        source="workflow",
+    )
+
+    simulation_plan_path = os.path.join(working_dir, "simulation_plan.json")
+    if not os.path.exists(simulation_plan_path):
+        raise FileNotFoundError(f"Simulation plan file not found: {simulation_plan_path}")
+
+    with open(simulation_plan_path, "r") as f:
+        planned_runs = json.load(f)
+
+    if not isinstance(planned_runs, list) or len(planned_runs) == 0:
+        raise ValueError("simulation_plan.json must contain a non-empty list of simulation runs.")
+
+    status_path = os.path.join(working_dir, "workflow_status.csv")
+    workflow_config = get_workflow_config()
+    status_fieldnames = workflow_config.get("status_fieldnames")
+    if not isinstance(status_fieldnames, list) or len(status_fieldnames) == 0:
+        raise ValueError("workflow.status_fieldnames must be configured as a non-empty list in colpack_config.json.")
+    status_fieldnames = list(status_fieldnames)
+    if EXECUTION_STATE_FIELD not in status_fieldnames:
+        status_fieldnames.append(EXECUTION_STATE_FIELD)
+
+    # Load existing status records.
+    existing_records_by_run = {}
+    if os.path.exists(status_path) and os.path.getsize(status_path) > 0:
+        with open(status_path, "r", newline="") as status_file:
+            reader = csv.DictReader(status_file)
+            for row in reader:
+                if not row:
+                    continue
+                run_number_key = str(row.get("run_number", ""))
+                row[EXECUTION_STATE_FIELD] = str(row.get(EXECUTION_STATE_FIELD, "")).strip() or EXECUTION_STATE_FINISHED
+                existing_records_by_run[run_number_key] = row
+    else:
+        _initialize_status_csv(status_path, status_fieldnames)
 
     from colpack.analyze import analyze_main
 
-    summaries = []
-    for run_dir in run_dirs:
-        summary = analyze_main(run_dir=run_dir)
-        summaries.append(summary)
+    _write_workflow_progress(
+        working_dir=working_dir,
+        n_runs=len(planned_runs),
+        records_by_run=existing_records_by_run,
+        status="running",
+        message=f"analyze_simulation_runs: loaded {len(planned_runs)} planned run(s).",
+    )
 
-    return summaries
+    for idx, run in enumerate(planned_runs):
+        run_number = run.get("run_number", idx)
+        run_dir = run.get("run_dir")
+        if not run_dir:
+            run_dir = os.path.join(working_dir, f"run_{run_number}")
+
+        run_record = existing_records_by_run.get(str(run_number))
+        if run_record is None:
+            run_record = _build_run_status_record(run, run_number, run_dir)
+        else:
+            run_record = dict(run_record)
+
+        # Skip runs already analyzed.
+        if run_record.get("analyze") == "O":
+            continue
+
+        run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
+        existing_records_by_run[str(run_number)] = run_record.copy()
+        _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
+        _write_workflow_progress(
+            working_dir=working_dir,
+            n_runs=len(planned_runs),
+            records_by_run=existing_records_by_run,
+            status="running",
+            message=f"Running analyze for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
+        )
+
+        try:
+            analyze_main(run_dir=run_dir)
+            run_record["analyze"] = "O"
+            run_record["status"] = "success"
+            run_record["finished_at"] = datetime.now(timezone.utc).isoformat()
+            existing_records_by_run[str(run_number)] = run_record.copy()
+            _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
+            _write_workflow_progress(
+                working_dir=working_dir,
+                n_runs=len(planned_runs),
+                records_by_run=existing_records_by_run,
+                status="running",
+                message=f"Completed analyze for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
+            )
+
+        except Exception as exc:
+            run_record["status"] = "failed"
+            run_record["finished_at"] = datetime.now(timezone.utc).isoformat()
+            run_record["error"] = str(exc)
+            existing_records_by_run[str(run_number)] = run_record.copy()
+            _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
+            _write_workflow_progress(
+                working_dir=working_dir,
+                n_runs=len(planned_runs),
+                records_by_run=existing_records_by_run,
+                status="failed" if not continue_on_error else "running",
+                message=f"Run {idx + 1}/{len(planned_runs)} (run_{run_number}) failed during analyze.",
+                error=str(exc),
+            )
+            if not continue_on_error:
+                break
+
+    latest_records = list(existing_records_by_run.values())
+    final_status = "completed"
+    final_message = f"analyze_simulation_runs finished: {len(planned_runs)} planned run(s) processed."
+    if any(r.get("status") == "failed" for r in latest_records):
+        final_message = "analyze_simulation_runs finished with one or more failed runs."
+
+    for run_key in list(existing_records_by_run.keys()):
+        updated_record = existing_records_by_run[run_key].copy()
+        updated_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_FINISHED
+        existing_records_by_run[run_key] = updated_record
+    _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
+    latest_records = list(existing_records_by_run.values())
+
+    _write_workflow_progress(
+        working_dir=working_dir,
+        n_runs=len(planned_runs),
+        records_by_run=existing_records_by_run,
+        status=final_status,
+        message=final_message,
+    )
+
+    return {
+        "status_path": status_path,
+        "progress_path": os.path.join(working_dir, "workflow_progress.json"),
+        "log_path": str(resolve_workflow_log_path(working_dir)),
+        "n_runs": len(planned_runs),
+        "n_success": sum(1 for r in latest_records if r.get("status") == "success"),
+        "n_failed": sum(1 for r in latest_records if r.get("status") == "failed"),
+    }

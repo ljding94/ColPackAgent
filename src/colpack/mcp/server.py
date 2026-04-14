@@ -11,6 +11,7 @@ from mcp.server.fastmcp import FastMCP, Context
 from pydantic import BaseModel, Field
 
 from colpack.workflow import (
+    analyze_simulation_runs,
     execute_simulation_workflow,
     plan_simulaiton_runs,
     setup_simulation_problem,
@@ -78,33 +79,6 @@ async def _safe_context_error(context: Context | None, message: str) -> None:
         pass
 
 
-class SetupSimulationProblemInput(BaseModel):
-    dimension: int = Field(..., description="Simulation dimension, must be 2 or 3.")
-    total_particle_number: int = Field(..., gt=0, description="Total number of particles in the simulation.")
-    particle_shape_list: list[str] = Field(..., min_length=1, description="List of colloid shapes, e.g. ['sphere', 'capsule'].")
-    ensemble: str = Field(..., description="Thermodynamic ensemble, either NVT or NPT.")
-
-
-class PlanSimulationRunsInput(BaseModel):
-    baseline_parameters: dict[str, Any] = Field(..., description="Baseline workflow parameter overrides. Every key must already exist in simulation_problem.json.")
-    tunable_parameters: dict[str, list[Any]] = Field(..., description="Dot-path parameter sweeps. Every key must already exist in simulation_problem.json.")
-    working_dir: str = Field(..., description="Directory containing simulation_problem.json and output plan files.")
-
-
-class ExecuteSimulationWorkflowInput(BaseModel):
-    working_dir: str = Field(..., description="Directory containing simulation_plan.json.")
-    continue_on_error: bool = Field(default=True, description="If true, continue remaining runs when one run fails.")
-    wait: bool = Field(
-        default=False,
-        description="If true, run synchronously and wait for completion. If false, start background job and return immediately.",
-    )
-
-
-class WorkflowExecutionStatusInput(BaseModel):
-    working_dir: str | None = Field(default=None, description="Workflow working directory to query.")
-    job_id: str | None = Field(default=None, description="Explicit background job id to query.")
-
-
 def _count_status_from_csv(working_dir: str) -> dict[str, int]:
     status_path = Path(working_dir) / "workflow_status.csv"
     if not status_path.exists():
@@ -157,6 +131,12 @@ def _workflow_marked_running_in_csv(working_dir: str) -> bool:
             if execution_state == "running":
                 return True
     return False
+
+
+_analyze_jobs: dict[str, dict[str, Any]] = {}
+_analyze_processes: dict[str, multiprocessing.Process] = {}
+_analyze_jobs_by_working_dir: dict[str, str] = {}
+_analyze_lock = threading.Lock()
 
 
 def _run_workflow_job_process(working_dir: str, continue_on_error: bool) -> None:
@@ -256,6 +236,111 @@ def _start_workflow_job(working_dir: str, continue_on_error: bool) -> dict[str, 
     }
 
 
+def _run_analyze_job_process(working_dir: str, continue_on_error: bool) -> None:
+    try:
+        analyze_simulation_runs(
+            working_dir=working_dir,
+            continue_on_error=continue_on_error,
+        )
+        append_workflow_log(working_dir, "analyze job completed", source="mcp")
+    except Exception as exc:
+        append_workflow_log(working_dir, f"analyze job failed: {exc}", source="mcp")
+        raise
+
+
+def _refresh_analyze_job_record(job_id: str) -> dict[str, Any] | None:
+    with _analyze_lock:
+        current = _analyze_jobs.get(job_id)
+        process = _analyze_processes.get(job_id)
+        if current is None:
+            return None
+        if process is None:
+            return dict(current)
+
+    if process.is_alive():
+        return dict(current)
+
+    process.join(timeout=0)
+    with _analyze_lock:
+        current = _analyze_jobs.get(job_id)
+        if current is None:
+            return None
+
+        if current.get("status") == "running":
+            current["finished_at"] = datetime.now(timezone.utc).isoformat()
+            if process.exitcode == 0:
+                current["status"] = "completed"
+            else:
+                current["status"] = "failed"
+                current["error"] = current.get("error") or f"Analyze process exited with code {process.exitcode}."
+
+        _analyze_processes.pop(job_id, None)
+        return dict(current)
+
+
+def _start_analyze_job(working_dir: str, continue_on_error: bool) -> dict[str, Any]:
+    with _analyze_lock:
+        existing_job_id = _analyze_jobs_by_working_dir.get(working_dir)
+
+    if existing_job_id:
+        existing = _refresh_analyze_job_record(existing_job_id)
+        if existing and existing.get("status") == "running":
+            append_workflow_log(
+                working_dir,
+                f"async analyze request reused running job {existing_job_id}",
+                source="mcp",
+            )
+            return {
+                "started": False,
+                "job_id": existing_job_id,
+                "status": "running",
+            }
+
+    with _analyze_lock:
+        job_id = f"az_{uuid.uuid4().hex[:12]}"
+        job_record = {
+            "job_id": job_id,
+            "working_dir": working_dir,
+            "status": "running",
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "finished_at": None,
+            "error": None,
+            "result": None,
+        }
+        _analyze_jobs[job_id] = job_record
+        _analyze_jobs_by_working_dir[working_dir] = job_id
+
+    append_workflow_log(
+        working_dir,
+        f"started async analyze job {job_id} with continue_on_error={continue_on_error}",
+        source="mcp",
+    )
+
+    process = multiprocessing.get_context("spawn").Process(
+        target=_run_analyze_job_process,
+        args=(working_dir, continue_on_error),
+        name=f"colpack-analyze-{job_id}",
+        daemon=False,
+    )
+    process.start()
+    with _analyze_lock:
+        _analyze_processes[job_id] = process
+
+    return {
+        "started": True,
+        "job_id": job_id,
+        "status": "running",
+    }
+
+
+# TODO: total particle number not necessary for setup_simulation_problem; can be inferred from particle list.
+class SetupSimulationProblemInput(BaseModel):
+    dimension: int = Field(..., description="Simulation dimension, must be 2 or 3.")
+    total_particle_number: int = Field(..., gt=0, description="Total number of particles in the simulation.")
+    particle_shape_list: list[str] = Field(..., min_length=1, description="List of colloid shapes, supported shapes are: for dimensions=2: ['disk', 'ellipse', 'capsule', 'triangle', 'square', 'rectangle'] ;for dimensions=2 ['sphere', 'ellipsoid', capsule', 'tethrahedron', 'cube', 'octahedron'].")
+    ensemble: str = Field(..., description="Thermodynamic ensemble, either NVT or NPT.")
+
+
 @mcp.tool()
 def setup_simulation_problem_tool(params: SetupSimulationProblemInput) -> dict[str, Any]:
     """Create simulation_problem.json for a workflow directory."""
@@ -279,6 +364,12 @@ def setup_simulation_problem_tool(params: SetupSimulationProblemInput) -> dict[s
     }
 
 
+class PlanSimulationRunsInput(BaseModel):
+    baseline_parameters: dict[str, Any] = Field(..., description="Baseline workflow parameter overrides. Every key must already exist in simulation_problem.json.")
+    tunable_parameters: dict[str, list[Any]] = Field(..., description="Dot-path parameter sweeps. Every key must already exist in simulation_problem.json.")
+    working_dir: str = Field(..., description="Directory containing simulation_problem.json and output plan files.")
+
+
 @mcp.tool()
 def plan_simulation_runs_tool(params: PlanSimulationRunsInput) -> dict[str, Any]:
     """Create simulation_baseline.json, run folders, and simulation_plan.json from simulation_problem.json-defined paths."""
@@ -299,6 +390,15 @@ def plan_simulation_runs_tool(params: PlanSimulationRunsInput) -> dict[str, Any]
         "n_runs": result["n_runs"],
         "simulation_runs": result["simulation_runs"],
     }
+
+
+class ExecuteSimulationWorkflowInput(BaseModel):
+    working_dir: str = Field(..., description="Directory containing simulation_plan.json.")
+    continue_on_error: bool = Field(default=True, description="If true, continue remaining runs when one run fails.")
+    wait: bool = Field(
+        default=False,
+        description="If true, run synchronously and wait for completion. If false, start background job and return immediately.",
+    )
 
 
 @mcp.tool()
@@ -347,7 +447,7 @@ async def execute_simulation_workflow_tool(
         if launch["started"]:
             await _safe_context_info(
                 context,
-                f"Started async workflow job {launch['job_id']}. Use get_simulation_workflow_status_tool to monitor progress.",
+                f"Started async workflow job {launch['job_id']}. Monitor progress via workflow_progress.json or workflow_monitor script.",
             )
         else:
             await _safe_context_info(
@@ -401,43 +501,108 @@ async def execute_simulation_workflow_tool(
     }
 
 
+class AnalyzeSimulationRunsInput(BaseModel):
+    working_dir: str = Field(..., description="Directory containing simulation_plan.json and completed simulation runs.")
+    continue_on_error: bool = Field(default=True, description="If true, continue remaining runs when one fails analysis.")
+    wait: bool = Field(
+        default=False,
+        description="If true, run synchronously and wait for completion. If false, start background job and return immediately.",
+    )
+
+
 @mcp.tool()
-def get_simulation_workflow_status_tool(params: WorkflowExecutionStatusInput) -> dict[str, Any]:
-    """Get status for an async workflow execution job and current workflow_status.csv counts."""
-    resolved_dir = _normalize_working_dir(params.working_dir) if params.working_dir else None
+async def analyze_simulation_runs_tool(
+    params: AnalyzeSimulationRunsInput,
+    context: Context | None = None,
+) -> dict[str, Any]:
+    """Analyze simulation results for all planned runs in a workflow directory."""
+    resolved_dir = _normalize_working_dir(params.working_dir)
+    print(
+        "[mcp] analyze_simulation_runs_tool "
+        f"working_dir={resolved_dir} wait={params.wait} continue_on_error={params.continue_on_error}"
+    )
+    append_workflow_log(
+        resolved_dir,
+        f"analyze_simulation_runs_tool invoked with wait={params.wait} continue_on_error={params.continue_on_error}",
+        source="mcp",
+    )
 
-    selected_job_id = None
-    with _jobs_lock:
-        selected_job = None
-        if params.job_id:
-            selected_job_id = params.job_id
-            selected_job = _workflow_jobs.get(params.job_id)
-        elif resolved_dir:
-            job_id = _jobs_by_working_dir.get(resolved_dir)
-            if job_id:
-                selected_job_id = job_id
-                selected_job = _workflow_jobs.get(job_id)
+    await _safe_context_info(
+        context,
+        f"Analysis requested: wait={params.wait}, continue_on_error={params.continue_on_error}.",
+    )
 
-    if selected_job_id is not None:
-        job_snapshot = _refresh_job_record(selected_job_id)
-    else:
-        job_snapshot = dict(selected_job) if selected_job else None
+    if not params.wait:
+        if _workflow_marked_running_in_csv(resolved_dir):
+            await _safe_context_info(context, "A workflow job is already running in this directory; async analyze call skipped.")
+            csv_counts = _count_status_from_csv(resolved_dir)
+            return {
+                "ok": True,
+                "mode": "async",
+                "working_dir": resolved_dir,
+                "job_id": None,
+                "job_status": "running",
+                "already_running": True,
+                "status_path": str(Path(resolved_dir) / "workflow_status.csv"),
+                "log_path": str(resolve_workflow_log_path(resolved_dir)),
+                "progress": _read_workflow_progress(resolved_dir),
+                **csv_counts,
+            }
 
-    if job_snapshot is None and resolved_dir is None:
-        raise ValueError("Provide either job_id or working_dir.")
+        launch = _start_analyze_job(
+            working_dir=resolved_dir,
+            continue_on_error=params.continue_on_error,
+        )
+        if launch["started"]:
+            await _safe_context_info(
+                context,
+                f"Started async analyze job {launch['job_id']}. Monitor progress via workflow_progress.json or workflow_monitor script.",
+            )
+        else:
+            await _safe_context_info(
+                context,
+                f"Analyze job {launch['job_id']} is already running. Reusing existing job.",
+            )
+        csv_counts = _count_status_from_csv(resolved_dir)
+        return {
+            "ok": True,
+            "mode": "async",
+            "working_dir": resolved_dir,
+            "job_id": launch["job_id"],
+            "job_status": launch["status"],
+            "already_running": not launch["started"],
+            "status_path": str(Path(resolved_dir) / "workflow_status.csv"),
+            "log_path": str(resolve_workflow_log_path(resolved_dir)),
+            "progress": _read_workflow_progress(resolved_dir),
+            **csv_counts,
+        }
 
-    working_dir = resolved_dir or str(job_snapshot["working_dir"])
-    csv_counts = _count_status_from_csv(working_dir)
+    await _safe_context_report_progress(context, progress=0, total=1, message="Preparing analysis.")
+
+    try:
+        result = await asyncio.to_thread(
+            analyze_simulation_runs,
+            working_dir=resolved_dir,
+            continue_on_error=params.continue_on_error,
+        )
+    except Exception as exc:
+        await _safe_context_error(context, f"Analysis failed: {exc}")
+        raise
+
+    await _safe_context_report_progress(context, progress=1, total=1, message="Analysis completed.")
+    await _safe_context_info(context, "Analysis completed.")
 
     return {
         "ok": True,
-        "working_dir": working_dir,
-        "job": job_snapshot,
-        "status_path": str(Path(working_dir) / "workflow_status.csv"),
-        "progress_path": str(Path(working_dir) / "workflow_progress.json"),
-        "log_path": str(resolve_workflow_log_path(working_dir)),
-        "progress": _read_workflow_progress(working_dir),
-        **csv_counts,
+        "mode": "sync",
+        "working_dir": resolved_dir,
+        "status_path": result["status_path"],
+        "progress_path": result.get("progress_path"),
+        "log_path": result.get("log_path"),
+        "progress": _read_workflow_progress(resolved_dir),
+        "n_runs": result["n_runs"],
+        "n_success": result["n_success"],
+        "n_failed": result["n_failed"],
     }
 
 

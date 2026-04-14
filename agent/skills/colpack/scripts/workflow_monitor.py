@@ -28,7 +28,7 @@ def _tool_supports_local_monitor(tool_name: str) -> bool:
             "setup_simulation_problem_tool",
             "plan_simulation_runs_tool",
             "execute_simulation_workflow_tool",
-            "get_simulation_workflow_status_tool",
+            "analyze_simulation_runs_tool",
         )
     )
 

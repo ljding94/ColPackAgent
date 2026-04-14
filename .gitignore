@@ -32,6 +32,17 @@
 # Git and project files
 !/.gitignore
 
+# AGENTS.md lives in agent/ — Codex finds it by running from agent/ as CWD
+!/agent/AGENTS.md
+
+# Gemini CLI project settings live in agent/.gemini/
+# Commit: settings.json (MCP config) and system.md (symlink -> ../agents/colpack_agent.md).
+# Exclude: skills/ (machine-specific absolute symlinks; recreate with: ./run_colpack.sh setup)
+!/agent/.gemini/
+!/agent/.gemini/settings.json
+!/agent/.gemini/system.md
+/agent/.gemini/skills/
+
 # Python cache
 __pycache__/
 
