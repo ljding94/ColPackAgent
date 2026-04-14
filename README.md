@@ -4,20 +4,41 @@ ColPackAgent is an AI agent for Hard Particle Monte Carlo simulations.
 
 ## 🚀 How to Use ColPackAgent
 
-ColPackAgent provides two ways to run the AI physics assistant: as a standalone terminal app, or as a native skill inside your favorite AI IDE (Claude Code, OpenCode, Cursor, etc.).
+All launch modes are managed by `run_colpack.sh`. Run it without arguments to see available options:
 
-### Route 1: Standalone Terminal App (Recommended for standard users)
-Run the AI directly from your terminal. The app will automatically connect the physics engine to the AI.
-1. Install the physics package and tools: `pip install -e ./src/`
-2. Install the agent dependencies: `pip install -r agent/requirements.txt`
-3. Launch the agent: `python agent/app.py`
+```bash
+./run_colpack.sh
+# Usage: ./run_colpack.sh [standalone|opencode|claude|gemini|codex|setup]
+```
 
-### Route 2: Bring Your Own Agent (For AI IDE users)
-If you already use an AI coding assistant, you can give it the ColPack skill directly.
-1. Install the tools to your environment: `pip install -e ./src/`
-2. Add the FastMCP server to your IDE's tool registry. For example, in OpenCode or Claude Code, run:
-   `mcp add colpack-tools command colpack-mcp`
-3. Point your AI to the skill instructions: Tell your agent to read `agent/skills/colpack/SKILL.md` and begin the workflow.
+### One-time setup
+
+After cloning or when the skill path changes, register the ColPack skill with your AI clients:
+
+```bash
+./run_colpack.sh setup
+```
+
+This symlinks `agent/skills/colpack` into the skill directories of Claude Code, Gemini CLI, and Codex.
+
+### Route 1: Standalone Terminal App
+
+Runs the AI agent directly from the terminal using the OpenCode SDK runner (`agent/app.py`):
+
+```bash
+./run_colpack.sh standalone
+```
+
+### Route 2: AI IDE / Coding Assistant
+
+Launch ColPackAgent inside your preferred AI client. Each mode loads the MCP tool server, agent prompt, and ColPack skill automatically:
+
+| Command | Client |
+|---------|--------|
+| `./run_colpack.sh opencode` | OpenCode (`agent/opencode.json`) |
+| `./run_colpack.sh claude` | Claude Code (`agent/claude_mcp.json`) |
+| `./run_colpack.sh gemini` | Gemini CLI (`agent/.gemini/settings.json`) |
+| `./run_colpack.sh codex` | Codex (`~/.codex/config.toml`) |
 
 ## Setup
 
@@ -57,7 +78,13 @@ Notes:
 - `hoomd-blue` is managed by conda, not pip.
 - Use `python -m pip ...` to ensure install goes to the active interpreter.
 
-### 4. Verify installation
+### 4. Install agent dependencies
+
+```bash
+pip install -r agent/requirements.txt
+```
+
+### 5. Verify installation
 
 ```bash
 python -c "import sys, colpack; print(sys.executable); print(colpack.__file__)"
@@ -73,12 +100,6 @@ colpack-mcp
 ```
 
 The command is expected to stay quiet in terminal because MCP stdio servers wait for a client connection.
-
-## Use OpenCode
-
-```bash
-opencode --config agent/agent_config.json
-```
 
 ## Quick Troubleshooting
 
