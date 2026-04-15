@@ -23,11 +23,32 @@ def _resolve_dimension(simulation_config):
     return int(dimension)
 
 
-def analyze_main(run_dir):
+def analyze_main(run_dir, extra_order_params=None):
     """
     Main function to analyze the compressed system.
     It will read the compress_summary.json and sample_trajectory.gsd from the system_dir,
     then perform analysis based on the particle types and shapes, and save the results to analysis_results.json
+
+    Parameters
+    ----------
+    run_dir : str
+        Path to the run directory.
+    extra_order_params : list[dict], optional
+        Additional order parameters to measure for every particle type,
+        on top of the shape-specific defaults.  Each entry is a dict with:
+          - ``"name"`` (str): result key name (e.g. ``"hexatic_8"``).
+          - ``"type"`` (str): freud.order class name (e.g. ``"Hexatic"``).
+          - ``"params"`` (dict): constructor keyword arguments
+            (e.g. ``{"k": 8}``).
+        Example::
+
+            extra_order_params=[
+                {"name": "hexatic_8", "type": "Hexatic", "params": {"k": 8}},
+                {"name": "steinhardt_q10", "type": "Steinhardt", "params": {"l": 10}},
+            ]
+
+        Available types and their required/optional parameters are listed in
+        ``available_analysis_params.order`` in colpack_config.json.
     """
     run_dir = _normalize_run_dir(run_dir)
 
@@ -40,7 +61,7 @@ def analyze_main(run_dir):
         simulation_config = json.load(f)
 
     # 1. compute and save the analysis results
-    analyze_compute(run_dir, simulation_config)
+    analyze_compute(run_dir, simulation_config, extra_order_params=extra_order_params)
 
     # 2.0 find the post analysis simulation config path
     simulation_config_path = os.path.join(run_dir, "simulation_config_analysis.json")
@@ -70,7 +91,7 @@ def analyze_main(run_dir):
     }
 
 
-def analyze_compute(run_dir, simulation_config):
+def analyze_compute(run_dir, simulation_config, extra_order_params=None):
     run_dir = _normalize_run_dir(run_dir)
     particle_list = simulation_config.get("particle_list")
     if not particle_list:
@@ -88,6 +109,9 @@ def analyze_compute(run_dir, simulation_config):
     dimension = _resolve_dimension(simulation_config)
     analysis_config = get_analyze_config(dimension)
 
+    # 1.1 resolve extra order params from config catalog
+    extra_ops = _resolve_extra_order_params(extra_order_params) if extra_order_params else []
+
     results = {}
 
     # 2 analysis loop: type-specific and global
@@ -97,11 +121,21 @@ def analyze_compute(run_dir, simulation_config):
         pTypeShape = pType.split("_")[0]  # e.g. "disk" from "disk_1"
         if pTypeShape in analysis_config:
             instructions = analysis_config[pTypeShape]
+            # Merge shape defaults with extra params (skip duplicates by name)
+            merged_ops = list(instructions["order_params"])
+            existing_names = {op["name"] for op in merged_ops}
+            for op in extra_ops:
+                if op["name"] not in existing_names:
+                    merged_ops.append(op)
             # Execute all configured order parameters
-            type_results = _compute_shape_orders(traj, p_info, instructions["order_params"])
+            type_results = _compute_shape_orders(traj, p_info, merged_ops)
             results[f"{pType}"] = type_results
         else:
-            print(f"Warning: No analysis config found for shape {pType}")
+            if extra_ops:
+                type_results = _compute_shape_orders(traj, p_info, extra_ops)
+                results[f"{pType}"] = type_results
+            else:
+                print(f"Warning: No analysis config found for shape {pType}")
 
     # 2.2. rdf analysis loop
     if len(particle_list) > 1:
@@ -257,22 +291,95 @@ def _values_to_float_array(values):
     return np.array(values, dtype=float)
 
 
+_FREUD_ORDER_CLASSES = {
+    "Hexatic": lambda p: freud.order.Hexatic(**p),
+    "Nematic": lambda p: freud.order.Nematic(**p),
+    "Steinhardt": lambda p: freud.order.Steinhardt(**p),
+    "ContinuousCoordination": lambda p: freud.order.ContinuousCoordination(**p),
+    "Cubatic": lambda p: freud.order.Cubatic(**p),
+    "SolidLiquid": lambda p: freud.order.SolidLiquid(**p),
+    "RotationalAutocorrelation": lambda p: freud.order.RotationalAutocorrelation(**p),
+}
+
+
+def _resolve_extra_order_params(param_specs):
+    """
+    Resolve a list of order parameter specifications into instantiated
+    freud objects.
+
+    Each element of *param_specs* is a dict with:
+      - ``"name"`` (str): result key name.
+      - ``"type"`` (str): freud.order class name.
+      - ``"params"`` (dict): constructor keyword arguments.
+
+    Validates that:
+      1. The ``type`` is a supported freud.order class.
+      2. All required constructor parameters are provided.
+      3. No unknown parameters are passed.
+
+    Returns a list of ``{"name": ..., "func": ...}`` dicts ready for
+    ``_compute_shape_orders``.
+    """
+    import inspect
+
+    resolved = []
+    for spec in param_specs:
+        # --- basic structure check ---
+        if not isinstance(spec, dict):
+            raise TypeError(
+                f"Each extra_order_params entry must be a dict, got {type(spec).__name__}."
+            )
+        for required_key in ("name", "type"):
+            if required_key not in spec:
+                raise ValueError(f"Extra order param entry missing required key '{required_key}': {spec}")
+
+        name = spec["name"]
+        cls_name = spec["type"]
+        params = dict(spec.get("params", {}))
+
+        # --- validate class name ---
+        if cls_name not in _FREUD_ORDER_CLASSES:
+            raise ValueError(
+                f"Unknown freud order class '{cls_name}'. "
+                f"Supported: {list(_FREUD_ORDER_CLASSES.keys())}"
+            )
+
+        # --- validate constructor params ---
+        freud_cls = getattr(freud.order, cls_name)
+        sig = inspect.signature(freud_cls.__init__)
+        valid_params = {k for k in sig.parameters if k != "self"}
+        required_params = {
+            k for k, v in sig.parameters.items()
+            if k != "self" and v.default is inspect.Parameter.empty
+        }
+
+        unknown = set(params) - valid_params
+        if unknown:
+            raise ValueError(
+                f"Unknown parameter(s) {unknown} for {cls_name}. "
+                f"Valid: {valid_params}"
+            )
+
+        missing = required_params - set(params)
+        if missing:
+            raise ValueError(
+                f"Missing required parameter(s) {missing} for {cls_name}. "
+                f"Required: {required_params}"
+            )
+
+        # Filter out None values
+        params = {k: v for k, v in params.items() if v is not None}
+        func = _FREUD_ORDER_CLASSES[cls_name](params)
+        resolved.append({"name": name, "func": func})
+    return resolved
+
+
 def get_analyze_config(dimension=None):
     """
     Builds analysis config from colpack_config.json, instantiating freud objects.
     """
     if dimension is not None and int(dimension) not in (2, 3):
         raise ValueError(f"Unsupported dimension for analysis: {dimension}")
-
-    _freud_order_classes = {
-        "Hexatic": lambda p: freud.order.Hexatic(**p),
-        "Nematic": lambda p: freud.order.Nematic(**p),
-        "Steinhardt": lambda p: freud.order.Steinhardt(**p),
-        "ContinuousCoordination": lambda p: freud.order.ContinuousCoordination(**p),
-        "Cubatic": lambda p: freud.order.Cubatic(**p),
-        "SolidLiquid": lambda p: freud.order.SolidLiquid(**p),
-        "RotationalAutocorrelation": lambda p: freud.order.RotationalAutocorrelation(**p),
-    }
 
     raw = _load_analyze_config()
     shape_order_params = raw.get("shape_order_params", {})
@@ -282,9 +389,9 @@ def get_analyze_config(dimension=None):
         order_params = []
         for entry in param_list:
             cls_name = entry["type"]
-            if cls_name not in _freud_order_classes:
+            if cls_name not in _FREUD_ORDER_CLASSES:
                 raise ValueError(f"Unknown freud order class '{cls_name}' in analysis config.")
-            func = _freud_order_classes[cls_name](entry.get("params", {}))
+            func = _FREUD_ORDER_CLASSES[cls_name](entry.get("params", {}))
             order_params.append({"name": entry["name"], "func": func})
         config[shape] = {"order_params": order_params}
 

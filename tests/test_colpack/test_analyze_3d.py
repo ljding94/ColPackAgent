@@ -18,11 +18,11 @@ def _has_hoomd() -> bool:
     return importlib.util.find_spec("hoomd") is not None
 
 
-def run_analyze(output_subdir, expected_order_params=None):
+def run_analyze(output_subdir, expected_order_params=None, extra_order_params=None):
     project_root = _find_project_root(Path(__file__).resolve())
     run_dir = project_root / "data" / "test" / output_subdir / "run_0"
     print(f"run_analyze: run_dir: {run_dir}")
-    summary = analyze_main(run_dir=str(run_dir))
+    summary = analyze_main(run_dir=str(run_dir), extra_order_params=extra_order_params)
 
     assert (run_dir / "simulation_config_analysis.json").exists()
     assert (run_dir / "analysis_results.json").exists()
@@ -79,13 +79,31 @@ def main():
         output_subdir="3d_sphere_capsule",
         expected_order_params={
             "sphere_0": ["steinhardt_q6", "steinhardt_q4", "solid_liquid_q6"],
-            "capsule_0": ["nematic", "rot_autocorr"],
+            "capsule_0": ["nematic"],
         },
     )
     print("test_analyze_3d_sphere_capsule: OK\n")
 
     run_analyze(output_subdir="3d_sphere_capsule_npt")
     print("test_analyze_3d_npt: OK\n")
+
+    # Test with custom extra order params
+    run_analyze(
+        output_subdir="3d_sphere",
+        expected_order_params={"sphere_0": ["steinhardt_q6", "steinhardt_q4", "solid_liquid_q6", "steinhardt_q3", "continuous_coord"]},
+        extra_order_params=[
+            {"name": "steinhardt_q3", "type": "Steinhardt", "params": {"l": 3}},
+            {"name": "continuous_coord", "type": "ContinuousCoordination", "params": {}},
+        ],
+    )
+    print("test_analyze_3d_sphere_extra_params: OK\n")
+
+    # Restore default (no extras) so test data is clean
+    run_analyze(
+        output_subdir="3d_sphere",
+        expected_order_params={"sphere_0": ["steinhardt_q6", "steinhardt_q4", "solid_liquid_q6"]},
+    )
+    print("test_analyze_3d_sphere_restore: OK\n")
 
 
 if __name__ == "__main__":

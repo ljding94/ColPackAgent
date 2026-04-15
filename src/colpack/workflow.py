@@ -491,6 +491,7 @@ def execute_simulation_workflow(
 def analyze_simulation_runs(
     working_dir: str | None = None,
     continue_on_error: bool = True,
+    extra_order_params: list | None = None,
 ):
     """
     Analyze simulation results for all planned runs in working_dir.
@@ -582,7 +583,7 @@ def analyze_simulation_runs(
         )
 
         try:
-            analyze_main(run_dir=run_dir)
+            analyze_main(run_dir=run_dir, extra_order_params=extra_order_params)
             run_record["analyze"] = "O"
             run_record["status"] = "success"
             run_record["finished_at"] = datetime.now(timezone.utc).isoformat()

@@ -18,11 +18,11 @@ def _has_hoomd() -> bool:
     return importlib.util.find_spec("hoomd") is not None
 
 
-def run_analyze(output_subdir, expected_order_params=None):
+def run_analyze(output_subdir, expected_order_params=None, extra_order_params=None):
     project_root = _find_project_root(Path(__file__).resolve())
     run_dir = project_root / "data" / "test" / output_subdir / "run_0"
     print(f"run_analyze: run_dir: {run_dir}")
-    summary = analyze_main(run_dir=str(run_dir))
+    summary = analyze_main(run_dir=str(run_dir), extra_order_params=extra_order_params)
 
     assert (run_dir / "simulation_config_analysis.json").exists()
     assert (run_dir / "analysis_results.json").exists()
@@ -71,21 +71,39 @@ def main():
 
     run_analyze(
         output_subdir="2d_disk",
-        expected_order_params={"disk_0": ["hexatic_6", "continuous_coord"]},
+        expected_order_params={"disk_0": ["hexatic_6"]},
     )
     print("test_analyze_2d_disk: OK\n")
 
     run_analyze(
         output_subdir="2d_disk_capsule",
         expected_order_params={
-            "disk_0": ["hexatic_6", "continuous_coord"],
-            "capsule_0": ["nematic", "rot_autocorr"],
+            "disk_0": ["hexatic_6"],
+            "capsule_0": ["nematic"],
         },
     )
     print("test_analyze_2d_disk_capsule: OK\n")
 
     run_analyze(output_subdir="2d_disk_ellipse_npt")
     print("test_analyze_2d_npt: OK\n")
+
+    # Test with custom extra order params
+    run_analyze(
+        output_subdir="2d_disk",
+        expected_order_params={"disk_0": ["hexatic_6", "hexatic_4", "nematic"]},
+        extra_order_params=[
+            {"name": "hexatic_4", "type": "Hexatic", "params": {"k": 4}},
+            {"name": "nematic", "type": "Nematic", "params": {}},
+        ],
+    )
+    print("test_analyze_2d_disk_extra_params: OK\n")
+
+    # Restore default (no extras) so test data is clean
+    run_analyze(
+        output_subdir="2d_disk",
+        expected_order_params={"disk_0": ["hexatic_6"]},
+    )
+    print("test_analyze_2d_disk_restore: OK\n")
 
 
 if __name__ == "__main__":

@@ -223,6 +223,53 @@ def test_get_colpack_capabilities_tool():
     assert "analyze_simulation_runs_tool" in step_tools
     assert "workflow_progress_file" in data["progress_monitoring"]
 
+    # Analysis capabilities
+    analysis = data.get("analysis")
+    assert analysis is not None, "Missing 'analysis' in capabilities"
+
+    avail = analysis.get("available_analysis_params", {})
+    assert "order" in avail, "Missing 'order' in available_analysis_params"
+    assert "density" in avail, "Missing 'density' in available_analysis_params"
+    order_classes = set(avail["order"].keys())
+    assert {"Hexatic", "Nematic", "Steinhardt"}.issubset(order_classes)
+    for cls_info in avail["order"].values():
+        assert "params" in cls_info
+        assert "notes" in cls_info
+
+    shape_defaults = analysis.get("shape_order_params", {})
+    assert "disk" in shape_defaults
+    assert "sphere" in shape_defaults
+
+    extra_fmt = analysis.get("extra_order_params_format")
+    assert extra_fmt is not None, "Missing extra_order_params_format"
+    assert "format" in extra_fmt
+    assert "example" in extra_fmt
+
+
+def test_analyze_tool_schema_has_extra_order_params():
+    """analyze_simulation_runs_tool must expose extra_order_params in its schema."""
+
+    async def _run(session: ClientSession):
+        result = await session.list_tools()
+        for tool in result.tools:
+            if tool.name == "analyze_simulation_runs_tool":
+                return tool
+        return None
+
+    tool = _call(_run)
+    assert tool is not None
+    # The tool uses a Pydantic BaseModel, so params are nested under "params".
+    params_schema = tool.inputSchema.get("properties", {}).get("params", {})
+    # Resolve $defs / $ref if present.
+    defs = tool.inputSchema.get("$defs", {})
+    if "$ref" in params_schema:
+        ref_name = params_schema["$ref"].rsplit("/", 1)[-1]
+        params_schema = defs.get(ref_name, params_schema)
+    inner_props = set(params_schema.get("properties", {}).keys())
+    assert "extra_order_params" in inner_props, (
+        f"analyze_simulation_runs_tool is missing the extra_order_params parameter; got {inner_props}"
+    )
+
 
 # ---------------------------------------------------------------------------
 # Test: full async round-trip with mocked simulation functions

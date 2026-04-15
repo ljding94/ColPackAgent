@@ -67,6 +67,23 @@
         }
     },
     "analysis": {
+        "available_analysis_params": {
+            "order": {
+                "Hexatic":                  {"params": {"k": 6, "weighted": false},                                         "notes": "2D bond-orientational order; set k to match lattice symmetry (k=6 hexagonal, k=4 square, k=3 triangular)."},
+                "Nematic":                  {"params": {},                                                                   "notes": "Nematic order parameter for rod-like particles from orientation vectors."},
+                "Steinhardt":               {"params": {"l": 6, "average": false, "wl": false, "weighted": false},           "notes": "Steinhardt bond-orientational order; l=6 FCC/HCP, l=4 BCC/cubic, l=3 tetrahedral. 'l' is required."},
+                "ContinuousCoordination":   {"params": {"powers": null, "compute_log": true, "compute_exp": true},           "notes": "Continuous coordination number from Voronoi tessellation."},
+                "Cubatic":                  {"params": {"t_initial": 5.0, "t_final": 0.001, "scale": 0.9, "n_replicates": 1},"notes": "Cubatic order for cubic-symmetry particles; uses simulated annealing. 't_initial', 't_final', 'scale' are required."},
+                "SolidLiquid":              {"params": {"l": 6, "q_threshold": 0.7, "solid_threshold": 6, "normalize_q": true}, "notes": "Identifies solid-like vs liquid-like particles. 'l', 'q_threshold', 'solid_threshold' are required."},
+                "RotationalAutocorrelation":{"params": {"l": 2},                                                             "notes": "Rotational autocorrelation from quaternion time series. 'l' is required."}
+            },
+            "density": {
+                "RDF":                {"params": {"bins": 100, "r_max": 5.0, "r_min": 0.1},   "notes": "Radial distribution function g(r). Already computed for multi-component systems."},
+                "LocalDensity":       {"params": {"r_max": 3.0, "diameter": 1.0},              "notes": "Local number density and packing fraction within a sphere of radius r_max."},
+                "GaussianDensity":    {"params": {"width": 50, "r_max": 5.0, "sigma": 0.1},    "notes": "Gaussian-smeared 3D density field on a regular grid."},
+                "CorrelationFunction":{"params": {"bins": 100, "r_max": 5.0},                  "notes": "Spatial correlation function of per-particle scalar quantities."}
+            }
+        },
         "rdf_defaults": {
             "max_cap": 5.0,
             "bins": 100,
@@ -75,10 +92,8 @@
         "n_neighbors_2d": 6,
         "n_neighbors_3d": 12,
         "shape_order_params": {
-            "disk":      [{"name": "hexatic_6",     "type": "Hexatic",    "params": {"k": 6}},
-                          {"name": "continuous_coord", "type": "ContinuousCoordination", "params": {}}],
-            "triangle":  [{"name": "hexatic_6",     "type": "Hexatic",    "params": {"k": 6}},
-                          {"name": "hexatic_3",     "type": "Hexatic",    "params": {"k": 3}}],
+            "disk":      [{"name": "hexatic_6",     "type": "Hexatic",    "params": {"k": 6}}],
+            "triangle":  [{"name": "hexatic_3",     "type": "Hexatic",    "params": {"k": 3}}],
             "square":    [{"name": "hexatic_4",     "type": "Hexatic",    "params": {"k": 4}}],
             "rectangle": [{"name": "nematic",       "type": "Nematic",    "params": {}},
                           {"name": "hexatic_2",     "type": "Hexatic",    "params": {"k": 2}}],
@@ -86,11 +101,10 @@
             "sphere":    [{"name": "steinhardt_q6", "type": "Steinhardt", "params": {"l": 6}},
                           {"name": "steinhardt_q4", "type": "Steinhardt", "params": {"l": 4}},
                           {"name": "solid_liquid_q6", "type": "SolidLiquid", "params": {"l": 6, "q_threshold": 0.7, "solid_threshold": 6}}],
-            "ellipsoid": [{"name": "nematic",       "type": "Nematic",    "params": {}},
-                          {"name": "rot_autocorr",  "type": "RotationalAutocorrelation", "params": {"l": 2}}],
-            "capsule":   [{"name": "nematic",       "type": "Nematic",    "params": {}},
-                          {"name": "rot_autocorr",  "type": "RotationalAutocorrelation", "params": {"l": 2}}],
-            "tetrahedron":[{"name": "steinhardt_q3","type": "Steinhardt", "params": {"l": 3}}],
+            "ellipsoid": [{"name": "nematic",       "type": "Nematic",    "params": {}}],
+            "capsule":   [{"name": "nematic",       "type": "Nematic",    "params": {}}],
+            "tetrahedron":[{"name": "steinhardt_q3","type": "Steinhardt", "params": {"l": 3}},
+                           {"name": "solid_liquid_q6", "type": "SolidLiquid", "params": {"l": 6, "q_threshold": 0.7, "solid_threshold": 6}}],
             "cube":      [{"name": "steinhardt_q4", "type": "Steinhardt", "params": {"l": 4}},
                           {"name": "cubatic",       "type": "Cubatic",    "params": {"t_initial": 5.0, "t_final": 0.001, "scale": 0.9}}]
         }

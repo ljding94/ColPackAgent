@@ -216,11 +216,12 @@ def _start_workflow_job(working_dir: str, continue_on_error: bool) -> dict[str, 
 # Analyze job management
 # ---------------------------------------------------------------------------
 
-def _run_analyze_job_process(working_dir: str, continue_on_error: bool) -> None:
+def _run_analyze_job_process(working_dir: str, continue_on_error: bool, extra_order_params: list | None = None) -> None:
     try:
         analyze_simulation_runs(
             working_dir=working_dir,
             continue_on_error=continue_on_error,
+            extra_order_params=extra_order_params,
         )
         append_workflow_log(working_dir, "analyze job completed", source="mcp")
     except Exception as exc:
@@ -258,7 +259,7 @@ def _refresh_analyze_job_record(job_id: str) -> dict[str, Any] | None:
         return dict(current)
 
 
-def _start_analyze_job(working_dir: str, continue_on_error: bool) -> dict[str, Any]:
+def _start_analyze_job(working_dir: str, continue_on_error: bool, extra_order_params: list | None = None) -> dict[str, Any]:
     with _analyze_lock:
         existing_job_id = _analyze_jobs_by_working_dir.get(working_dir)
 
@@ -298,7 +299,7 @@ def _start_analyze_job(working_dir: str, continue_on_error: bool) -> dict[str, A
 
     process = multiprocessing.get_context("spawn").Process(
         target=_run_analyze_job_process,
-        args=(working_dir, continue_on_error),
+        args=(working_dir, continue_on_error, extra_order_params),
         name=f"colpack-analyze-{job_id}",
         daemon=False,
     )

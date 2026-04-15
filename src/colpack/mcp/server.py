@@ -161,6 +161,14 @@ async def execute_simulation_workflow_tool(
 class AnalyzeSimulationRunsInput(BaseModel):
     working_dir: str = Field(..., description="Directory containing simulation_plan.json and completed simulation runs.")
     continue_on_error: bool = Field(default=True, description="If true, continue remaining runs when one fails analysis.")
+    extra_order_params: list[dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "Optional list of extra order-parameter specs to compute in addition to shape defaults. "
+            'Each dict must have keys "name" (str), "type" (freud.order class name), and "params" (dict). '
+            "Use get_colpack_capabilities_tool to see available classes and their parameters."
+        ),
+    )
 
 
 @mcp.tool()
@@ -175,13 +183,15 @@ async def analyze_simulation_runs_tool(
     Monitor progress locally via workflow_progress.json and workflow_events.log.
     """
     resolved_dir = _normalize_working_dir(params.working_dir)
+    extra = params.extra_order_params
     print(
         "[mcp] analyze_simulation_runs_tool "
-        f"working_dir={resolved_dir} continue_on_error={params.continue_on_error}"
+        f"working_dir={resolved_dir} continue_on_error={params.continue_on_error} "
+        f"extra_order_params={extra}"
     )
     append_workflow_log(
         resolved_dir,
-        f"analyze_simulation_runs_tool invoked with continue_on_error={params.continue_on_error}",
+        f"analyze_simulation_runs_tool invoked with continue_on_error={params.continue_on_error}, extra_order_params={extra}",
         source="mcp",
     )
 
@@ -209,6 +219,7 @@ async def analyze_simulation_runs_tool(
     launch = _start_analyze_job(
         working_dir=resolved_dir,
         continue_on_error=params.continue_on_error,
+        extra_order_params=extra,
     )
     if launch["started"]:
         await _safe_context_info(
@@ -247,6 +258,7 @@ def get_colpack_capabilities_tool() -> dict[str, Any]:
     cfg = load_config()
     dim_cfg = cfg.get("dimensions", {})
     workflow_cfg = cfg.get("workflow", {})
+    analysis_cfg = cfg.get("analysis", {})
     ensemble_requirements = workflow_cfg.get("ensemble_requirements", {})
     common_fields = workflow_cfg.get("common_system_fields", {})
 
@@ -313,6 +325,18 @@ def get_colpack_capabilities_tool() -> dict[str, Any]:
             "note": "Poll workflow_progress.json locally; no MCP polling tool is needed.",
         },
         "key_parameters": key_parameters,
+        "analysis": {
+            "available_analysis_params": analysis_cfg.get("available_analysis_params", {}),
+            "shape_order_params": analysis_cfg.get("shape_order_params", {}),
+            "extra_order_params_format": {
+                "description": "Pass extra_order_params to analyze_simulation_runs_tool to compute additional order parameters beyond shape defaults.",
+                "format": [{"name": "str", "type": "FreudClassName", "params": {"...": "..."}}],
+                "example": [
+                    {"name": "hexatic_4", "type": "Hexatic", "params": {"k": 4}},
+                    {"name": "steinhardt_q3", "type": "Steinhardt", "params": {"l": 3}},
+                ],
+            },
+        },
     }
 
 
