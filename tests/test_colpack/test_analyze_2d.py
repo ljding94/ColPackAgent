@@ -18,7 +18,7 @@ def _has_hoomd() -> bool:
     return importlib.util.find_spec("hoomd") is not None
 
 
-def run_analyze(output_subdir):
+def run_analyze(output_subdir, expected_order_params=None):
     project_root = _find_project_root(Path(__file__).resolve())
     run_dir = project_root / "data" / "test" / output_subdir / "run_0"
     print(f"run_analyze: run_dir: {run_dir}")
@@ -35,6 +35,32 @@ def run_analyze(output_subdir):
 
     assert analyzed_config["analysis_results_path"].endswith("analysis_results.json")
 
+    # Validate expected order parameter keys and equilibrium info in results
+    if expected_order_params:
+        with (run_dir / "analysis_results.json").open("r", encoding="utf-8") as f:
+            results = json.load(f)
+        for ptype, param_names in expected_order_params.items():
+            assert ptype in results, f"Missing particle type '{ptype}' in analysis_results.json"
+            for param in param_names:
+                assert param in results[ptype], (
+                    f"Missing order param '{param}' for '{ptype}' in analysis_results.json"
+                )
+                assert len(results[ptype][param]) > 0, (
+                    f"Order param '{param}' for '{ptype}' has no data"
+                )
+            # Validate equilibrium block structure
+            eq = results[ptype].get("equilibrium")
+            assert eq is not None, f"Missing 'equilibrium' block for '{ptype}'"
+            assert "equilibrated" in eq
+            assert "eq_start_index" in eq
+            assert "per_parameter" in eq
+            for param in param_names:
+                peq = eq["per_parameter"].get(param)
+                assert peq is not None, f"Missing equilibrium info for param '{param}' in '{ptype}'"
+                assert "equilibrated" in peq
+                assert "eq_mean" in peq
+                assert "eq_std" in peq
+
 
 def main():
     if not _has_hoomd():
@@ -43,10 +69,19 @@ def main():
 
     print("testing analysis of 2d systems...\n")
 
-    run_analyze(output_subdir="2d_disk")
+    run_analyze(
+        output_subdir="2d_disk",
+        expected_order_params={"disk_0": ["hexatic_6", "continuous_coord"]},
+    )
     print("test_analyze_2d_disk: OK\n")
 
-    run_analyze(output_subdir="2d_disk_capsule")
+    run_analyze(
+        output_subdir="2d_disk_capsule",
+        expected_order_params={
+            "disk_0": ["hexatic_6", "continuous_coord"],
+            "capsule_0": ["nematic", "rot_autocorr"],
+        },
+    )
     print("test_analyze_2d_disk_capsule: OK\n")
 
     run_analyze(output_subdir="2d_disk_ellipse_npt")

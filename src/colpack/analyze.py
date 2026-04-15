@@ -47,6 +47,9 @@ def analyze_main(run_dir):
     if not os.path.exists(simulation_config_path):
         raise FileNotFoundError(f"Missing simulation_config_analysis.json in {run_dir}. Cannot perform plotting.")
 
+    # 1.5 analyze analysis time series results, find if the simulation reached equilibrium if so what the equilibrium steps can be used
+    analyze_process_time_series(run_dir)
+
     with open(simulation_config_path, "r") as f:
         simulation_config = json.load(f)
     # 2. plot the analysis results and save the figures
@@ -124,6 +127,136 @@ def analyze_compute(run_dir, simulation_config):
     return results
 
 
+def analyze_process_time_series(run_dir):
+    """
+    Post-process analysis time series to detect equilibrium and compute
+    equilibrium averages.
+
+    For each order parameter time series, we use a reverse cumulative mean
+    approach: starting from the end of the trajectory (assumed equilibrated),
+    we extend the averaging window backwards until the running mean deviates
+    beyond a tolerance. The first frame where the running mean is still
+    stable defines the equilibrium start index.
+
+    Updates analysis_results.json in-place, adding an ``"equilibrium"``
+    block per particle type with per-parameter equilibrium info.
+    """
+    run_dir = _normalize_run_dir(run_dir)
+    result_path = os.path.join(run_dir, "analysis_results.json")
+    if not os.path.exists(result_path):
+        print(f"No analysis_results.json in {run_dir}, skipping time-series processing.")
+        return
+
+    with open(result_path, "r") as f:
+        results = json.load(f)
+
+    for key, data in results.items():
+        # Skip RDF entries and non-dict entries
+        if key.startswith("rdf_") or not isinstance(data, dict):
+            continue
+
+        eq_info = {}
+        for param_name, values in data.items():
+            if param_name == "equilibrium":
+                continue
+            eq_info[param_name] = _detect_equilibrium(values)
+
+        # Determine overall equilibrium status for this particle type:
+        # equilibrated if ALL parameters are equilibrated.
+        all_eq = all(info["equilibrated"] for info in eq_info.values()) if eq_info else False
+        # The overall equilibrium start is the latest (max) start among params.
+        eq_starts = [info["eq_start_index"] for info in eq_info.values() if info["equilibrated"]]
+        overall_start = max(eq_starts) if eq_starts else None
+
+        # Rebuild dict with equilibrium at the top
+        eq_block = {
+            "equilibrated": all_eq,
+            "eq_start_index": overall_start,
+            "per_parameter": eq_info,
+        }
+        reordered = {"equilibrium": eq_block}
+        reordered.update({k: v for k, v in data.items() if k != "equilibrium"})
+        results[key] = reordered
+
+    with open(result_path, "w") as f:
+        json.dump(results, f, indent=4)
+
+    print(f"Equilibrium analysis written to {result_path}")
+
+
+def _detect_equilibrium(values, n_sigma=2.0, min_eq_fraction=0.2):
+    """
+    Detect equilibrium onset in a 1-D time series using reverse cumulative
+    mean deviation with a sigma-based tolerance.
+
+    Algorithm:
+      1. Convert complex-valued entries (``{"real", "imag"}``) to magnitudes.
+      2. Compute the mean and std of the last ``min_eq_fraction`` of frames
+         as a reference window.
+      3. Walk backwards from the end, extending the averaging window.
+         Stop when the running mean deviates by more than
+         ``n_sigma * ref_std`` from the reference mean.
+      4. Report the earliest frame still within tolerance as ``eq_start_index``.
+
+    Returns a dict with:
+      - equilibrated (bool)
+      - eq_start_index (int or None)
+      - eq_mean (float or None) — mean over the equilibrated portion
+      - eq_std (float or None) — std dev over the equilibrated portion
+    """
+    if not values or len(values) < 4:
+        return {"equilibrated": False, "eq_start_index": None, "eq_mean": None, "eq_std": None}
+
+    # Convert to float array (handle complex dicts)
+    arr = _values_to_float_array(values)
+    n = len(arr)
+
+    # Reference window: last min_eq_fraction of frames
+    tail_len = max(2, int(n * min_eq_fraction))
+    ref_window = arr[-tail_len:]
+    ref_mean = np.mean(ref_window)
+    ref_std = np.std(ref_window)
+
+    # Tolerance: n_sigma * reference-window std dev
+    # If ref_std is near zero the signal is essentially flat; use a small
+    # absolute fallback so that any real drift is still caught.
+    if ref_std < 1e-12:
+        tol = 1e-8
+    else:
+        tol = n_sigma * ref_std
+
+    # Walk backwards from end, extending averaging window
+    eq_start = n - 1
+    for i in range(n - 1, -1, -1):
+        window_mean = np.mean(arr[i:])
+        if abs(window_mean - ref_mean) > tol:
+            eq_start = i + 1
+            break
+    else:
+        # Entire series is within tolerance
+        eq_start = 0
+
+    # Clamp to valid range
+    eq_start = min(eq_start, n - 1)
+
+    eq_portion = arr[eq_start:]
+    equilibrated = len(eq_portion) >= max(2, int(n * min_eq_fraction))
+
+    return {
+        "equilibrated": equilibrated,
+        "eq_start_index": int(eq_start),
+        "eq_mean": float(np.mean(eq_portion)),
+        "eq_std": float(np.std(eq_portion)),
+    }
+
+
+def _values_to_float_array(values):
+    """Convert a list of values (possibly complex dicts) to a float numpy array."""
+    if isinstance(values[0], dict) and "real" in values[0] and "imag" in values[0]:
+        return np.array([np.hypot(v["real"], v["imag"]) for v in values])
+    return np.array(values, dtype=float)
+
+
 def get_analyze_config(dimension=None):
     """
     Builds analysis config from colpack_config.json, instantiating freud objects.
@@ -135,6 +268,10 @@ def get_analyze_config(dimension=None):
         "Hexatic": lambda p: freud.order.Hexatic(**p),
         "Nematic": lambda p: freud.order.Nematic(**p),
         "Steinhardt": lambda p: freud.order.Steinhardt(**p),
+        "ContinuousCoordination": lambda p: freud.order.ContinuousCoordination(**p),
+        "Cubatic": lambda p: freud.order.Cubatic(**p),
+        "SolidLiquid": lambda p: freud.order.SolidLiquid(**p),
+        "RotationalAutocorrelation": lambda p: freud.order.RotationalAutocorrelation(**p),
     }
 
     raw = _load_analyze_config()
@@ -247,16 +384,23 @@ def analyze_compute_old(system_dir, density=None):
 def _compute_shape_orders(traj, p_info, order_params_list):
     """
     Generic runner for shape-specific order parameters.
+    Supports all freud.order classes:
+      - Hexatic, Steinhardt: system + neighbors
+      - Nematic: orientation vectors (3D)
+      - Cubatic: raw quaternions (4D)
+      - ContinuousCoordination: system (uses Voronoi internally)
+      - SolidLiquid: system + neighbors
+      - RotationalAutocorrelation: ref quaternions + current quaternions
     """
     # Initialize Freud Compute Objects
     # We instantiate them ONCE before the loop to save overhead
     computers = []
     for op_config in order_params_list:
-        # Dynamic instantiation: freud.order.Hexatic(k=6)
         computers.append({"name": op_config["name"], "obj": op_config["func"]})
 
     # Loop over trajectory
     frame_results = {comp["name"]: [] for comp in computers}
+    ref_quaternions = {}  # for RotationalAutocorrelation: name -> first-frame quaternions
 
     for frame in traj:
         box = frame.configuration.box
@@ -266,10 +410,9 @@ def _compute_shape_orders(traj, p_info, order_params_list):
         director = p_info.get("pDirector")
         if director is None:
             director = [1, 0, 0]
-        orientations = rowan.rotate(orientations_0, director)  # default long axis along z
+        orientations = rowan.rotate(orientations_0, director)  # direction vectors (N, 3)
 
         # Filter for just this particle type
-        # (Assuming you have a helper or logic to get type indices)
         type_ids = frame.particles.typeid
         type_names = frame.particles.types
         target_idx = type_names.index(p_info["pType"])
@@ -277,6 +420,7 @@ def _compute_shape_orders(traj, p_info, order_params_list):
         # Slicing: Only analyze particles of 'type_name'
         subset_pos = positions[type_ids == target_idx]
         subset_ort = orientations[type_ids == target_idx]
+        subset_quat = orientations_0[type_ids == target_idx]
 
         if len(subset_pos) == 0:
             continue
@@ -285,22 +429,31 @@ def _compute_shape_orders(traj, p_info, order_params_list):
             calc = comp["obj"]
             name = comp["name"]
 
-            # --- EXECUTION LOGIC ---
-            # Some Freud computes need orientations (Nematic), some don't (Steinhardt)
-            # We try/except or inspect arguments to be robust.
-            if name == "nematic":
+            # --- COMPUTE DISPATCH ---
+            if isinstance(calc, freud.order.Nematic):
                 calc.compute(orientations=subset_ort)
+            elif isinstance(calc, freud.order.Cubatic):
+                calc.compute(subset_quat)
+            elif isinstance(calc, freud.order.RotationalAutocorrelation):
+                if name not in ref_quaternions:
+                    ref_quaternions[name] = subset_quat.copy()
+                calc.compute(ref_quaternions[name], subset_quat)
+            elif isinstance(calc, freud.order.ContinuousCoordination):
+                calc.compute(system=(box, subset_pos))
             else:
-                # General neighbor-based compute (Steinhardt, Hexatic)
+                # Hexatic, Steinhardt, SolidLiquid
                 # Heuristic: 6 neighbors for 2D, 12 neighbors for 3D
                 is_2d = box[2] == 0
                 n_neighbors = 6 if is_2d else 12
                 calc.compute(system=(box, subset_pos), neighbors={"num_neighbors": n_neighbors})
 
-            if hasattr(calc, "particle_order"):
+            # --- RESULT EXTRACTION ---
+            if isinstance(calc, freud.order.SolidLiquid):
+                avg_order = np.mean(calc.num_connections)
+            elif hasattr(calc, "particle_order"):
                 avg_order = np.mean(calc.particle_order)
             elif hasattr(calc, "order"):
-                avg_order = calc.order  # Nematic returns a scalar 'order' directly
+                avg_order = calc.order  # Nematic, Cubatic, RotationalAutocorrelation
             else:
                 avg_order = 0.0  # Fallback
 

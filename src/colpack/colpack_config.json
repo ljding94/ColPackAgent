@@ -75,7 +75,8 @@
         "n_neighbors_2d": 6,
         "n_neighbors_3d": 12,
         "shape_order_params": {
-            "disk":      [{"name": "hexatic_6",     "type": "Hexatic",    "params": {"k": 6}}],
+            "disk":      [{"name": "hexatic_6",     "type": "Hexatic",    "params": {"k": 6}},
+                          {"name": "continuous_coord", "type": "ContinuousCoordination", "params": {}}],
             "triangle":  [{"name": "hexatic_6",     "type": "Hexatic",    "params": {"k": 6}},
                           {"name": "hexatic_3",     "type": "Hexatic",    "params": {"k": 3}}],
             "square":    [{"name": "hexatic_4",     "type": "Hexatic",    "params": {"k": 4}}],
@@ -83,11 +84,15 @@
                           {"name": "hexatic_2",     "type": "Hexatic",    "params": {"k": 2}}],
             "ellipse":   [{"name": "nematic",       "type": "Nematic",    "params": {}}],
             "sphere":    [{"name": "steinhardt_q6", "type": "Steinhardt", "params": {"l": 6}},
-                          {"name": "steinhardt_q4", "type": "Steinhardt", "params": {"l": 4}}],
-            "ellipsoid": [{"name": "nematic",       "type": "Nematic",    "params": {}}],
-            "capsule":   [{"name": "nematic",       "type": "Nematic",    "params": {}}],
+                          {"name": "steinhardt_q4", "type": "Steinhardt", "params": {"l": 4}},
+                          {"name": "solid_liquid_q6", "type": "SolidLiquid", "params": {"l": 6, "q_threshold": 0.7, "solid_threshold": 6}}],
+            "ellipsoid": [{"name": "nematic",       "type": "Nematic",    "params": {}},
+                          {"name": "rot_autocorr",  "type": "RotationalAutocorrelation", "params": {"l": 2}}],
+            "capsule":   [{"name": "nematic",       "type": "Nematic",    "params": {}},
+                          {"name": "rot_autocorr",  "type": "RotationalAutocorrelation", "params": {"l": 2}}],
             "tetrahedron":[{"name": "steinhardt_q3","type": "Steinhardt", "params": {"l": 3}}],
-            "cube":      [{"name": "steinhardt_q4", "type": "Steinhardt", "params": {"l": 4}}]
+            "cube":      [{"name": "steinhardt_q4", "type": "Steinhardt", "params": {"l": 4}},
+                          {"name": "cubatic",       "type": "Cubatic",    "params": {"t_initial": 5.0, "t_final": 0.001, "scale": 0.9}}]
         }
     },
     "dimensions": {

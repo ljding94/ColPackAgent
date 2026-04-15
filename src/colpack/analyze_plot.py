@@ -98,28 +98,48 @@ def analyze_plot_old(system_dir, density=None):
 
 def _plot_shape_order(results, title, filename):
     plt = _get_pyplot()
-    fig = plt.figure(figsize=(10.0 / 3 * 1.2, 10.0 / 3 * 1.0))
-    ax1 = fig.add_subplot(111)
 
-    for label, values in results.items():
-        if not values:
-            continue
+    # Extract equilibrium info if present
+    eq_info = results.get("equilibrium", {})
+    per_param_eq = eq_info.get("per_parameter", {})
 
-        # Handle complex numbers serialized as dicts {"real": ..., "imag": ...}
-        if isinstance(values[0], dict) and "real" in values[0] and "imag" in values[0]:
-            # Compute magnitude for plotting
-            y_values = [np.hypot(v["real"], v["imag"]) for v in values]
-        else:
-            y_values = values
+    # Filter out non-timeseries entries (equilibrium block, empty lists)
+    plot_items = [(label, values) for label, values in results.items()
+                  if label != "equilibrium" and values]
+    if not plot_items:
+        return []
 
+    n_params = len(plot_items)
+
+    if n_params == 1:
+        # Single parameter: one plot
+        fig = plt.figure(figsize=(10.0 / 3 * 1.2, 10.0 / 3 * 1.0))
+        ax = fig.add_subplot(111)
+        label, values = plot_items[0]
+        y_values = _extract_y_values(values)
         x = np.arange(len(y_values))
-        ax1.plot(x, y_values, label=label)
-
-    ax1.set_xlabel("Frame", fontsize=9, labelpad=0)
-    ax1.set_ylabel("Order Parameter", fontsize=9, labelpad=0)
-    ax1.tick_params(axis="both", which="both", direction="in", labelsize=7)
-    ax1.set_title(title, fontsize=9)
-    ax1.legend(frameon=False, fontsize=7, loc="best")
+        ax.plot(x, y_values, label=label)
+        _draw_equilibrium(ax, label, per_param_eq, x)
+        ax.set_xlabel("Frame", fontsize=9, labelpad=0)
+        ax.set_ylabel("Order Parameter", fontsize=9, labelpad=0)
+        ax.tick_params(axis="both", which="both", direction="in", labelsize=7)
+        ax.set_title(title, fontsize=9)
+        ax.legend(frameon=False, fontsize=7, loc="best")
+    else:
+        # Multiple parameters: vertically stacked subplots
+        fig, axes = plt.subplots(n_params, 1, figsize=(10.0 / 3 * 1.2, 10.0 / 3 * 0.7 * n_params), sharex=True)
+        if n_params == 2:
+            axes = list(axes)
+        for ax, (label, values) in zip(axes, plot_items):
+            y_values = _extract_y_values(values)
+            x = np.arange(len(y_values))
+            ax.plot(x, y_values, label=label)
+            _draw_equilibrium(ax, label, per_param_eq, x)
+            ax.set_ylabel(label, fontsize=8, labelpad=2)
+            ax.tick_params(axis="both", which="both", direction="in", labelsize=7)
+            ax.legend(frameon=False, fontsize=7, loc="best")
+        axes[-1].set_xlabel("Frame", fontsize=9, labelpad=0)
+        fig.suptitle(title, fontsize=9, y=1.0)
 
     plt.tight_layout(pad=0.2)
     png_path = filename + ".png"
@@ -128,6 +148,39 @@ def _plot_shape_order(results, title, filename):
     plt.savefig(pdf_path, dpi=300, format="pdf")
     plt.close()
     return [png_path, pdf_path]
+
+
+def _draw_equilibrium(ax, param_name, per_param_eq, x):
+    """Draw equilibrium markers on an axis if equilibrium info exists for param_name."""
+    peq = per_param_eq.get(param_name, {})
+    if not peq or not peq.get("equilibrated"):
+        return
+    eq_start = peq["eq_start_index"]
+    eq_mean = peq["eq_mean"]
+    eq_std = peq.get("eq_std", 0)
+    # Vertical line at equilibrium start
+    ax.axvline(eq_start, color="gray", linestyle="--", linewidth=0.8, alpha=0.7)
+    # Horizontal band for mean ± std over the equilibrated region
+    ax.axhline(eq_mean, xmin=(eq_start / max(x[-1], 1)) if len(x) > 1 else 0,
+               color="red", linestyle="-", linewidth=0.8, alpha=0.6)
+    if eq_std > 0:
+        ax.axhspan(eq_mean - eq_std, eq_mean + eq_std,
+                    xmin=(eq_start / max(x[-1], 1)) if len(x) > 1 else 0,
+                    color="red", alpha=0.08)
+    # Annotation
+    ax.text(eq_start, ax.get_ylim()[1], f" eq={eq_mean:.4f}",
+            fontsize=6, color="red", va="top", ha="left")
+
+
+def _extract_y_values(values):
+    """Convert raw order parameter values to plottable floats.
+
+    Handles complex numbers serialized as ``{"real": ..., "imag": ...}`` by
+    returning the magnitude.
+    """
+    if isinstance(values[0], dict) and "real" in values[0] and "imag" in values[0]:
+        return [np.hypot(v["real"], v["imag"]) for v in values]
+    return values
 
 
 def _plot_rdf(results, title, filename):
