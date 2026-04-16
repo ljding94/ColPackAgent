@@ -20,7 +20,7 @@ When calling `setup_simulation_problem_tool`, your payload must match one of the
 - `setup_simulation_problem_tool` resolves `working_dir` deterministically under project root `data/` from `dimension`, `ensemble`, and `particle_shape_list`.
 - Treat this `working_dir` as the workflow anchor directory and reuse the exact same value in planning and execution.
 - ColPack packing workflows here are athermal hard-particle simulations. Do not ask for or include temperature unless the user explicitly requests a thermal model outside this workflow.
-- In interactive mode, setup-stage questions should be limited to setup-stage requirements only. Do not ask for planning or execution parameters before setup is complete.
+- In the standalone wrapper, setup-stage questions should be limited to setup-stage requirements only. Do not ask for planning or execution parameters before setup is complete.
 - Setup requires `dimension`, `total_particle_number`, `particle_shape_list`, and `ensemble` only. Do not ask the user to provide or confirm `working_dir` during setup.
 - Do not ask for or include initial volume fraction, `volume_fraction`, number density, pressure sweeps, sampling steps, boundary conditions, box shape, initial box length, or any other box initialization control in the setup payload.
 - For NVT workflows, `volume_fraction` belongs in planning via `plan_simulation_runs_tool`, not in setup. For NPT workflows, pressure belongs in planning, not in setup.

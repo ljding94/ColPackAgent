@@ -13,18 +13,12 @@ description: "End-to-end ColPack colloidal packing simulation workflow. Use for 
 7. If execution returns `n_failed > 0`, read `workflow_status.csv` before responding.
 8. Use ColPack MCP tools directly for simulation requests. Do not start with `glob`, `read`, or `bash` unless diagnosing a failure or answering a codebase question.
 
-# Mode Contract
-The wrapper may append `AGENT_MODE = interactive` or `AGENT_MODE = autonomous`.
-
-- **Interactive** (default when no mode is set):
-  - Handle one workflow stage at a time.
-  - Ask only the missing inputs needed for the current stage — do not ask for later-stage parameters (see each reference file for what belongs to that stage).
-  - Merge incremental follow-up replies into the active workflow context instead of restarting the checklist.
-  - Show the intended payload and wait for explicit approval before each tool call.
-  - After each stage, ask whether to continue, revise, or redo.
-- **Autonomous**:
-  - Complete all stages end-to-end when the prompt is specific enough.
-  - Ask only blocking clarification questions.
+# Wrapper Contract
+- Handle one workflow stage at a time.
+- Ask only the missing inputs needed for the current stage — do not ask for later-stage parameters (see each reference file for what belongs to that stage).
+- Merge incremental follow-up replies into the active workflow context instead of restarting the checklist.
+- Show the intended payload and wait for explicit approval before each tool call.
+- After each stage, ask whether to continue, revise, or redo.
 
 # Workflow Steps
 
@@ -46,4 +40,3 @@ Async execute and analyze jobs write progress to `workflow_progress.json` and `w
 2. Show the exact tool call payload before execution when helpful.
 3. After each tool call, summarize what files were created or updated.
 4. For failures, provide diagnosis first, then remediation.
-

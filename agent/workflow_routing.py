@@ -201,15 +201,9 @@ def _looks_like_colpack_workflow_request(user_input: str) -> bool:
     return False
 
 
-def _build_routed_user_input(user_input: str, mode: str, routing_context: WorkflowRoutingContext | None = None) -> str:
+def _build_routed_user_input(user_input: str, routing_context: WorkflowRoutingContext | None = None) -> str:
     if not _looks_like_colpack_workflow_request(user_input):
         return user_input
-
-    mode_instruction = (
-        "Interactive handling only: stay on the current workflow stage and wait for approval before each MCP call."
-        if mode == "interactive"
-        else "Autonomous handling: complete the ColPack workflow end-to-end when the request is specific enough."
-    )
 
     context_note = _build_workflow_context_note(routing_context or WorkflowRoutingContext())
     lines = [
@@ -222,7 +216,7 @@ def _build_routed_user_input(user_input: str, mode: str, routing_context: Workfl
     lines.extend(
         [
             "Use workflow MCP tools directly unless the user is explicitly asking a codebase question or diagnosing an existing failure.",
-            mode_instruction,
+            "Handle one workflow stage at a time and wait for approval before each MCP call.",
             f"Original user request: {user_input}",
         ]
     )
@@ -249,13 +243,7 @@ def _looks_like_colpack_followup_reply(user_input: str) -> bool:
     )
 
 
-def _build_followup_user_input(user_input: str, mode: str, routing_context: WorkflowRoutingContext | None = None) -> str:
-    mode_instruction = (
-        "Interactive handling only: treat this as a follow-up answer in the active ColPack workflow and merge it into the current stage context."
-        if mode == "interactive"
-        else "Autonomous handling: treat this as a follow-up update to the active ColPack workflow context."
-    )
-
+def _build_followup_user_input(user_input: str, routing_context: WorkflowRoutingContext | None = None) -> str:
     context_note = _build_workflow_context_note(routing_context or WorkflowRoutingContext())
     lines = [
         "COLPACK WORKFLOW FOLLOW-UP",
@@ -267,7 +255,7 @@ def _build_followup_user_input(user_input: str, mode: str, routing_context: Work
         lines.append(context_note)
     lines.extend(
         [
-            mode_instruction,
+            "Treat this as a follow-up answer in the active ColPack workflow and merge it into the current stage context.",
             f"Original user reply: {user_input}",
         ]
     )
@@ -276,7 +264,6 @@ def _build_followup_user_input(user_input: str, mode: str, routing_context: Work
 
 def _route_user_message(
     user_input: str,
-    current_mode: str,
     workflow_session_active: bool,
     routing_context: WorkflowRoutingContext,
 ) -> tuple[str, bool, WorkflowRoutingContext, str | None]:
@@ -284,17 +271,33 @@ def _route_user_message(
 
     if workflow_session_active and _looks_like_colpack_followup_reply(user_input):
         routing_context = _update_workflow_routing_context(routing_context, user_input)
-        routed_user_input = _build_followup_user_input(user_input, current_mode, routing_context=routing_context)
+        routed_user_input = _build_followup_user_input(user_input, routing_context=routing_context)
         return routed_user_input, True, routing_context, "follow-up"
 
     if _looks_like_colpack_workflow_request(user_input):
         if not workflow_session_active:
             routing_context = WorkflowRoutingContext()
         routing_context = _update_workflow_routing_context(routing_context, user_input)
-        routed_user_input = _build_routed_user_input(user_input, current_mode, routing_context=routing_context)
+        routed_user_input = _build_routed_user_input(user_input, routing_context=routing_context)
         return routed_user_input, True, routing_context, "request"
 
     if workflow_session_active:
         return routed_user_input, False, WorkflowRoutingContext(), None
 
     return routed_user_input, workflow_session_active, routing_context, None
+
+
+def _prepare_user_input(
+    user_input: str,
+    workflow_session_active: bool,
+    routing_context: WorkflowRoutingContext,
+    routing_enabled: bool,
+) -> tuple[str, bool, WorkflowRoutingContext, str | None]:
+    if not routing_enabled:
+        return user_input, workflow_session_active, routing_context, None
+
+    return _route_user_message(
+        user_input=user_input,
+        workflow_session_active=workflow_session_active,
+        routing_context=routing_context,
+    )
