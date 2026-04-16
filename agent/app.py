@@ -381,6 +381,7 @@ async def _connect_client(
     mcp_command: str,
     normalized_model: str,
     provider_id: str,
+    mcp_env: dict[str, str] | None = None,
 ) -> SDKClient:
     system_prompt = build_system_prompt(agent_path, skill_path=skill_path)
 
@@ -390,6 +391,7 @@ async def _connect_client(
         "mcp_servers": {
             "colpack": {
                 "command": mcp_command,
+                "env": dict(mcp_env or {}),
             }
         },
     }

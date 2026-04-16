@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import csv
+import os
 import shutil
 import sys
 import types
@@ -86,6 +87,25 @@ def test_setup_simulation_problem_resolves_default_working_dir_when_omitted() ->
         expected_dir = (temp_root / "data" / "2d_nvt_disk_capsule").resolve()
         assert problem["working_dir"] == str(expected_dir)
         assert (expected_dir / "simulation_problem.json").exists()
+
+
+def test_resolve_working_dir_from_setup_honors_env_root_override() -> None:
+    from colpack.workflow_helper import WORKING_DIR_ROOT_ENV_VAR, resolve_working_dir_from_setup
+
+    with TemporaryDirectory() as temp_dir:
+        temp_root = Path(temp_dir)
+        (temp_root / "environment.yml").write_text("name: colpack-test\n", encoding="utf-8")
+        eval_root = temp_root / "eval" / "data"
+
+        with patch("colpack.workflow_helper._find_project_root", return_value=temp_root):
+            with patch.dict(os.environ, {WORKING_DIR_ROOT_ENV_VAR: str(eval_root)}, clear=False):
+                resolved = resolve_working_dir_from_setup(
+                    dimension=2,
+                    ensemble="NVT",
+                    particle_shape_list=["triangle"],
+                )
+
+        assert resolved == str((eval_root / "2d_nvt_triangle").resolve())
 
 
 def test_plan_simulaiton_runs_appends_without_duplicate_tunable_values() -> None:

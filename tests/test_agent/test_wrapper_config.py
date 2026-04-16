@@ -45,7 +45,7 @@ def test_build_system_prompt_assembles_agent_skill_and_mode_sections():
     assert "Present yourself as **ColPackAgent**." in system_prompt
     assert "Do not say you are `opencode`, `Codex`, or any other generic assistant name." in system_prompt
     assert "# Operating Rules" in system_prompt
-    assert "# Wrapper Contract" in system_prompt
+    assert "# Mode Contract" in system_prompt
     assert "Prefer the wrapper's local progress monitor" in system_prompt
 
 

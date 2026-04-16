@@ -1,0 +1,53 @@
+{
+  "experiment_id": "colpack_eval_scaffold",
+  "description": "Initial scaffold for setup-stage ColPack task benchmarking.",
+  "output_dir": "eval/runs/colpack_eval_scaffold",
+  "working_dir_root": "eval/data",
+  "repeats": 1,
+  "routing": false,
+  "bootstrap_skill": true,
+  "user_profiles": [
+    {
+      "profile_id": "novice_workflow_user",
+      "description": "Describes the workflow in natural language and expects the agent to structure the process."
+    },
+    {
+      "profile_id": "analysis_focused_user",
+      "description": "Cares primarily about interpretation and summary of simulation outputs."
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "setup_only",
+      "description": "Only set up the simulation problem.",
+      "difficulty_level": 1,
+      "user_profile_id": "novice_workflow_user",
+      "user_messages": [
+        "Please set up a 2D NVT colloidal packing problem for triangle particles with 100 particles and side length 1. Use the default working directory."
+      ],
+      "expected_outcomes": [
+        "The agent should complete the setup stage and stop before planning."
+      ]
+    }
+  ],
+  "models": [
+    {
+      "model_id": "openrouter/google/gemini-3-flash-preview",
+      "label": "gemini-3-flash-preview"
+    }
+  ],
+  "skills": [
+    {
+      "skill_id": "baseline",
+      "skill_path": "eval/skills/colpack/SKILL.md",
+      "description": "Eval-local baseline skill"
+    }
+  ],
+  "metadata": {
+    "planned_axes": [
+      "task difficulty",
+      "llm benchmark",
+      "skill ablation"
+    ]
+  }
+}

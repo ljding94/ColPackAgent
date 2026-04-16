@@ -11,6 +11,7 @@ from colpack.workflow_logging import append_workflow_log
 
 
 STEP_SEQUENCE = ["initialize", "compress", "sample", "analyze"]
+WORKING_DIR_ROOT_ENV_VAR = "COLPACK_WORKING_DIR_ROOT"
 
 
 def _find_project_root(start: Path | None = None) -> Path:
@@ -24,6 +25,20 @@ def _find_project_root(start: Path | None = None) -> Path:
         if current.parent == current:
             raise RuntimeError("Could not locate project root (environment.yml or src/pyproject.toml not found).")
         current = current.parent
+
+
+def resolve_working_dir_root(start: Path | None = None) -> Path:
+    project_root = _find_project_root(start)
+    configured_root = os.environ.get(WORKING_DIR_ROOT_ENV_VAR, "").strip()
+    if not configured_root:
+        return project_root / "data"
+
+    candidate = Path(configured_root).expanduser()
+    if not candidate.is_absolute():
+        candidate = (project_root / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+    return candidate
 
 
 def resolve_working_dir_from_setup(
@@ -55,9 +70,9 @@ def resolve_working_dir_from_setup(
             raise ValueError(f"Invalid shape '{shape}' for dimension {dimension}. Allowed shapes: {allowed_text}.")
         normalized_shapes.append(shape)
 
-    project_root = _find_project_root()
     shape_slug = "_".join(normalized_shapes)
-    base_path = project_root / "data" / f"{dimension}d_{normalized_ensemble.lower()}_{shape_slug}"
+    working_dir_root = resolve_working_dir_root()
+    base_path = working_dir_root / f"{dimension}d_{normalized_ensemble.lower()}_{shape_slug}"
     candidate = base_path
     suffix = 2
     while candidate.exists():

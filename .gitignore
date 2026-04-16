@@ -18,6 +18,11 @@
 
 !/agent/
 !/agent/**
+!/eval/
+!/eval/**
+/eval/**/__pycache__/
+/eval/data/
+/eval/runs/
 
 # plots
 !/plots/

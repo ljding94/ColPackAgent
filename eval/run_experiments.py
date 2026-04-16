@@ -1,0 +1,407 @@
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import sys
+import time
+from dataclasses import replace
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from opencode_agent_sdk.types import AssistantMessage, ResultMessage, SystemMessage
+
+from agent import app as agent_app
+from agent.workflow_routing import WorkflowRoutingContext, _prepare_user_input
+from colpack.workflow_helper import WORKING_DIR_ROOT_ENV_VAR
+from eval.experiment_types import (
+    ExperimentSpec,
+    PlannedRun,
+    RunResult,
+    TokenUsageRecord,
+    TurnResult,
+    dataclass_to_json,
+    expand_planned_runs,
+    load_experiment_spec,
+)
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Plan or run ColPack agent evaluation experiments.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    plan_parser = subparsers.add_parser("plan", help="Expand an experiment spec into a run matrix.")
+    plan_parser.add_argument("--spec", type=Path, required=True, help="Path to the experiment JSON spec.")
+    plan_parser.add_argument(
+        "--write-manifest",
+        action="store_true",
+        help="Write the planned run manifest into the experiment output directory.",
+    )
+
+    run_parser = subparsers.add_parser("run", help="Execute an experiment spec.")
+    run_parser.add_argument("--spec", type=Path, required=True, help="Path to the experiment JSON spec.")
+    run_parser.add_argument("--limit", type=int, default=0, help="Optional cap on the number of planned runs to execute.")
+    run_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Only print the planned runs for the experiment; do not execute them.",
+    )
+    run_parser.add_argument(
+        "--no-bootstrap-skill",
+        action="store_true",
+        help="Disable the ColPack capability bootstrap even if the spec enables it.",
+    )
+    return parser
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _ensure_output_dir(spec: ExperimentSpec) -> Path:
+    spec.output_dir.mkdir(parents=True, exist_ok=True)
+    return spec.output_dir
+
+
+def _ensure_working_dir_root(spec: ExperimentSpec) -> Path:
+    spec.working_dir_root.mkdir(parents=True, exist_ok=True)
+    return spec.working_dir_root
+
+
+def _manifest_path(spec: ExperimentSpec) -> Path:
+    return _ensure_output_dir(spec) / "planned_runs.json"
+
+
+def _results_path(spec: ExperimentSpec) -> Path:
+    return _ensure_output_dir(spec) / "results.jsonl"
+
+
+def _summary_path(spec: ExperimentSpec) -> Path:
+    return _ensure_output_dir(spec) / "summary.json"
+
+
+def _write_manifest(spec: ExperimentSpec, planned_runs: tuple[PlannedRun, ...]) -> Path:
+    payload = {
+        "experiment": dataclass_to_json(spec),
+        "planned_runs": [dataclass_to_json(run) for run in planned_runs],
+        "generated_at": _utc_now(),
+    }
+    manifest_path = _manifest_path(spec)
+    manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return manifest_path
+
+
+def _append_result(result_path: Path, result: RunResult) -> None:
+    with result_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(dataclass_to_json(result), ensure_ascii=True) + "\n")
+
+
+def _sum_usage(left: TokenUsageRecord, right: TokenUsageRecord) -> TokenUsageRecord:
+    return TokenUsageRecord(
+        input_tokens=left.input_tokens + right.input_tokens,
+        output_tokens=left.output_tokens + right.output_tokens,
+        cache_creation_input_tokens=(left.cache_creation_input_tokens or 0) + (right.cache_creation_input_tokens or 0),
+        cache_read_input_tokens=(left.cache_read_input_tokens or 0) + (right.cache_read_input_tokens or 0),
+    )
+
+
+def _usage_from_result_message(message: ResultMessage) -> TokenUsageRecord:
+    return TokenUsageRecord(
+        input_tokens=message.usage.input_tokens,
+        output_tokens=message.usage.output_tokens,
+        cache_creation_input_tokens=message.usage.cache_creation_input_tokens,
+        cache_read_input_tokens=message.usage.cache_read_input_tokens,
+    )
+
+
+async def _collect_turn_result(
+    client,
+    background_state,
+    workflow_session_active: bool,
+) -> tuple[TurnResult, Any, bool]:
+    response_state = agent_app.QueryResponseState()
+    seen_tool_ids: set[str] = set()
+    session_id = ""
+    sdk_turn_count = 0
+    usage = TokenUsageRecord()
+    total_cost_usd = 0.0
+    response_duration_ms = 0.0
+
+    async for message in client.receive_response():
+        if isinstance(message, AssistantMessage):
+            response_state.had_assistant_message = True
+            for tool_use in agent_app._extract_tool_uses(message):
+                if tool_use.id in seen_tool_ids:
+                    continue
+                seen_tool_ids.add(tool_use.id)
+                background_state, response_state, workflow_session_active = await agent_app._handle_tool_use(
+                    tool_use=tool_use,
+                    background_state=background_state,
+                    response_state=response_state,
+                    workflow_session_active=workflow_session_active,
+                    show_output=False,
+                )
+
+            extracted = agent_app._extract_assistant_text(message)
+            if extracted:
+                response_state.final_text = extracted
+        elif isinstance(message, SystemMessage):
+            system_error = agent_app._extract_system_error(message)
+            if system_error:
+                response_state.system_errors.append(system_error)
+        elif isinstance(message, ResultMessage):
+            if message.is_error:
+                response_state.query_had_error = True
+            usage = _sum_usage(usage, _usage_from_result_message(message))
+            total_cost_usd += message.total_cost_usd
+            response_duration_ms += message.duration_ms
+            session_id = message.session_id or session_id
+            sdk_turn_count = max(sdk_turn_count, message.num_turns)
+
+    background_state = await agent_app._finalize_query_monitoring(
+        background_state=background_state,
+        response_state=response_state,
+        show_status_output=False,
+    )
+
+    turn_result = TurnResult(
+        turn_index=0,
+        user_input="",
+        routed_user_input="",
+        route_kind=None,
+        assistant_text=response_state.final_text,
+        system_errors=tuple(response_state.system_errors),
+        query_had_error=response_state.query_had_error,
+        response_duration_ms=response_duration_ms,
+        total_cost_usd=total_cost_usd,
+        usage=usage,
+        session_id=session_id,
+        sdk_turn_count=sdk_turn_count,
+    )
+    return turn_result, background_state, workflow_session_active
+
+
+async def _execute_run_case(
+    spec: ExperimentSpec,
+    planned_run: PlannedRun,
+    *,
+    bootstrap_skill: bool,
+) -> RunResult:
+    normalized_model, provider_id = agent_app._resolve_model_and_provider(planned_run.model.model_id)
+    agent_definition = agent_app.load_agent_definition(
+        spec.agent_path,
+        skill_path_override=planned_run.skill.skill_path,
+    )
+
+    started_at = _utc_now()
+    wall_start = time.perf_counter()
+    background_state = agent_app.BackgroundMonitorState()
+    workflow_session_active = False
+    routing_context = WorkflowRoutingContext()
+    turn_results: list[TurnResult] = []
+    total_usage = TokenUsageRecord()
+    total_cost_usd = 0.0
+    client = None
+
+    try:
+        client = await agent_app._connect_client(
+            agent_path=agent_definition.source_path,
+            skill_path=agent_definition.skill_path,
+            mcp_command=spec.mcp_command,
+            normalized_model=normalized_model,
+            provider_id=provider_id,
+            mcp_env={WORKING_DIR_ROOT_ENV_VAR: str(spec.working_dir_root)},
+        )
+        if bootstrap_skill:
+            background_state = await agent_app._bootstrap_skill_session(client, background_state)
+
+        for index, user_message in enumerate(planned_run.task.user_messages, start=1):
+            routed_user_input, workflow_session_active, routing_context, route_kind = _prepare_user_input(
+                user_input=user_message,
+                workflow_session_active=workflow_session_active,
+                routing_context=routing_context,
+                routing_enabled=spec.routing,
+            )
+
+            attempt = 0
+            while attempt < 2:
+                try:
+                    await client.query(routed_user_input)
+                    turn_result, background_state, workflow_session_active = await _collect_turn_result(
+                        client=client,
+                        background_state=background_state,
+                        workflow_session_active=workflow_session_active,
+                    )
+                    turn_result = replace(
+                        turn_result,
+                        turn_index=index,
+                        user_input=user_message,
+                        routed_user_input=routed_user_input,
+                        route_kind=route_kind,
+                    )
+                    turn_results.append(turn_result)
+                    total_usage = _sum_usage(total_usage, turn_result.usage)
+                    total_cost_usd += turn_result.total_cost_usd
+                    break
+                except Exception as exc:
+                    if attempt == 0 and agent_app._is_timeout_like_error(str(exc)):
+                        await client.disconnect()
+                        client = await agent_app._connect_client(
+                            agent_path=agent_definition.source_path,
+                            skill_path=agent_definition.skill_path,
+                            mcp_command=spec.mcp_command,
+                            normalized_model=normalized_model,
+                            provider_id=provider_id,
+                            mcp_env={WORKING_DIR_ROOT_ENV_VAR: str(spec.working_dir_root)},
+                        )
+                        attempt += 1
+                        continue
+                    turn_results.append(
+                        TurnResult(
+                            turn_index=index,
+                            user_input=user_message,
+                            routed_user_input=routed_user_input,
+                            route_kind=route_kind,
+                            assistant_text="",
+                            system_errors=(str(exc),),
+                            query_had_error=True,
+                            response_duration_ms=0.0,
+                            total_cost_usd=0.0,
+                            usage=TokenUsageRecord(),
+                        )
+                    )
+                    break
+    finally:
+        background_state = await agent_app._stop_background_monitor(background_state)
+        if client is not None:
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+
+    success = all(not turn.query_had_error and not turn.system_errors for turn in turn_results)
+    completed_at = _utc_now()
+    wall_time_seconds = time.perf_counter() - wall_start
+    return RunResult(
+        run_id=planned_run.run_id,
+        experiment_id=spec.experiment_id,
+        task_id=planned_run.task.task_id,
+        model_id=planned_run.model.model_id,
+        skill_id=planned_run.skill.skill_id,
+        repeat_index=planned_run.repeat_index,
+        user_profile_id=planned_run.user_profile.profile_id if planned_run.user_profile is not None else None,
+        success=success,
+        started_at=started_at,
+        completed_at=completed_at,
+        wall_time_seconds=wall_time_seconds,
+        total_cost_usd=total_cost_usd,
+        usage=total_usage,
+        turn_results=tuple(turn_results),
+        metadata={
+            "agent_path": str(spec.agent_path),
+            "resolved_skill_path": str(planned_run.skill.skill_path),
+            "working_dir_root": str(spec.working_dir_root),
+            "routing": spec.routing,
+            "bootstrap_skill": bootstrap_skill,
+        },
+    )
+
+
+def _summarize_results(spec: ExperimentSpec, run_results: list[RunResult]) -> dict[str, Any]:
+    success_count = sum(1 for result in run_results if result.success)
+    return {
+        "experiment_id": spec.experiment_id,
+        "generated_at": _utc_now(),
+        "n_runs": len(run_results),
+        "n_success": success_count,
+        "success_rate": (success_count / len(run_results)) if run_results else 0.0,
+        "total_cost_usd": sum(result.total_cost_usd for result in run_results),
+        "total_wall_time_seconds": sum(result.wall_time_seconds for result in run_results),
+        "total_input_tokens": sum(result.usage.input_tokens for result in run_results),
+        "total_output_tokens": sum(result.usage.output_tokens for result in run_results),
+    }
+
+
+async def _run_experiment(spec: ExperimentSpec, *, limit: int, dry_run: bool, bootstrap_skill: bool) -> int:
+    planned_runs = expand_planned_runs(spec)
+    if limit > 0:
+        planned_runs = planned_runs[:limit]
+
+    _ensure_working_dir_root(spec)
+    manifest_path = _write_manifest(spec, planned_runs)
+    print(f"Manifest written to {manifest_path}")
+    print(f"Planned runs: {len(planned_runs)}")
+
+    if dry_run:
+        for planned_run in planned_runs:
+            print(f"- {planned_run.run_id}")
+        return 0
+
+    result_path = _results_path(spec)
+    if result_path.exists():
+        result_path.unlink()
+
+    run_results: list[RunResult] = []
+    for index, planned_run in enumerate(planned_runs, start=1):
+        print(
+            f"[{index}/{len(planned_runs)}] "
+            f"task={planned_run.task.task_id} "
+            f"model={planned_run.model.model_id} "
+            f"skill={planned_run.skill.skill_id}"
+        )
+        run_result = await _execute_run_case(
+            spec,
+            planned_run,
+            bootstrap_skill=bootstrap_skill,
+        )
+        _append_result(result_path, run_result)
+        run_results.append(run_result)
+
+    summary = _summarize_results(spec, run_results)
+    summary_path = _summary_path(spec)
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print(f"Results written to {result_path}")
+    print(f"Summary written to {summary_path}")
+    return 0
+
+
+def _print_plan(spec: ExperimentSpec, *, write_manifest: bool) -> int:
+    planned_runs = expand_planned_runs(spec)
+    print(f"Experiment: {spec.experiment_id}")
+    print(f"Description: {spec.description}")
+    print(f"Tasks: {len(spec.tasks)} | Models: {len(spec.models)} | Skills: {len(spec.skills)} | Repeats: {spec.repeats}")
+    print(f"Planned runs: {len(planned_runs)}")
+    for planned_run in planned_runs:
+        print(
+            f"- {planned_run.run_id} "
+            f"(task={planned_run.task.task_id}, model={planned_run.model.model_id}, skill={planned_run.skill.skill_id}, repeat={planned_run.repeat_index})"
+        )
+    if write_manifest:
+        manifest_path = _write_manifest(spec, planned_runs)
+        print(f"Manifest written to {manifest_path}")
+    return 0
+
+
+def main() -> int:
+    args = _build_parser().parse_args()
+    spec = load_experiment_spec(args.spec)
+
+    if args.command == "plan":
+        return _print_plan(spec, write_manifest=args.write_manifest)
+
+    return asyncio.run(
+        _run_experiment(
+            spec,
+            limit=args.limit,
+            dry_run=args.dry_run,
+            bootstrap_skill=(False if args.no_bootstrap_skill else spec.bootstrap_skill),
+        )
+    )
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
