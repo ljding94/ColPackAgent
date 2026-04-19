@@ -1,0 +1,40 @@
+{
+  "experiment_id": "colpack_demo_interactive",
+  "description": "Interactive staged ColPack demo that advances with explicit user approvals.",
+  "output_dir": "demo/runs/interactive",
+  "working_dir_root": "demo/data",
+  "agent_path": "agent/agents/colpack_agent.md",
+  "repeats": 1,
+  "routing": false,
+  "bootstrap_skill": true,
+  "tasks": [
+    {
+      "task_id": "interactive_capsule_sphere",
+      "description": "Interactive 2D NPT capsule+sphere workflow with explicit stage confirmations.",
+      "difficulty_level": 2,
+      "user_messages": [
+        "Please set up a 2D NPT colloidal packing simulation for a mixture of capsule and sphere particles with total_particle_number=120. Use the default working directory.",
+        "yes",
+        "For planning, sweep pressure values [4.0, 6.0, 8.0], use 3000 compress sweeps and 3000 sample sweeps.",
+        "yes",
+        "yes"
+      ],
+      "expected_outcomes": [
+        "The agent should step through setup, plan, execute, and analyze with confirmations."
+      ]
+    }
+  ],
+  "models": [
+    {
+      "model_id": "openrouter/google/gemini-3-flash-preview",
+      "label": "gemini-3-flash-preview"
+    }
+  ],
+  "skills": [
+    {
+      "skill_id": "production_colpack",
+      "skill_path": "agent/skills/colpack/SKILL.md",
+      "description": "Production ColPack skill from the project root agent folder"
+    }
+  ]
+}

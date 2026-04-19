@@ -24,6 +24,12 @@
 /eval/data/
 /eval/runs/
 
+!/demo/
+!/demo/**
+/demo/**/__pycache__/
+/demo/data/
+/demo/runs/
+
 # plots
 !/plots/
 !/plots/*.py

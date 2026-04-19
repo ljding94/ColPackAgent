@@ -1,0 +1,36 @@
+{
+  "experiment_id": "colpack_demo_autonomous",
+  "description": "Autonomous end-to-end ColPack demo using the production skill.",
+  "output_dir": "demo/runs/autonomous",
+  "working_dir_root": "demo/data",
+  "agent_path": "agent/agents/colpack_agent.md",
+  "repeats": 1,
+  "routing": false,
+  "bootstrap_skill": true,
+  "tasks": [
+    {
+      "task_id": "autonomous_triangle_transition",
+      "description": "Autonomous NPT pressure sweep for triangle particles with analysis.",
+      "difficulty_level": 3,
+      "user_messages": [
+        "AGENT_MODE = autonomous\nPlease run an end-to-end ColPack workflow: set up a 2D NPT simulation for triangle particles with side length 1.0 and total_particle_number=100, use the default working directory, plan a short pressure sweep over [3.0, 5.0, 7.0] with modest sweep counts (around 3000), execute it, then analyze and summarize the 6-fold bond-order trend across pressure."
+      ],
+      "expected_outcomes": [
+        "The agent should complete setup, planning, execution, and analysis in one run."
+      ]
+    }
+  ],
+  "models": [
+    {
+      "model_id": "openrouter/google/gemini-3-flash-preview",
+      "label": "gemini-3-flash-preview"
+    }
+  ],
+  "skills": [
+    {
+      "skill_id": "production_colpack",
+      "skill_path": "agent/skills/colpack/SKILL.md",
+      "description": "Production ColPack skill from the project root agent folder"
+    }
+  ]
+}
