@@ -5,7 +5,6 @@
   "working_dir_root": "demo/data",
   "agent_path": "agent/agents/colpack_agent.md",
   "repeats": 1,
-  "routing": false,
   "bootstrap_skill": true,
   "tasks": [
     {

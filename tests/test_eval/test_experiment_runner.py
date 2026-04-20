@@ -25,7 +25,6 @@ def test_load_experiment_spec_uses_expected_defaults_and_paths():
     spec = experiment_types.load_experiment_spec(PROJECT_ROOT / "eval" / "experiment_spec.example.json")
 
     assert spec.experiment_id == "colpack_eval_scaffold"
-    assert spec.routing is False
     assert spec.bootstrap_skill is True
     assert spec.working_dir_root == PROJECT_ROOT / "eval" / "data"
     assert spec.agent_path == PROJECT_ROOT / "agent" / "agents" / "colpack_agent.md"

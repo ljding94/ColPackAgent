@@ -34,7 +34,6 @@ try:
         build_system_prompt,
         default_agent_path,
         default_mcp_command,
-        default_routing_enabled,
         default_skill_path,
         default_skill_bootstrap_enabled,
         load_agent_definition,
@@ -44,16 +43,10 @@ except ImportError:
         build_system_prompt,
         default_agent_path,
         default_mcp_command,
-        default_routing_enabled,
         default_skill_path,
         default_skill_bootstrap_enabled,
         load_agent_definition,
     )
-
-try:
-    from .workflow_routing import WorkflowRoutingContext, _prepare_user_input
-except ImportError:
-    from workflow_routing import WorkflowRoutingContext, _prepare_user_input
 
 
 @dataclass
@@ -91,12 +84,6 @@ def _build_parser() -> argparse.ArgumentParser:
         "--model",
         default="openrouter/google/gemini-3-flash-preview",
         help="Underlying LLM model name passed to OpenCode (for OpenRouter, use provider-qualified ids like openrouter/google/gemini-3-flash-preview).",
-    )
-    parser.add_argument(
-        "--routing",
-        action=argparse.BooleanOptionalAction,
-        default=default_routing_enabled(),
-        help="Enable wrapper-side ColPack message routing. Disabled by default because the ColPack skill is loaded at session start.",
     )
     parser.add_argument(
         "--bootstrap-skill",
@@ -410,7 +397,6 @@ async def run_agent(
     skill_path: Path | None,
     mcp_command: str,
     model: str,
-    routing: bool,
     bootstrap_skill: bool,
 ) -> None:
     agent_definition = load_agent_definition(agent_path, skill_path_override=skill_path)
@@ -418,7 +404,6 @@ async def run_agent(
     client: SDKClient | None = None
     background_monitor_state = BackgroundMonitorState()
     workflow_session_active = False
-    routing_context = WorkflowRoutingContext()
 
     print(f"Booting {agent_definition.name}...")
     print(f"Using agent: {agent_definition.name}")
@@ -427,7 +412,6 @@ async def run_agent(
         print(f"Agent skill: {agent_definition.skill_path}")
     print(f"Using provider: {provider_id}")
     print(f"Using model: {normalized_model}")
-    print(f"Wrapper routing: {'enabled' if routing else 'disabled'}")
     print(f"Skill bootstrap: {'enabled' if bootstrap_skill else 'disabled'}")
 
     try:
@@ -483,18 +467,7 @@ async def run_agent(
             attempt = 0
             while attempt < 2:
                 try:
-                    routed_user_input, workflow_session_active, routing_context, route_kind = _prepare_user_input(
-                        user_input=user_input,
-                        workflow_session_active=workflow_session_active,
-                        routing_context=routing_context,
-                        routing_enabled=routing,
-                    )
-                    if route_kind == "follow-up":
-                        print("[route] ColPack workflow follow-up detected; preserving active workflow context.")
-                    elif route_kind == "request":
-                        print("[route] ColPack workflow request detected; prioritizing MCP workflow tools.")
-
-                    await client.query(routed_user_input)
+                    await client.query(user_input)
 
                     response_state, background_monitor_state, workflow_session_active = await _collect_query_response(
                         client=client,
@@ -542,7 +515,6 @@ def main() -> None:
             skill_path=args.skill_path,
             mcp_command=args.mcp_command,
             model=args.model,
-            routing=args.routing,
             bootstrap_skill=args.bootstrap_skill,
         )
     )

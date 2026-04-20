@@ -21,7 +21,6 @@ workflow_monitor_loader = _load_module(
     "test_workflow_monitor_loader_module",
     AGENT_DIR / "workflow_monitor_loader.py",
 )
-workflow_routing = _load_module("test_workflow_routing_module", AGENT_DIR / "workflow_routing.py")
 
 
 def test_default_agent_path_handles_configured_agent_name_case():
@@ -30,8 +29,7 @@ def test_default_agent_path_handles_configured_agent_name_case():
     assert agent_path.exists()
 
 
-def test_wrapper_runtime_defaults_disable_routing_and_enable_skill_bootstrap():
-    assert wrapper_config.default_routing_enabled(AGENT_DIR) is False
+def test_wrapper_runtime_defaults_enable_skill_bootstrap():
     assert wrapper_config.default_skill_bootstrap_enabled(AGENT_DIR) is True
 
 
@@ -53,20 +51,3 @@ def test_workflow_monitor_loader_exposes_monitor_helpers():
     assert workflow_monitor_loader._tool_supports_local_monitor("execute_simulation_workflow_tool")
     assert workflow_monitor_loader._tool_supports_local_monitor("colpack_execute_simulation_workflow_tool")
     assert not workflow_monitor_loader._tool_supports_local_monitor("bash")
-
-
-def test_prepare_user_input_returns_raw_message_when_routing_disabled():
-    raw_input = "let's work on the colloidal packing simulation"
-    context = workflow_routing.WorkflowRoutingContext()
-
-    prepared_input, workflow_session_active, returned_context, route_kind = workflow_routing._prepare_user_input(
-        user_input=raw_input,
-        workflow_session_active=False,
-        routing_context=context,
-        routing_enabled=False,
-    )
-
-    assert prepared_input == raw_input
-    assert workflow_session_active is False
-    assert returned_context == context
-    assert route_kind is None

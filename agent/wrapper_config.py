@@ -64,11 +64,6 @@ def default_skill_path(base_dir: Path | None = None) -> Path:
     return resolved_base_dir / "skills" / "colpack" / "SKILL.md"
 
 
-def default_routing_enabled(base_dir: Path | None = None) -> bool:
-    wrapper_config = load_opencode_config(base_dir).get("wrapper", {})
-    return bool(wrapper_config.get("routing", False))
-
-
 def default_skill_bootstrap_enabled(base_dir: Path | None = None) -> bool:
     wrapper_config = load_opencode_config(base_dir).get("wrapper", {})
     return bool(wrapper_config.get("bootstrap_skill", True))

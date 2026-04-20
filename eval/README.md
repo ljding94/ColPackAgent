@@ -71,7 +71,6 @@ Key fields in the JSON spec:
 - `output_dir`
 - `working_dir_root`
 - `repeats`
-- `routing`
 - `bootstrap_skill`
 - `user_profiles`
 - `tasks`

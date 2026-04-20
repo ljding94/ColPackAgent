@@ -68,7 +68,6 @@ class ExperimentSpec:
     working_dir_root: Path
     agent_path: Path
     mcp_command: str
-    routing: bool
     bootstrap_skill: bool
     repeats: int
     user_profiles: tuple[UserProfileSpec, ...]
@@ -222,7 +221,6 @@ def load_experiment_spec(spec_path: Path) -> ExperimentSpec:
         working_dir_root=working_dir_root,
         agent_path=agent_path,
         mcp_command=str(raw_spec.get("mcp_command", default_mcp_command(_repo_root() / "agent"))),
-        routing=bool(raw_spec.get("routing", False)),
         bootstrap_skill=bool(raw_spec.get("bootstrap_skill", True)),
         repeats=max(1, int(raw_spec.get("repeats", 1))),
         user_profiles=_load_user_profiles(raw_spec.get("user_profiles")),

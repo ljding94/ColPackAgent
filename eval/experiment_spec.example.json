@@ -4,7 +4,6 @@
   "output_dir": "eval/runs/colpack_eval_scaffold",
   "working_dir_root": "eval/data",
   "repeats": 1,
-  "routing": false,
   "bootstrap_skill": true,
   "user_profiles": [
     {

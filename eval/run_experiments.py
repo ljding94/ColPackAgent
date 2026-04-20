@@ -16,7 +16,6 @@ if __package__ in {None, ""}:
 from opencode_agent_sdk.types import AssistantMessage, ResultMessage, SystemMessage
 
 from agent import app as agent_app
-from agent.workflow_routing import WorkflowRoutingContext, _prepare_user_input
 from colpack.workflow_helper import WORKING_DIR_ROOT_ENV_VAR
 from eval.experiment_types import (
     ExperimentSpec,
@@ -201,7 +200,6 @@ async def _execute_run_case(
     wall_start = time.perf_counter()
     background_state = agent_app.BackgroundMonitorState()
     workflow_session_active = False
-    routing_context = WorkflowRoutingContext()
     turn_results: list[TurnResult] = []
     total_usage = TokenUsageRecord()
     total_cost_usd = 0.0
@@ -220,17 +218,10 @@ async def _execute_run_case(
             background_state = await agent_app._bootstrap_skill_session(client, background_state)
 
         for index, user_message in enumerate(planned_run.task.user_messages, start=1):
-            routed_user_input, workflow_session_active, routing_context, route_kind = _prepare_user_input(
-                user_input=user_message,
-                workflow_session_active=workflow_session_active,
-                routing_context=routing_context,
-                routing_enabled=spec.routing,
-            )
-
             attempt = 0
             while attempt < 2:
                 try:
-                    await client.query(routed_user_input)
+                    await client.query(user_message)
                     turn_result, background_state, workflow_session_active = await _collect_turn_result(
                         client=client,
                         background_state=background_state,
@@ -240,8 +231,8 @@ async def _execute_run_case(
                         turn_result,
                         turn_index=index,
                         user_input=user_message,
-                        routed_user_input=routed_user_input,
-                        route_kind=route_kind,
+                        routed_user_input=user_message,
+                        route_kind=None,
                     )
                     turn_results.append(turn_result)
                     total_usage = _sum_usage(total_usage, turn_result.usage)
@@ -264,8 +255,8 @@ async def _execute_run_case(
                         TurnResult(
                             turn_index=index,
                             user_input=user_message,
-                            routed_user_input=routed_user_input,
-                            route_kind=route_kind,
+                            routed_user_input=user_message,
+                            route_kind=None,
                             assistant_text="",
                             system_errors=(str(exc),),
                             query_had_error=True,
@@ -305,7 +296,6 @@ async def _execute_run_case(
             "agent_path": str(spec.agent_path),
             "resolved_skill_path": str(planned_run.skill.skill_path),
             "working_dir_root": str(spec.working_dir_root),
-            "routing": spec.routing,
             "bootstrap_skill": bootstrap_skill,
         },
     )
