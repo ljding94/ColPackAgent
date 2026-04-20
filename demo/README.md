@@ -39,4 +39,4 @@ Execute:
 
 - Add `--limit N` to cap planned runs.
 - Add `--no-bootstrap-skill` to disable startup capability bootstrap.
-- You can inspect generated manifests and summaries in `demo/runs/<interactive|autonomous>/`.
+- You can inspect generated outputs in `demo/runs/<interactive|autonomous>/`: `planned_runs.json`, `results.jsonl`, `summary.json`, and `conversations/<run_id>.md`.

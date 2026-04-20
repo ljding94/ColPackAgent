@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import logging
+import re
 import sys
 import time
 from dataclasses import replace
@@ -54,11 +56,31 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable the ColPack capability bootstrap even if the spec enables it.",
     )
+    run_parser.add_argument(
+        "--sdk-trace",
+        action="store_true",
+        help="Enable verbose opencode_agent_sdk transport logs (disabled by default).",
+    )
     return parser
 
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _configure_eval_logging(sdk_trace: bool) -> None:
+    logging.basicConfig(level=logging.WARNING)
+    if sdk_trace:
+        return
+
+    noisy_loggers = (
+        "opencode_agent_sdk",
+        "opencode_agent_sdk.client",
+        "opencode_agent_sdk._internal.transport",
+        "opencode_agent_sdk._internal.acp",
+    )
+    for logger_name in noisy_loggers:
+        logging.getLogger(logger_name).setLevel(logging.ERROR)
 
 
 def _ensure_output_dir(spec: ExperimentSpec) -> Path:
@@ -79,8 +101,23 @@ def _results_path(spec: ExperimentSpec) -> Path:
     return _ensure_output_dir(spec) / "results.jsonl"
 
 
+def _legacy_results_path(spec: ExperimentSpec) -> Path:
+    return _ensure_output_dir(spec) / "results.json"
+
+
 def _summary_path(spec: ExperimentSpec) -> Path:
     return _ensure_output_dir(spec) / "summary.json"
+
+
+def _conversation_dir(spec: ExperimentSpec) -> Path:
+    path = _ensure_output_dir(spec) / "conversations"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _conversation_path(spec: ExperimentSpec, run_id: str) -> Path:
+    safe_run_id = re.sub(r"[^A-Za-z0-9._-]+", "_", run_id)
+    return _conversation_dir(spec) / f"{safe_run_id}.md"
 
 
 def _write_manifest(spec: ExperimentSpec, planned_runs: tuple[PlannedRun, ...]) -> Path:
@@ -97,6 +134,46 @@ def _write_manifest(spec: ExperimentSpec, planned_runs: tuple[PlannedRun, ...]) 
 def _append_result(result_path: Path, result: RunResult) -> None:
     with result_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(dataclass_to_json(result), ensure_ascii=True) + "\n")
+
+
+def _write_conversation_transcript(spec: ExperimentSpec, result: RunResult) -> Path:
+    transcript_path = _conversation_path(spec, result.run_id)
+    lines: list[str] = [
+        f"# Conversation Transcript: {result.run_id}",
+        "",
+        f"- experiment_id: `{result.experiment_id}`",
+        f"- task_id: `{result.task_id}`",
+        f"- model_id: `{result.model_id}`",
+        f"- skill_id: `{result.skill_id}`",
+        f"- repeat_index: `{result.repeat_index}`",
+        f"- success: `{result.success}`",
+        "",
+    ]
+
+    for turn in result.turn_results:
+        lines.extend(
+            [
+                f"## Turn {turn.turn_index}",
+                "",
+                "**User**",
+                "",
+                turn.user_input if turn.user_input else "[empty]",
+                "",
+                "**Assistant**",
+                "",
+                turn.assistant_text if turn.assistant_text else "[no text response]",
+                "",
+            ]
+        )
+        if turn.system_errors:
+            lines.append("**System Errors**")
+            lines.append("")
+            for error in turn.system_errors:
+                lines.append(f"- {error}")
+            lines.append("")
+
+    transcript_path.write_text("\n".join(lines), encoding="utf-8")
+    return transcript_path
 
 
 def _sum_usage(left: TokenUsageRecord, right: TokenUsageRecord) -> TokenUsageRecord:
@@ -332,6 +409,9 @@ async def _run_experiment(spec: ExperimentSpec, *, limit: int, dry_run: bool, bo
         return 0
 
     result_path = _results_path(spec)
+    legacy_result_path = _legacy_results_path(spec)
+    if legacy_result_path.exists() and legacy_result_path != result_path:
+        legacy_result_path.unlink()
     if result_path.exists():
         result_path.unlink()
 
@@ -349,6 +429,7 @@ async def _run_experiment(spec: ExperimentSpec, *, limit: int, dry_run: bool, bo
             bootstrap_skill=bootstrap_skill,
         )
         _append_result(result_path, run_result)
+        _write_conversation_transcript(spec, run_result)
         run_results.append(run_result)
 
     summary = _summarize_results(spec, run_results)
@@ -378,6 +459,7 @@ def _print_plan(spec: ExperimentSpec, *, write_manifest: bool) -> int:
 
 def main() -> int:
     args = _build_parser().parse_args()
+    _configure_eval_logging(sdk_trace=getattr(args, "sdk_trace", False))
     spec = load_experiment_spec(args.spec)
 
     if args.command == "plan":

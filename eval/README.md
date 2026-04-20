@@ -28,8 +28,9 @@ python -m eval.run_experiments run --spec eval/experiment_spec.example.json --dr
 `run` executes the planned runs sequentially and writes:
 
 - `planned_runs.json`
-- `results.jsonl`
+- `results.jsonl` (JSON Lines; trailing `l` is the letter ell)
 - `summary.json`
+- `conversations/<run_id>.md` (user/assistant transcript per run)
 
 under the experiment `output_dir`.
 
