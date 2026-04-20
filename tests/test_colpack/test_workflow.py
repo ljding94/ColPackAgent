@@ -133,7 +133,7 @@ def test_plan_simulaiton_runs_appends_without_duplicate_tunable_values() -> None
         )
 
         baseline = {
-            "sampling_steps": 20,
+            "sample_steps": 20,
             "particle_specs.0.diameter": 1.0,
         }
 
@@ -352,7 +352,12 @@ def test_execute_simulation_workflow_returns_already_running_when_status_indicat
 
 
 def _run_workflow_case(case):
-    from colpack.workflow import setup_simulation_problem, plan_simulaiton_runs, execute_simulation_workflow
+    from colpack.workflow import (
+        setup_simulation_problem,
+        plan_simulaiton_runs,
+        execute_simulation_workflow,
+        analyze_simulation_runs,
+    )
 
     project_root = _find_project_root(Path(__file__).resolve())
     case_root = project_root / "data" / "test" / case["system_subdir"]
@@ -362,7 +367,7 @@ def _run_workflow_case(case):
     print(f"case_root: {case_root}")
 
     # 1) setup_simulation_problem
-    print("[1/3] setup_simulation_problem: start")
+    print("[1/4] setup_simulation_problem: start")
     with patch("colpack.workflow.resolve_working_dir_from_setup", return_value=str(case_root)):
         problem = setup_simulation_problem(
             dimension=case["dimension"],
@@ -376,10 +381,10 @@ def _run_workflow_case(case):
     assert problem["dimension"] == case["dimension"]
     assert problem["ensemble"] == case["ensemble"]
     assert len(problem["particle_specs"]) == len(case["particle_shape_list"])
-    print("[1/3] setup_simulation_problem: done")
+    print("[1/4] setup_simulation_problem: done")
 
     # 2) plan_simulaiton_runs
-    print("[2/3] plan_simulaiton_runs: start")
+    print("[2/4] plan_simulaiton_runs: start")
     planning = plan_simulaiton_runs(
         baseline_parameters=case["baseline_parameters"],
         tunable_parameters=case["tunable_parameters"],
@@ -400,14 +405,14 @@ def _run_workflow_case(case):
         assert run["total_particle_number"] == case["total_particle_number"]
         assert run["run_dir"].endswith(f"run_{run['run_number']}")
         assert isinstance(run["particle_specs"], list)
-    print(f"[2/3] plan_simulaiton_runs: done (n_runs={planning['n_runs']})")
+    print(f"[2/4] plan_simulaiton_runs: done (n_runs={planning['n_runs']})")
 
     if not _has_hoomd():
         print(f"Skipping execute_simulation_workflow for {case['system_subdir']}: 'hoomd' is not installed.")
         return
 
     # 3) execute_simulation_workflow
-    print("[3/3] execute_simulation_workflow pass-1: start")
+    print("[3/4] execute_simulation_workflow pass-1: start")
     first = execute_simulation_workflow(working_dir=str(working_dir), continue_on_error=True)
     assert first["n_runs"] == planning["n_runs"]
 
@@ -416,10 +421,10 @@ def _run_workflow_case(case):
     rows_first = _load_status_rows(status_path)
     _assert_status_schema(rows_first)
     assert len(rows_first) >= planning["n_runs"]
-    print(f"[3/3] execute_simulation_workflow pass-1: done (status_rows={len(rows_first)})")
+    print(f"[3/4] execute_simulation_workflow pass-1: done (status_rows={len(rows_first)})")
 
     # Run twice to validate resume logic and append-only status behavior.
-    print("[3/3] execute_simulation_workflow pass-2 (resume): start")
+    print("[3/4] execute_simulation_workflow pass-2 (resume): start")
     second = execute_simulation_workflow(working_dir=str(working_dir), continue_on_error=True)
     assert second["n_runs"] == planning["n_runs"]
 
@@ -435,8 +440,65 @@ def _run_workflow_case(case):
         for step in step_columns:
             assert row[step] in {"O", "X"}
 
-    print(f"[3/3] execute_simulation_workflow pass-2 (resume): done (status_rows={len(rows_second)})")
-    print(f"workflow case {case['system_subdir']}: n_runs={planning['n_runs']}, final_status_rows={len(rows_second)}")
+    print(f"[3/4] execute_simulation_workflow pass-2 (resume): done (status_rows={len(rows_second)})")
+
+    # 4) analyze_simulation_runs (separate from execution workflow)
+    extra_order_params = case.get("extra_order_params")
+
+    print("[4/4] analyze_simulation_runs pass-1: start")
+    analyze_first = analyze_simulation_runs(
+        working_dir=str(working_dir),
+        continue_on_error=True,
+        extra_order_params=extra_order_params,
+    )
+    assert analyze_first["n_runs"] == planning["n_runs"]
+    assert analyze_first["n_failed"] == 0
+    assert analyze_first["n_success"] == planning["n_runs"]
+
+    rows_analyze_first = _load_status_rows(Path(analyze_first["status_path"]))
+    assert len(rows_analyze_first) == planning["n_runs"]
+    for row in rows_analyze_first:
+        assert row["analyze"] == "O"
+        assert row["status"] in {"success", "failed"}
+    print(f"[4/4] analyze_simulation_runs pass-1: done (status_rows={len(rows_analyze_first)})")
+
+    # Re-run to validate idempotent analyze behavior.
+    print("[4/4] analyze_simulation_runs pass-2 (idempotency): start")
+    analyze_second = analyze_simulation_runs(
+        working_dir=str(working_dir),
+        continue_on_error=True,
+        extra_order_params=extra_order_params,
+    )
+    assert analyze_second["n_runs"] == planning["n_runs"]
+    assert analyze_second["n_failed"] == 0
+
+    for run in planned_runs:
+        run_dir = Path(run["run_dir"])
+        assert (run_dir / "analysis_results.json").exists(), f"Missing analysis_results.json in {run_dir}"
+        assert (run_dir / "simulation_config_analysis.json").exists(), f"Missing simulation_config_analysis.json in {run_dir}"
+        if extra_order_params:
+            expected_extra_names = {item["name"] for item in extra_order_params}
+            with (run_dir / "analysis_results.json").open("r", encoding="utf-8") as f:
+                analysis_results = json.load(f)
+            analyzed_types = {
+                key: value
+                for key, value in analysis_results.items()
+                if isinstance(value, dict) and not str(key).startswith("rdf_")
+            }
+            assert analyzed_types, f"No per-type analysis entries found in {run_dir}/analysis_results.json"
+            for p_type, type_results in analyzed_types.items():
+                for expected_name in expected_extra_names:
+                    assert expected_name in type_results, (
+                        f"Missing extra order parameter '{expected_name}' for {p_type} in {run_dir}"
+                    )
+
+    rows_final = _load_status_rows(Path(analyze_second["status_path"]))
+    assert len(rows_final) == planning["n_runs"]
+    for row in rows_final:
+        assert row["analyze"] == "O"
+
+    print(f"[4/4] analyze_simulation_runs pass-2 (idempotency): done (status_rows={len(rows_final)})")
+    print(f"workflow case {case['system_subdir']}: n_runs={planning['n_runs']}, final_status_rows={len(rows_final)}")
 
 
 def main():
@@ -453,13 +515,61 @@ def main():
 
     cases = [
         {
+            "system_subdir": "workflow_case_2d_nvt_capsule_disk_mix",
+            "dimension": 2,
+            "ensemble": "NVT",
+            "total_particle_number": 500,
+            "particle_shape_list": ["capsule", "disk"],
+            "baseline_parameters": {
+                "sample_steps": 4e5,
+                "particle_specs.0.diameter": 0.2,
+                "particle_specs.0.length": 5,
+                "particle_specs.1.diameter": 1,
+                "particle_specs.1.relative_volume_fraction": 4,
+            },
+            "tunable_parameters": {
+                "volume_fraction": [0.6],
+            },
+            "expected_runs": 1
+        },
+        {
+            "system_subdir": "workflow_case_3d_npt_capsule_sphere_mix",
+            "dimension": 3,
+            "ensemble": "NPT",
+            "total_particle_number": 500,
+            "particle_shape_list": ["capsule", "sphere"],
+            "baseline_parameters": {
+                "sample_steps": 20000,
+                "particle_specs.0.diameter": 0.25,
+                "particle_specs.0.length": 4,
+                "particle_specs.1.diameter": 1,
+                "particle_specs.1.relative_volume_fraction": 2,
+            },
+            "tunable_parameters": {
+                "P": [10.0],
+            },
+            "expected_runs": 1,
+            "extra_order_params": [
+                {
+                    "name": "solid_liquid_q6_extra",
+                    "type": "SolidLiquid",
+                    "params": {
+                        "l": 6,
+                        "q_threshold": 0.7,
+                        "solid_threshold": 6,
+                        "normalize_q": True,
+                    },
+                }
+            ],
+        },
+        {
             "system_subdir": "workflow_case_2d_npt_multishape",
             "dimension": 2,
             "ensemble": "NPT",
             "total_particle_number": 200,
             "particle_shape_list": ["disk", "capsule", "triangle", "rectangle"],
             "baseline_parameters": {
-                "sampling_steps": 50,
+                "sample_steps": 50,
                 "particle_specs.0.diameter": 1.0,
                 "particle_specs.1.length": 1.5,
                 "particle_specs.1.diameter": 0.5,
@@ -479,7 +589,7 @@ def main():
             "total_particle_number": 200,
             "particle_shape_list": ["disk", "capsule"],
             "baseline_parameters": {
-                "sampling_steps": 50,
+                "sample_steps": 50,
                 "particle_specs.0.diameter": 1.0,
                 "particle_specs.1.length": 1.5,
                 "particle_specs.1.diameter": 0.5,
@@ -497,7 +607,7 @@ def main():
             "total_particle_number": 36,
             "particle_shape_list": ["disk", "ellipse"],
             "baseline_parameters": {
-                "sampling_steps": 50,
+                "sample_steps": 50,
                 "particle_specs.0.diameter": 1.0,
                 "particle_specs.1.a": 0.9,
                 "particle_specs.1.b": 0.6,
@@ -515,7 +625,7 @@ def main():
             "total_particle_number": 40,
             "particle_shape_list": ["sphere", "capsule"],
             "baseline_parameters": {
-                "sampling_steps": 50,
+                "sample_steps": 50,
                 "particle_specs.0.diameter": 1.0,
                 "particle_specs.1.length": 1.8,
                 "particle_specs.1.diameter": 0.6,
@@ -525,6 +635,18 @@ def main():
                 "particle_specs.1.relative_volume_fraction": [0.7],
             },
             "expected_runs": 3,
+            "extra_order_params": [
+                {
+                    "name": "solid_liquid_q6_extra",
+                    "type": "SolidLiquid",
+                    "params": {
+                        "l": 6,
+                        "q_threshold": 0.7,
+                        "solid_threshold": 6,
+                        "normalize_q": True,
+                    },
+                }
+            ],
         },
         {
             "system_subdir": "workflow_case_3d_npt_sphere_cube",
@@ -533,7 +655,7 @@ def main():
             "total_particle_number": 32,
             "particle_shape_list": ["sphere", "cube"],
             "baseline_parameters": {
-                "sampling_steps": 50,
+                "sample_steps": 50,
                 "particle_specs.0.diameter": 1.0,
                 "particle_specs.1.edge": 0.9,
             },
@@ -542,6 +664,18 @@ def main():
                 "particle_specs.1.relative_volume_fraction": [0.45],
             },
             "expected_runs": 3,
+            "extra_order_params": [
+                {
+                    "name": "solid_liquid_q6_extra",
+                    "type": "SolidLiquid",
+                    "params": {
+                        "l": 6,
+                        "q_threshold": 0.7,
+                        "solid_threshold": 6,
+                        "normalize_q": True,
+                    },
+                }
+            ],
         },
     ]
 

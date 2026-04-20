@@ -8,12 +8,12 @@
             "default_a": 0.1
         },
         "compression_defaults": {
-            "max_steps_per_stage": 2000,
-            "randomization_steps": 1000,
+            "max_steps_per_stage": 4000,
+            "randomization_steps": 2000,
             "stages": 5,
-            "npt_precompress_volume_fraction": 0.3,
+            "npt_precompress_volume_fraction": 0.4,
             "npt_boxmc_steps": 2000,
-            "npt_boxmc_volume_delta": 0.01,
+            "npt_boxmc_volume_delta": 0.02,
             "npt_boxmc_trigger_period": 10
         },
         "sample_defaults": {
@@ -35,7 +35,7 @@
         "relative_volume_fraction_first_particle": 1,
         "relative_volume_fraction_other_particles": 0.5,
         "common_system_fields": {
-            "sampling_steps": 20000
+            "sample_steps": 20000
         },
         "status_fieldnames": [
             "run_number",

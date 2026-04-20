@@ -405,7 +405,7 @@ def main():
             "total_particle_number": 64,
             "particle_shape_list": ["disk"],
             "baseline_parameters": {
-                "sampling_steps": 500,
+                "sample_steps": 500,
                 "particle_specs.0.diameter": 1.0,
             },
             "tunable_parameters": {
@@ -420,7 +420,7 @@ def main():
             "total_particle_number": 64,
             "particle_shape_list": ["disk", "capsule"],
             "baseline_parameters": {
-                "sampling_steps": 500,
+                "sample_steps": 500,
                 "particle_specs.0.diameter": 1.0,
                 "particle_specs.1.length": 1.5,
                 "particle_specs.1.diameter": 0.5,

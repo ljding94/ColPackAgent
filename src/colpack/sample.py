@@ -9,6 +9,19 @@ MAX_SAMPLE_TRAJECTORY_TRIGGER_PERIOD = 1000
 TARGET_SAMPLE_TRAJECTORY_FRAMES = 50
 
 
+def _resolve_sample_steps(simulation_config: dict, sample_defaults: dict) -> int:
+    """Resolve sampling steps with backward compatibility.
+
+    Preferred key is ``sample_steps``. Legacy workflows still set
+    ``sampling_steps``; honor that when ``sample_steps`` is absent.
+    """
+    if "sample_steps" in simulation_config and simulation_config.get("sample_steps") is not None:
+        return int(simulation_config["sample_steps"])
+    if "sampling_steps" in simulation_config and simulation_config.get("sampling_steps") is not None:
+        return int(simulation_config["sampling_steps"])
+    return int(sample_defaults.get("sample_steps", 50000))
+
+
 def _get_sample_trajectory_trigger_period(sample_steps: int) -> int:
     if sample_steps <= 0:
         raise ValueError("sample_steps must be positive.")
@@ -79,7 +92,7 @@ def sample_system(run_dir: str):
 
     workflow_config = get_workflow_config()
     sample_defaults = workflow_config.get("sample_defaults", {})
-    sample_steps = int(simulation_config.get("sample_steps", sample_defaults.get("sample_steps", 50000)))
+    sample_steps = _resolve_sample_steps(simulation_config, sample_defaults)
     configured_move_tune_period = int(simulation_config.get("move_tune_period", sample_defaults.get("move_tune_period", 100)))
     min_move_tune_updates = int(simulation_config.get("min_move_tune_updates", sample_defaults.get("min_move_tune_updates", 10)))
     move_tune_period = _get_move_tune_period(sample_steps, configured_move_tune_period, min_move_tune_updates)
@@ -177,6 +190,7 @@ def sample_system(run_dir: str):
     simulation_config_sample["sample_translation_moves"] = mc.translate_moves
     simulation_config_sample["sample_rotation_moves"] = mc.rotate_moves
     simulation_config_sample["sample_overlaps"] = mc.overlaps
+    simulation_config_sample["sample_steps"] = sample_steps
     simulation_config_sample["sample_trajectory_trigger_period"] = trajectory_trigger_period
     simulation_config_sample["sample_move_tune_period"] = move_tune_period
     simulation_config_sample["min_move_tune_updates"] = min_move_tune_updates
