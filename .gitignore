@@ -1,6 +1,8 @@
 # Ignore everything first (root-level whitelist strategy)
 /*
 
+!environment.yml
+
 # Then allow specific files and folders
 !/README.md
 
