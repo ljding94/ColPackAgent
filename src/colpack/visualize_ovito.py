@@ -122,6 +122,7 @@ def render_physical_size(
     dpi=600,
     frame_index=-1,
     antialiasing_level=8,
+    enable_shadows=False,
     background=(1.0, 1.0, 1.0),
     debug=False,
 ):
@@ -130,6 +131,13 @@ def render_physical_size(
 
     renderer = TachyonRenderer()
     renderer.ambient_occlusion = False  # faster, consistent with simple batch renders
+    aa_samples = max(int(antialiasing_level), 1)
+    if hasattr(renderer, "antialiasing"):
+        renderer.antialiasing = aa_samples > 1
+    if hasattr(renderer, "antialiasing_samples"):
+        renderer.antialiasing_samples = aa_samples
+    if hasattr(renderer, "shadows"):
+        renderer.shadows = bool(enable_shadows)
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -146,8 +154,30 @@ def render_physical_size(
     if debug:
         print(
             f"Rendered {float(width_inch):.3f}\" x {float(height_inch):.3f}\" "
-            f"image at {int(dpi)} DPI ({width_px}x{height_px} pixels)."
+            f"image at {int(dpi)} DPI ({width_px}x{height_px} pixels, "
+            f"aa_samples={aa_samples}, shadows={bool(enable_shadows)})."
         )
+
+
+def _set_simulation_cell_visibility(pipeline, cell, show_boundary, debug=False):
+    show_boundary = bool(show_boundary)
+    source_data = getattr(getattr(pipeline, "source", None), "data", None)
+    if source_data is not None and hasattr(source_data, "cell") and hasattr(source_data.cell, "vis"):
+        cell_vis = source_data.cell.vis
+    elif hasattr(cell, "vis"):
+        cell_vis = cell.vis
+    else:
+        if debug:
+            print("visualize_gsd: could not access simulation cell vis object; boundary visibility unchanged.")
+        return
+
+    if hasattr(cell_vis, "render_cell"):
+        cell_vis.render_cell = show_boundary
+    elif hasattr(cell_vis, "enabled"):
+        cell_vis.enabled = show_boundary
+
+    if debug:
+        print(f"visualize_gsd: boundary visibility set to {show_boundary}")
 
 
 def visualize_gsd(
@@ -161,6 +191,7 @@ def visualize_gsd(
     debug=False,
     show_boundary=True,
     antialiasing_level=8,
+    enable_shadows=False,
     **kwargs,
 ):
     """
@@ -186,6 +217,8 @@ def visualize_gsd(
         Print debug information.
     show_boundary : bool, optional
         Whether to show the simulation box (default: True).
+    enable_shadows : bool, optional
+        Whether to enable cast shadows in the Tachyon renderer (default: False).
     **kwargs : dict
         Additional arguments ignored (compatibility with fresnel version).
     """
@@ -207,6 +240,9 @@ def visualize_gsd(
 
     if debug:
         print(f"visualize_gsd: loading {gsd_path}, frame {frame_index}/{num_frames}")
+
+    if "shadows" in kwargs:
+        enable_shadows = bool(kwargs.pop("shadows"))
 
     # Add to scene to visualize
     pipeline.add_to_scene()
@@ -261,6 +297,8 @@ def visualize_gsd(
     if debug:
         print(f"visualize_gsd: detected 2D={is_2d}")
 
+    _set_simulation_cell_visibility(pipeline, cell=cell, show_boundary=show_boundary, debug=debug)
+
     render_width_px, render_height_px = _resolve_render_size(width_inch=width_inch, height_inch=height_inch, dpi=dpi)
     aspect_ratio = render_width_px / max(render_height_px, 1)
 
@@ -291,6 +329,7 @@ def visualize_gsd(
             dpi=dpi,
             frame_index=frame_index,
             antialiasing_level=antialiasing_level,
+            enable_shadows=enable_shadows,
             background=(1.0, 1.0, 1.0),
             debug=debug,
         )
