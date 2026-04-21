@@ -321,6 +321,7 @@ def execute_simulation_workflow(
         message=f"Loaded {len(planned_runs)} planned run(s).",
     )
 
+    # TODO: make the following for loop parallel? and degree of paralleization depends on available cpu/gpu
     for idx, run in enumerate(planned_runs):
         run_number = run.get("run_number", idx)
         run_dir = run.get("run_dir")
