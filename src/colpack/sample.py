@@ -5,7 +5,7 @@ from colpack.config_reading import get_workflow_config
 from colpack.visualize_ovito import visualize_gsd
 
 
-MAX_SAMPLE_TRAJECTORY_TRIGGER_PERIOD = 1000
+MAX_SAMPLE_TRAJECTORY_TRIGGER_PERIOD = 100
 TARGET_SAMPLE_TRAJECTORY_FRAMES = 50
 
 

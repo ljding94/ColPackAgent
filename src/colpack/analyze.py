@@ -218,7 +218,7 @@ def analyze_process_time_series(run_dir):
     print(f"Equilibrium analysis written to {result_path}")
 
 
-def _detect_equilibrium(values, n_sigma=2.0, min_eq_fraction=0.2):
+def _detect_equilibrium(values, n_sigma=1.5, min_eq_fraction=0.2):
     """
     Detect equilibrium onset in a 1-D time series using reverse cumulative
     mean deviation with a sigma-based tolerance.
@@ -420,72 +420,6 @@ def _determine_rdf_r_max(traj):
 
     print(f"Auto-determined r_max for RDF: {r_max:.3f}")
     return r_max
-
-
-def analyze_compute_old(system_dir, density=None):
-    """
-    Wrapper function that directs the analysis based on the number of particle components.
-    """
-
-    # 1. Load Metadata and Trajectory
-    if density is not None:
-        summary_path = os.path.join(system_dir, f"compress_summary_n{density:.3f}.json")
-        gsd_path = os.path.join(system_dir, f"sample_trajectory_n{density:.3f}.gsd")
-    else:
-        summary_path = os.path.join(system_dir, "compress_summary.json")
-        gsd_path = os.path.join(system_dir, "sample_trajectory.gsd")
-
-    if not os.path.exists(summary_path) or not os.path.exists(gsd_path):
-        print(f"Error: Missing data in {system_dir}")
-        return
-
-    with open(summary_path, "r") as f:
-        summary = json.load(f)
-
-    particle_list = summary["particle_list"]
-
-    print(f"--- Starting Analysis for {system_dir} ---")
-
-    traj = gsd.hoomd.open(gsd_path)
-
-    # 1.1. load analysis config
-    dimensions = summary.get("dimensions", 3)  # default to 3D if not specified
-    analysis_config = get_analyze_config(dimensions)
-
-    results = {}
-    # 2 analysis loop: type-specific and global
-    # 2.1 type specific analysis loop
-    for p_info in particle_list:
-        pType = p_info["pType"]
-        pTypeShape = pType.split("_")[0]  # e.g. "disk" from "disk_1"
-        if pTypeShape in analysis_config:
-            instructions = analysis_config[pTypeShape]
-            # Execute all configured order parameters
-            type_results = _compute_shape_orders(traj, p_info, instructions["order_params"])
-            results[f"{pType}"] = type_results
-        else:
-            print(f"Warning: No analysis config found for shape {pType}")
-
-    # 2.2. rdf analysis loop
-    if len(particle_list) > 1:
-        # Simple loop for pairs
-        for i in range(len(particle_list)):
-            for j in range(i, len(particle_list)):
-                t1 = particle_list[i]["pType"]
-                t2 = particle_list[j]["pType"]
-                key = f"rdf_{t1}_{t2}"
-                results[key] = _compute_rdf(traj, query_type=t1, target_type=t2)
-
-    # save results to json
-    if density is not None:
-        result_path = os.path.join(system_dir, f"analysis_results_n{density:.3f}.json")
-    else:
-        result_path = os.path.join(system_dir, "analysis_results.json")
-
-    with open(result_path, "w") as f:
-        json.dump(_make_serializable(results), f, indent=4)
-
-    return results
 
 
 def _compute_shape_orders(traj, p_info, order_params_list):
