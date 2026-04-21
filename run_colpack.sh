@@ -3,12 +3,35 @@
 # ColPack Agent Runner Script
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOOMD_ENV_BIN="/opt/homebrew/Caskroom/miniconda/base/envs/hoomd-env/bin"
+
+resolve_python_bin() {
+    if [[ -n "${CONDA_PREFIX:-}" && -x "$CONDA_PREFIX/bin/python" ]]; then
+        echo "$CONDA_PREFIX/bin/python"
+        return
+    fi
+    if command -v python >/dev/null 2>&1; then
+        command -v python
+        return
+    fi
+    if command -v python3 >/dev/null 2>&1; then
+        command -v python3
+        return
+    fi
+    echo ""
+}
+
+PYTHON_BIN="$(resolve_python_bin)"
+if [[ -z "$PYTHON_BIN" ]]; then
+    echo "Error: Could not find a Python interpreter. Activate your environment first."
+    exit 127
+fi
+
+HOOMD_ENV_BIN="$(dirname "$PYTHON_BIN")"
 
 # Function to run as standalone agent (uses agent/app.py SDK runner)
 run_standalone() {
     echo "Running standalone agent..."
-    "$HOOMD_ENV_BIN/python" "$SCRIPT_DIR/agent/app.py" "${@:2}"
+    "$PYTHON_BIN" "$SCRIPT_DIR/agent/app.py" "${@:2}"
 }
 
 # Function to run with opencode (loads agent/opencode.json as project config)
