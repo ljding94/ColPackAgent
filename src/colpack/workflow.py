@@ -2,6 +2,8 @@ import os
 import json
 import copy
 import csv
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone
 from colpack.config_reading import get_allowed_shapes, canonicalize_shape, get_shape_defaults, get_workflow_config
 from colpack.workflow_helper import (
@@ -24,6 +26,83 @@ STEP_SEQUENCE = ["initialize", "compress", "sample", "analyze"]
 EXECUTION_STATE_FIELD = "execution_state"
 EXECUTION_STATE_RUNNING = "running"
 EXECUTION_STATE_FINISHED = "finished"
+
+
+def _execute_single_simulation_run(
+    idx: int,
+    run: dict,
+    n_runs: int,
+    working_dir: str,
+    resumed_steps: dict | None = None,
+):
+    # Keep heavy simulation imports lazy so parent setup/guards can run without HOOMD.
+    from colpack.initialize import create_initial_config
+    from colpack.compress import compress_system
+    from colpack.sample import sample_system
+
+    run_number = run.get("run_number", idx)
+    run_dir = run.get("run_dir")
+    if not run_dir:
+        run_dir = os.path.join(working_dir, f"run_{run_number}")
+    os.makedirs(run_dir, exist_ok=True)
+
+    run_record = _build_run_status_record(run, run_number, run_dir)
+    resumed_steps = resumed_steps or {}
+    for step_name in ["initialize", "compress", "sample", "analyze"]:
+        if resumed_steps.get(step_name) == "O":
+            run_record[step_name] = "O"
+
+    run_record["status"] = "running"
+    run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
+
+    try:
+        if "particle_specs" not in run:
+            raise ValueError("Missing 'particle_specs' in run configuration.")
+        if "dimension" not in run:
+            raise ValueError("Missing 'dimension' in run configuration.")
+
+        if run_record["initialize"] != "O":
+            create_initial_config(run_dir=run_dir)
+            run_record["initialize"] = "O"
+            run_record["status"] = "running"
+            run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
+
+        if run_record["compress"] != "O":
+            compress_system(run_dir=run_dir)
+            run_record["compress"] = "O"
+            run_record["status"] = "running"
+            run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
+
+        if run_record["sample"] != "O":
+            sample_system(run_dir=run_dir)
+            run_record["sample"] = "O"
+            run_record["status"] = "running"
+            run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
+
+        run_record["status"] = "success"
+        run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
+        run_record["finished_at"] = datetime.now(timezone.utc).isoformat()
+        return {
+            "idx": idx,
+            "run_number": run_number,
+            "run_record": run_record,
+            "success": True,
+            "error": None,
+            "n_runs": n_runs,
+        }
+    except Exception as exc:
+        run_record["status"] = "failed"
+        run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
+        run_record["finished_at"] = datetime.now(timezone.utc).isoformat()
+        run_record["error"] = str(exc)
+        return {
+            "idx": idx,
+            "run_number": run_number,
+            "run_record": run_record,
+            "success": False,
+            "error": str(exc),
+            "n_runs": n_runs,
+        }
 
 
 # generate the simulation config for a base simulation run: dimension, particle number, ensemble, particle shapes
@@ -308,11 +387,6 @@ def execute_simulation_workflow(
             "already_running": True,
         }
 
-    # Keep heavy simulation imports lazy so setup/guard logic can run without HOOMD.
-    from colpack.initialize import create_initial_config
-    from colpack.compress import compress_system
-    from colpack.sample import sample_system
-
     _write_workflow_progress(
         working_dir=working_dir,
         n_runs=len(planned_runs),
@@ -321,8 +395,47 @@ def execute_simulation_workflow(
         message=f"Loaded {len(planned_runs)} planned run(s).",
     )
 
-    # TODO: make the following for loop parallel? and degree of paralleization depends on available cpu/gpu
-    for idx, run in enumerate(planned_runs):
+    def _detect_available_gpu_count() -> int:
+        visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES")
+        if visible_devices is not None:
+            resolved_devices = [token.strip() for token in visible_devices.split(",") if token.strip()]
+            if not resolved_devices or resolved_devices == ["-1"]:
+                return 0
+            return len(resolved_devices)
+        try:
+            import hoomd
+
+            return 1 if hoomd.device.GPU.is_available() else 0
+        except Exception:
+            return 0
+
+    parallel_defaults = workflow_config.get("parallel_defaults", {})
+    if not isinstance(parallel_defaults, dict):
+        parallel_defaults = {}
+
+    cpu_workers_total = max(1, os.cpu_count() or 1)
+    cpu_reserve_raw = parallel_defaults.get("cpu_reserve", 2)
+    try:
+        cpu_reserve = max(0, int(cpu_reserve_raw))
+    except (TypeError, ValueError):
+        cpu_reserve = 2
+
+    max_workers_override_raw = parallel_defaults.get("max_workers")
+    max_workers_override = None
+    if max_workers_override_raw is not None:
+        try:
+            max_workers_override = max(1, int(max_workers_override_raw))
+        except (TypeError, ValueError):
+            max_workers_override = None
+
+    cpu_workers = max(1, cpu_workers_total - cpu_reserve)
+    gpu_workers = _detect_available_gpu_count()
+    candidate_workers = gpu_workers if gpu_workers > 0 else cpu_workers
+    if max_workers_override is not None:
+        candidate_workers = min(candidate_workers, max_workers_override)
+    max_workers = 1 if not continue_on_error else min(len(planned_runs), candidate_workers)
+
+    def _prepare_run(idx: int, run: dict):
         run_number = run.get("run_number", idx)
         run_dir = run.get("run_dir")
         if not run_dir:
@@ -336,7 +449,6 @@ def execute_simulation_workflow(
                 if previous_record.get(step_name) == "O":
                     run_record[step_name] = "O"
 
-        # Emit an immediate row so status CSV reflects in-progress runs.
         run_record["status"] = "running"
         run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
         existing_records_by_run[str(run_number)] = run_record.copy()
@@ -348,113 +460,70 @@ def execute_simulation_workflow(
             status="running",
             message=f"Starting run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
         )
+        resumed_steps = {step_name: run_record.get(step_name) for step_name in ["initialize", "compress", "sample", "analyze"]}
+        return run_number, resumed_steps
 
-        try:
-            # Required run parameters for current lower-level APIs.
-            if "particle_specs" not in run:
-                raise ValueError("Missing 'particle_specs' in run configuration.")
-            if "dimension" not in run:
-                raise ValueError("Missing 'dimension' in run configuration.")
-
-            # 1. initialize
-            if run_record["initialize"] != "O":
-                _write_workflow_progress(
-                    working_dir=working_dir,
-                    n_runs=len(planned_runs),
-                    records_by_run=existing_records_by_run,
-                    status="running",
-                    message=f"Running initialize for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
-                )
-                create_initial_config(run_dir=run_dir)
-                run_record["initialize"] = "O"
-                run_record["status"] = "running"
-                run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
-                existing_records_by_run[str(run_number)] = run_record.copy()
-                _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
-                _write_workflow_progress(
-                    working_dir=working_dir,
-                    n_runs=len(planned_runs),
-                    records_by_run=existing_records_by_run,
-                    status="running",
-                    message=f"Completed initialize for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
-                )
-
-            # 2. compress
-            if run_record["compress"] != "O":
-                _write_workflow_progress(
-                    working_dir=working_dir,
-                    n_runs=len(planned_runs),
-                    records_by_run=existing_records_by_run,
-                    status="running",
-                    message=f"Running compress for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
-                )
-                compress_system(run_dir=run_dir)
-                run_record["compress"] = "O"
-                run_record["status"] = "running"
-                run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
-                existing_records_by_run[str(run_number)] = run_record.copy()
-                _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
-                _write_workflow_progress(
-                    working_dir=working_dir,
-                    n_runs=len(planned_runs),
-                    records_by_run=existing_records_by_run,
-                    status="running",
-                    message=f"Completed compress for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
-                )
-
-            # 3. sample
-            if run_record["sample"] != "O":
-                _write_workflow_progress(
-                    working_dir=working_dir,
-                    n_runs=len(planned_runs),
-                    records_by_run=existing_records_by_run,
-                    status="running",
-                    message=f"Running sample for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
-                )
-                sample_system(run_dir=run_dir)
-                run_record["sample"] = "O"
-                run_record["status"] = "running"
-                run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
-                existing_records_by_run[str(run_number)] = run_record.copy()
-                _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
-                _write_workflow_progress(
-                    working_dir=working_dir,
-                    n_runs=len(planned_runs),
-                    records_by_run=existing_records_by_run,
-                    status="running",
-                    message=f"Completed sample for run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
-                )
-
-            run_record["status"] = "success"
-            run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
-            run_record["finished_at"] = datetime.now(timezone.utc).isoformat()
-            existing_records_by_run[str(run_number)] = run_record.copy()
+    if max_workers == 1:
+        for idx, run in enumerate(planned_runs):
+            run_number, resumed_steps = _prepare_run(idx, run)
+            result = _execute_single_simulation_run(idx, run, len(planned_runs), working_dir, resumed_steps)
+            result_run_number = result["run_number"]
+            existing_records_by_run[str(result_run_number)] = result["run_record"].copy()
             _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
-            _write_workflow_progress(
-                working_dir=working_dir,
-                n_runs=len(planned_runs),
-                records_by_run=existing_records_by_run,
-                status="running" if idx < len(planned_runs) - 1 else "completed",
-                message=f"Finished run {idx + 1}/{len(planned_runs)} (run_{run_number}).",
-            )
-
-        except Exception as exc:
-            run_record["status"] = "failed"
-            run_record[EXECUTION_STATE_FIELD] = EXECUTION_STATE_RUNNING
-            run_record["finished_at"] = datetime.now(timezone.utc).isoformat()
-            run_record["error"] = str(exc)
-            existing_records_by_run[str(run_number)] = run_record.copy()
-            _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
+            if result["success"]:
+                _write_workflow_progress(
+                    working_dir=working_dir,
+                    n_runs=len(planned_runs),
+                    records_by_run=existing_records_by_run,
+                    status="running",
+                    message=f"Finished run {idx + 1}/{len(planned_runs)} (run_{result_run_number}).",
+                )
+                continue
             _write_workflow_progress(
                 working_dir=working_dir,
                 n_runs=len(planned_runs),
                 records_by_run=existing_records_by_run,
                 status="failed" if not continue_on_error else "running",
-                message=f"Run {idx + 1}/{len(planned_runs)} (run_{run_number}) failed during workflow execution.",
-                error=str(exc),
+                message=f"Run {idx + 1}/{len(planned_runs)} (run_{result_run_number}) failed during workflow execution.",
+                error=result.get("error"),
             )
             if not continue_on_error:
                 break
+    else:
+        run_tasks = []
+        for idx, run in enumerate(planned_runs):
+            run_number, resumed_steps = _prepare_run(idx, run)
+            run_tasks.append((idx, run, run_number, resumed_steps))
+
+        mp_context = multiprocessing.get_context("spawn")
+        with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp_context) as executor:
+            futures = {
+                executor.submit(_execute_single_simulation_run, idx, run, len(planned_runs), working_dir, resumed_steps): (idx, run_number)
+                for idx, run, run_number, resumed_steps in run_tasks
+            }
+            for future in as_completed(futures):
+                idx, run_number = futures[future]
+                result = future.result()
+                result_run_number = result["run_number"]
+                existing_records_by_run[str(result_run_number)] = result["run_record"].copy()
+                _write_status_snapshot(status_path, status_fieldnames, existing_records_by_run)
+                if result["success"]:
+                    _write_workflow_progress(
+                        working_dir=working_dir,
+                        n_runs=len(planned_runs),
+                        records_by_run=existing_records_by_run,
+                        status="running",
+                        message=f"Finished run {idx + 1}/{len(planned_runs)} (run_{result_run_number}).",
+                    )
+                else:
+                    _write_workflow_progress(
+                        working_dir=working_dir,
+                        n_runs=len(planned_runs),
+                        records_by_run=existing_records_by_run,
+                        status="running",
+                        message=f"Run {idx + 1}/{len(planned_runs)} (run_{run_number}) failed during workflow execution.",
+                        error=result.get("error"),
+                    )
 
     latest_records = list(existing_records_by_run.values())
     final_status = "completed"

@@ -29,6 +29,10 @@
             "box_tune_target": 0.3,
             "tune_warmup_steps": 2000
         },
+        "parallel_defaults": {
+            "cpu_reserve": 2,
+            "max_workers": null
+        },
         "particle_required_fields": [
             "relative_volume_fraction"
         ],

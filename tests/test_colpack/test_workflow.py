@@ -480,17 +480,11 @@ def _run_workflow_case(case):
             expected_extra_names = {item["name"] for item in extra_order_params}
             with (run_dir / "analysis_results.json").open("r", encoding="utf-8") as f:
                 analysis_results = json.load(f)
-            analyzed_types = {
-                key: value
-                for key, value in analysis_results.items()
-                if isinstance(value, dict) and not str(key).startswith("rdf_")
-            }
+            analyzed_types = {key: value for key, value in analysis_results.items() if isinstance(value, dict) and not str(key).startswith("rdf_")}
             assert analyzed_types, f"No per-type analysis entries found in {run_dir}/analysis_results.json"
             for p_type, type_results in analyzed_types.items():
                 for expected_name in expected_extra_names:
-                    assert expected_name in type_results, (
-                        f"Missing extra order parameter '{expected_name}' for {p_type} in {run_dir}"
-                    )
+                    assert expected_name in type_results, f"Missing extra order parameter '{expected_name}' for {p_type} in {run_dir}"
 
     rows_final = _load_status_rows(Path(analyze_second["status_path"]))
     assert len(rows_final) == planning["n_runs"]
@@ -528,15 +522,15 @@ def main():
                 "particle_specs.1.relative_volume_fraction": 4,
             },
             "tunable_parameters": {
-                "volume_fraction": [0.6],
+                "volume_fraction": [0.3, 0.5, 0.7],
             },
-            "expected_runs": 1
+            "expected_runs": 3,
         },
         {
             "system_subdir": "workflow_case_3d_npt_capsule_sphere_mix",
             "dimension": 3,
             "ensemble": "NPT",
-            "total_particle_number": 500,
+            "total_particle_number": 100,
             "particle_shape_list": ["capsule", "sphere"],
             "baseline_parameters": {
                 "sample_steps": 20000,
@@ -546,9 +540,9 @@ def main():
                 "particle_specs.1.relative_volume_fraction": 2,
             },
             "tunable_parameters": {
-                "P": [10.0],
+                "P": [1.0, 5.0, 10.0],
             },
-            "expected_runs": 1,
+            "expected_runs": 3,
             "extra_order_params": [
                 {
                     "name": "solid_liquid_q6_extra",
@@ -680,7 +674,7 @@ def main():
     ]
 
     print("testing workflow setup/plan/execute for 2d and 3d, nvt and npt...\n")
-    for case in cases[:1]:
+    for case in cases[2:3]:
         _run_workflow_case(case)
 
 
