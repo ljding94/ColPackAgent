@@ -72,6 +72,9 @@ def create_initial_config(run_dir):
         initial_box_L = initial_box_volume ** (1 / dimension)
 
         # Initialize HOOMD
+        if hoomd.device.GPU.is_available():
+            print("GPU is available. Using GPU for initialization.")
+
         device = hoomd.device.GPU() if hoomd.device.GPU.is_available() else hoomd.device.CPU()
         sim = hoomd.Simulation(device=device)
 

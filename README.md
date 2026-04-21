@@ -45,32 +45,24 @@ Launch ColPackAgent inside your preferred AI client. Each mode loads the MCP too
 This project relies on `hoomd-blue`, which is installed via conda.
 Install and run everything from the conda environment first, then install the local `colpack` package.
 
-### 1. Create the conda environment
+### 1. create and activate conda environment for hoomd-blue
+
+```bash
 
 From the project root:
 
 ```bash
-conda env create -f environment.yml
-```
-
-If the environment already exists:
-
-```bash
-conda env update -f environment.yml --prune
-```
-
-### 2. Activate the environment
-
-```bash
+conda create --name hoomd-env
 conda activate hoomd-env
+conda install conda-forge::hoomd
 ```
 
-### 3. Install local package (editable)
+### 2. Install local package (editable)
 
 Install from `src` so CLI commands and imports are available in the active environment.
 
 ```bash
-python -m pip install -e ./src --no-deps
+python -m pip install -e ./src
 ```
 
 Notes:
@@ -78,13 +70,13 @@ Notes:
 - `hoomd-blue` is managed by conda, not pip.
 - Use `python -m pip ...` to ensure install goes to the active interpreter.
 
-### 4. Install agent dependencies
+### 3. Install agent dependencies
 
 ```bash
 pip install -r agent/requirements.txt
 ```
 
-### 5. Verify installation
+### 4. Verify installation (mcp)
 
 ```bash
 python -c "import sys, colpack; print(sys.executable); print(colpack.__file__)"
@@ -93,13 +85,10 @@ which colpack-mcp
 
 `which colpack-mcp` should point to your active conda environment path.
 
-## Run MCP Server
-
+### 5. install opencode (or alternative AI client) and link skill
 ```bash
-colpack-mcp
+curl -fsSL https://opencode.ai/install | bash
 ```
-
-The command is expected to stay quiet in terminal because MCP stdio servers wait for a client connection.
 
 ## Quick Troubleshooting
 
