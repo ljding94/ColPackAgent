@@ -2,6 +2,7 @@
 /*
 
 !environment.yml
+!run_colpack.sh
 
 # Then allow specific files and folders
 !/README.md
