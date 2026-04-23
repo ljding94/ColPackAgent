@@ -90,7 +90,6 @@ def analyze_main(run_dir, extra_order_params=None):
         "n_generated_plot_files": len(generated_files),
     }
 
-
 def analyze_compute(run_dir, simulation_config, extra_order_params=None):
     run_dir = _normalize_run_dir(run_dir)
     particle_list = simulation_config.get("particle_list")
@@ -146,6 +145,13 @@ def analyze_compute(run_dir, simulation_config, extra_order_params=None):
                 t2 = particle_list[j]["pType"]
                 key = f"rdf_{t1}_{t2}"
                 results[key] = _compute_rdf(traj, query_type=t1, target_type=t2)
+
+    # 2.3. system-level params (e.g. volume fraction). Skipped for NVT
+    # where the box is fixed and the time series would be constant.
+    system_params_list = _resolve_system_params(simulation_config.get("ensemble"))
+    system_results = _compute_system_params(traj, system_params_list, simulation_config)
+    if system_results:
+        results["system"] = system_results
 
     # save results to json
     result_path = os.path.abspath(os.path.join(run_dir, "analysis_results.json"))
@@ -304,6 +310,31 @@ _FREUD_ORDER_CLASSES = {
 }
 
 
+class VolumeFraction:
+    """System-level packing fraction phi = total_particle_volume / box_volume.
+
+    Mirrors the freud compute-object interface (``compute(...)`` populates
+    an attribute) so it plugs into the same dispatch machinery as
+    ``freud.order.*``.
+    """
+
+    def __init__(self):
+        self.volume_fraction = None
+
+    def compute(self, box, total_particle_volume):
+        Lx, Ly, Lz = float(box[0]), float(box[1]), float(box[2])
+        box_volume = Lx * Ly if Lz == 0 else Lx * Ly * Lz
+        if box_volume <= 0:
+            raise ValueError(f"Non-positive box volume from box={box!r}.")
+        self.volume_fraction = total_particle_volume / box_volume
+        return self
+
+
+_SYSTEM_PARAM_CLASSES = {
+    "VolumeFraction": lambda p: VolumeFraction(**p),
+}
+
+
 def _resolve_extra_order_params(param_specs):
     """
     Resolve a list of order parameter specifications into instantiated
@@ -398,6 +429,58 @@ def get_analyze_config(dimension=None):
         config[shape] = {"order_params": order_params}
 
     return config
+
+
+def _resolve_system_params(ensemble=None):
+    """Instantiate the system-level calculators listed in ``system_params``.
+
+    VolumeFraction is skipped under NVT because the box is fixed, so the
+    time series would be constant by construction.
+    """
+    raw = _load_analyze_config()
+    specs = raw.get("system_params", []) or []
+    ensemble_u = str(ensemble).strip().upper() if ensemble else None
+    resolved = []
+    for entry in specs:
+        cls_name = entry["type"]
+        if ensemble_u == "NVT" and cls_name == "VolumeFraction":
+            continue
+        if cls_name not in _SYSTEM_PARAM_CLASSES:
+            raise ValueError(
+                f"Unknown system param class '{cls_name}' in analysis config. "
+                f"Supported: {list(_SYSTEM_PARAM_CLASSES.keys())}"
+            )
+        func = _SYSTEM_PARAM_CLASSES[cls_name](entry.get("params", {}))
+        resolved.append({"name": entry["name"], "type": cls_name, "func": func})
+    return resolved
+
+
+def _compute_system_params(traj, system_params_list, simulation_config):
+    """Compute per-frame system-level scalars (e.g. volume fraction)."""
+    if not system_params_list:
+        return {}
+
+    needs_tpv = any(isinstance(e["func"], VolumeFraction) for e in system_params_list)
+    total_particle_volume = None
+    if needs_tpv:
+        raw_tpv = simulation_config.get("total_particle_volume")
+        if raw_tpv is None:
+            raise ValueError(
+                "simulation_config missing 'total_particle_volume'; cannot compute VolumeFraction."
+            )
+        total_particle_volume = float(raw_tpv)
+
+    frame_results = {entry["name"]: [] for entry in system_params_list}
+    for frame in traj:
+        box = frame.configuration.box
+        for entry in system_params_list:
+            calc = entry["func"]
+            if isinstance(calc, VolumeFraction):
+                calc.compute(box, total_particle_volume)
+                frame_results[entry["name"]].append(float(calc.volume_fraction))
+            else:
+                raise ValueError(f"Unhandled system param type: {entry['type']}")
+    return frame_results
 
 
 def _determine_rdf_r_max(traj):

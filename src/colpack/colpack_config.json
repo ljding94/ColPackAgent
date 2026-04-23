@@ -86,8 +86,14 @@
                 "LocalDensity":       {"params": {"r_max": 3.0, "diameter": 1.0},              "notes": "Local number density and packing fraction within a sphere of radius r_max."},
                 "GaussianDensity":    {"params": {"width": 50, "r_max": 5.0, "sigma": 0.1},    "notes": "Gaussian-smeared 3D density field on a regular grid."},
                 "CorrelationFunction":{"params": {"bins": 100, "r_max": 5.0},                  "notes": "Spatial correlation function of per-particle scalar quantities."}
+            },
+            "system": {
+                "VolumeFraction":     {"params": {},                                           "notes": "System-level packing fraction phi = total_particle_volume / box_volume computed per frame. Requires 'total_particle_volume' in simulation_config. Box volume is Lx*Ly in 2D and Lx*Ly*Lz in 3D."}
             }
         },
+        "system_params": [
+            {"name": "volume_fraction", "type": "VolumeFraction", "params": {}}
+        ],
         "rdf_defaults": {
             "max_cap": 4.0,
             "bins": 100,

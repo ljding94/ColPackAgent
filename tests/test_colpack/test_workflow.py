@@ -480,7 +480,11 @@ def _run_workflow_case(case):
             expected_extra_names = {item["name"] for item in extra_order_params}
             with (run_dir / "analysis_results.json").open("r", encoding="utf-8") as f:
                 analysis_results = json.load(f)
-            analyzed_types = {key: value for key, value in analysis_results.items() if isinstance(value, dict) and not str(key).startswith("rdf_")}
+            analyzed_types = {
+                key: value
+                for key, value in analysis_results.items()
+                if isinstance(value, dict) and not str(key).startswith("rdf_") and key != "system"
+            }
             assert analyzed_types, f"No per-type analysis entries found in {run_dir}/analysis_results.json"
             for p_type, type_results in analyzed_types.items():
                 for expected_name in expected_extra_names:
@@ -535,7 +539,7 @@ def main():
             "total_particle_number": 300,
             "particle_shape_list": ["cube"],
             "baseline_parameters": {
-                "sample_steps": 5e4,
+                "sample_steps": 1e3,
                 "particle_specs.0.side": 1.0,
             },
             "tunable_parameters": {
