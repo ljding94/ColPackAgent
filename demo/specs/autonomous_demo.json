@@ -8,11 +8,11 @@
   "bootstrap_skill": true,
   "tasks": [
     {
-      "task_id": "autonomous_3d_capsule_sphere",
-      "description": "Autonomous NPT run for capsule sphere mix.",
+      "task_id": "autonomous_2d_capsule_disk",
+      "description": "Autonomous NVT run for capsule disk mix.",
       "difficulty_level": 3,
       "user_messages": [
-        "AGENT_MODE = autonomous\nPlease run an end-to-end simulation: set up a 3D NPT simulation for mixture of capsule and sphere particles with total 500 particles. The capsule should be length 8 and diameter 1, the sphere should be diameter 0.75. Use relative volume fraction 0.2 for the sphere. Let's test two pressure P=[1.0, 10] with modest sampling steps 10000. Check the solid-liquid order parameter of the capsule."
+        "Please run end-to-end simulations: set up a 2D NVT simulation for mixture of capsule and disk particles with total 500 particles. The capsule should be length 5 and diameter 0.3. Use relative volume fraction 1 for the sphere. Let's test four volume fraction [0.1, 0.3, 0.5, 0.7] with modest sample steps 100000."
       ],
       "expected_outcomes": [
         "The agent should complete setup, planning, execution, and analysis in one run."
@@ -21,8 +21,8 @@
   ],
   "models": [
     {
-      "model_id": "openrouter/google/gemini-3-flash-preview",
-      "label": "gemini-3-flash-preview"
+      "model_id": "openrouter/anthropic/claude-opus-4.7",
+      "label": "claude-opus-4.7"
     }
   ],
   "skills": [

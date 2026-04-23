@@ -89,7 +89,7 @@
             }
         },
         "rdf_defaults": {
-            "max_cap": 5.0,
+            "max_cap": 4.0,
             "bins": 100,
             "r_min": 0.1
         },

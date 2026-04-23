@@ -511,7 +511,7 @@ def main():
 
     cases = [
         {
-            "system_subdir": "workflow_case_2d_nvt_capsule_disk_mix",
+            "system_subdir": "workflow_case_2d_nvt_capsule_disk_mix", # works as the autonomous demo
             "dimension": 2,
             "ensemble": "NVT",
             "total_particle_number": 500,
@@ -529,17 +529,14 @@ def main():
             "expected_runs": 3,
         },
         {
-            "system_subdir": "workflow_case_3d_npt_capsule_sphere_mix",
+            "system_subdir": "workflow_case_3d_npt_cube",
             "dimension": 3,
             "ensemble": "NPT",
-            "total_particle_number": 100,
-            "particle_shape_list": ["capsule", "sphere"],
+            "total_particle_number": 300,
+            "particle_shape_list": ["cube"],
             "baseline_parameters": {
-                "sample_steps": 20000,
-                "particle_specs.0.diameter": 0.25,
-                "particle_specs.0.length": 4,
-                "particle_specs.1.diameter": 1,
-                "particle_specs.1.relative_volume_fraction": 2,
+                "sample_steps": 5e4,
+                "particle_specs.0.side": 1.0,
             },
             "tunable_parameters": {
                 "P": [1.0, 5.0, 10.0],
@@ -557,126 +554,11 @@ def main():
                     },
                 }
             ],
-        },
-        {
-            "system_subdir": "workflow_case_2d_npt_multishape",
-            "dimension": 2,
-            "ensemble": "NPT",
-            "total_particle_number": 200,
-            "particle_shape_list": ["disk", "capsule", "triangle", "rectangle"],
-            "baseline_parameters": {
-                "sample_steps": 50,
-                "particle_specs.0.diameter": 1.0,
-                "particle_specs.1.length": 1.5,
-                "particle_specs.1.diameter": 0.5,
-                "particle_specs.2.side": 1.0,
-                "particle_specs.3.width": 0.5,
-                "particle_specs.3.length": 2.5,
-            },
-            "tunable_parameters": {
-                "P": [1.0, 10.0],
-            },
-            "expected_runs": 2,
-        },
-        {
-            "system_subdir": "workflow_case_2d_nvt_disk_capsule",
-            "dimension": 2,
-            "ensemble": "NVT",
-            "total_particle_number": 200,
-            "particle_shape_list": ["disk", "capsule"],
-            "baseline_parameters": {
-                "sample_steps": 50,
-                "particle_specs.0.diameter": 1.0,
-                "particle_specs.1.length": 1.5,
-                "particle_specs.1.diameter": 0.5,
-            },
-            "tunable_parameters": {
-                "volume_fraction": [0.22, 0.27],
-                "particle_specs.1.relative_volume_fraction": [0.6],
-            },
-            "expected_runs": 3,
-        },
-        {
-            "system_subdir": "workflow_case_2d_npt_disk_ellipse",
-            "dimension": 2,
-            "ensemble": "NPT",
-            "total_particle_number": 36,
-            "particle_shape_list": ["disk", "ellipse"],
-            "baseline_parameters": {
-                "sample_steps": 50,
-                "particle_specs.0.diameter": 1.0,
-                "particle_specs.1.a": 0.9,
-                "particle_specs.1.b": 0.6,
-            },
-            "tunable_parameters": {
-                "P": [1.0, 1.3],
-                "particle_specs.1.relative_volume_fraction": [0.5],
-            },
-            "expected_runs": 3,
-        },
-        {
-            "system_subdir": "workflow_case_3d_nvt_sphere_capsule",
-            "dimension": 3,
-            "ensemble": "NVT",
-            "total_particle_number": 40,
-            "particle_shape_list": ["sphere", "capsule"],
-            "baseline_parameters": {
-                "sample_steps": 50,
-                "particle_specs.0.diameter": 1.0,
-                "particle_specs.1.length": 1.8,
-                "particle_specs.1.diameter": 0.6,
-            },
-            "tunable_parameters": {
-                "volume_fraction": [0.18, 0.22],
-                "particle_specs.1.relative_volume_fraction": [0.7],
-            },
-            "expected_runs": 3,
-            "extra_order_params": [
-                {
-                    "name": "solid_liquid_q6_extra",
-                    "type": "SolidLiquid",
-                    "params": {
-                        "l": 6,
-                        "q_threshold": 0.7,
-                        "solid_threshold": 6,
-                        "normalize_q": True,
-                    },
-                }
-            ],
-        },
-        {
-            "system_subdir": "workflow_case_3d_npt_sphere_cube",
-            "dimension": 3,
-            "ensemble": "NPT",
-            "total_particle_number": 32,
-            "particle_shape_list": ["sphere", "cube"],
-            "baseline_parameters": {
-                "sample_steps": 50,
-                "particle_specs.0.diameter": 1.0,
-                "particle_specs.1.edge": 0.9,
-            },
-            "tunable_parameters": {
-                "P": [1.1, 1.4],
-                "particle_specs.1.relative_volume_fraction": [0.45],
-            },
-            "expected_runs": 3,
-            "extra_order_params": [
-                {
-                    "name": "solid_liquid_q6_extra",
-                    "type": "SolidLiquid",
-                    "params": {
-                        "l": 6,
-                        "q_threshold": 0.7,
-                        "solid_threshold": 6,
-                        "normalize_q": True,
-                    },
-                }
-            ],
-        },
+        }
     ]
 
     print("testing workflow setup/plan/execute for 2d and 3d, nvt and npt...\n")
-    for case in cases[2:3]:
+    for case in cases[1:2]:
         _run_workflow_case(case)
 
 

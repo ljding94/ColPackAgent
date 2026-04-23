@@ -22,7 +22,7 @@
       "difficulty_level": 1,
       "user_profile_id": "novice_workflow_user",
       "user_messages": [
-        "Please set up a 2D NVT colloidal packing problem for triangle particles with 100 particles and side length 1. Use the default working directory."
+        "Please run the following test case exactly:\n{\n  \"system_subdir\": \"workflow_case_2d_nvt_capsule_disk_mix\",\n  \"dimension\": 2,\n  \"ensemble\": \"NVT\",\n  \"total_particle_number\": 500,\n  \"particle_shape_list\": [\"capsule\", \"disk\"],\n  \"baseline_parameters\": {\n    \"sample_steps\": 4e5,\n    \"particle_specs.0.diameter\": 0.2,\n    \"particle_specs.0.length\": 5,\n    \"particle_specs.1.diameter\": 1,\n    \"particle_specs.1.relative_volume_fraction\": 4\n  },\n  \"tunable_parameters\": {\n    \"volume_fraction\": [0.3, 0.5, 0.7]\n  }\n}"
       ],
       "expected_outcomes": [
         "The agent should complete the setup stage and stop before planning."
