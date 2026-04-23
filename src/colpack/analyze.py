@@ -166,11 +166,11 @@ def analyze_process_time_series(run_dir):
     Post-process analysis time series to detect equilibrium and compute
     equilibrium averages.
 
-    For each order parameter time series, we use a reverse cumulative mean
-    approach: starting from the end of the trajectory (assumed equilibrated),
-    we extend the averaging window backwards until the running mean deviates
-    beyond a tolerance. The first frame where the running mean is still
-    stable defines the equilibrium start index.
+    For each order parameter time series, we start from an accepted tail
+    window at the end of the trajectory (assumed equilibrated), then walk
+    backward one frame at a time. Each newly added point is checked against
+    the current window mean/std (sigma gate). If accepted, the window is
+    extended and the reference statistics are updated dynamically.
 
     Updates analysis_results.json in-place, adding an ``"equilibrium"``
     block per particle type with per-parameter equilibrium info.
@@ -218,19 +218,22 @@ def analyze_process_time_series(run_dir):
     print(f"Equilibrium analysis written to {result_path}")
 
 
-def _detect_equilibrium(values, n_sigma=1.5, min_eq_fraction=0.2):
+def _detect_equilibrium(values, n_sigma=2.0, min_eq_fraction=0.1):
     """
-    Detect equilibrium onset in a 1-D time series using reverse cumulative
-    mean deviation with a sigma-based tolerance.
+    Detect equilibrium onset in a 1-D time series using a reverse,
+    pointwise sigma gate with a dynamically updated reference window.
 
     Algorithm:
       1. Convert complex-valued entries (``{"real", "imag"}``) to magnitudes.
-      2. Compute the mean and std of the last ``min_eq_fraction`` of frames
-         as a reference window.
-      3. Walk backwards from the end, extending the averaging window.
-         Stop when the running mean deviates by more than
-         ``n_sigma * ref_std`` from the reference mean.
-      4. Report the earliest frame still within tolerance as ``eq_start_index``.
+      2. Initialize an accepted equilibrium window as the last
+         ``min_eq_fraction`` of frames.
+      3. Walk backwards one frame at a time; for each newly added point,
+         test whether it lies within ``n_sigma * current_std`` of the
+         current accepted-window mean.
+      4. If the point is within tolerance, include it and recompute
+         mean/std on the extended window (dynamic reference).
+         If not, stop and set ``eq_start_index`` to the next frame.
+      5. Report equilibrium stats over ``arr[eq_start_index:]``.
 
     Returns a dict with:
       - equilibrated (bool)
@@ -245,29 +248,28 @@ def _detect_equilibrium(values, n_sigma=1.5, min_eq_fraction=0.2):
     arr = _values_to_float_array(values)
     n = len(arr)
 
-    # Reference window: last min_eq_fraction of frames
+    # Initial accepted window: last min_eq_fraction of frames
     tail_len = max(2, int(n * min_eq_fraction))
-    ref_window = arr[-tail_len:]
-    ref_mean = np.mean(ref_window)
-    ref_std = np.std(ref_window)
+    tail_len = min(tail_len, n)
+    accepted_start = n - tail_len
+    current_window = arr[accepted_start:]
+    current_mean = np.mean(current_window)
+    current_std = np.std(current_window)
 
-    # Tolerance: n_sigma * reference-window std dev
-    # If ref_std is near zero the signal is essentially flat; use a small
-    # absolute fallback so that any real drift is still caught.
-    if ref_std < 1e-12:
-        tol = 1e-8
-    else:
-        tol = n_sigma * ref_std
-
-    # Walk backwards from end, extending averaging window
-    eq_start = n - 1
-    for i in range(n - 1, -1, -1):
-        window_mean = np.mean(arr[i:])
-        if abs(window_mean - ref_mean) > tol:
+    # Walk backwards from the frame before the accepted window.
+    # Gate each newly added point against current window statistics,
+    # then update the reference dynamically after acceptance.
+    eq_start = accepted_start
+    for i in range(accepted_start - 1, -1, -1):
+        tol = 1e-8 if current_std < 1e-12 else n_sigma * current_std
+        if abs(arr[i] - current_mean) > tol:
             eq_start = i + 1
             break
+        accepted_start = i
+        current_window = arr[accepted_start:]
+        current_mean = np.mean(current_window)
+        current_std = np.std(current_window)
     else:
-        # Entire series is within tolerance
         eq_start = 0
 
     # Clamp to valid range
