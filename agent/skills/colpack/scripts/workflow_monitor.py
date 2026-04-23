@@ -9,6 +9,16 @@ from typing import Any
 WORKFLOW_PROGRESS_FILE = "workflow_progress.json"
 WORKFLOW_LOG_FILE = "workflow_events.log"
 
+# When quiet, the background monitor suppresses per-event terminal prints and
+# only announces a one-line start + one-line end. The workflow itself still
+# writes every event to <working_dir>/workflow_events.log on disk.
+QUIET_MONITOR = True
+
+
+def set_quiet_monitor(quiet: bool) -> None:
+    global QUIET_MONITOR
+    QUIET_MONITOR = quiet
+
 
 @dataclass
 class BackgroundMonitorState:
@@ -103,22 +113,50 @@ def _format_workflow_progress(progress: dict[str, Any]) -> str:
     )
 
 
+def _display_path(path: str) -> str:
+    """Render `path` relative to the current cwd (with ./ prefix) when it's
+    inside cwd; otherwise return it unchanged. Terminal-only — does not affect
+    paths sent to tools or persisted to the session log."""
+    try:
+        cwd = Path.cwd().resolve()
+        rel = Path(path).resolve().relative_to(cwd)
+        return f"./{rel}"
+    except (ValueError, OSError):
+        return path
+
+
+def _announce_workflow_end(progress: dict[str, Any], working_dir: str) -> None:
+    status = progress.get("status", "unknown")
+    n_runs = progress.get("n_runs", 0)
+    n_success = progress.get("n_success", 0)
+    n_failed = progress.get("n_failed", 0)
+    print(
+        f"\n[workflow] {status}: {n_success}/{n_runs} success, "
+        f"{n_failed} failed (events: {_display_path(working_dir)}/{WORKFLOW_LOG_FILE})"
+    )
+
+
 async def _monitor_workflow_progress(working_dir: str, stop_event: asyncio.Event) -> None:
     last_signature: tuple[Any, ...] | None = None
     log_offset = 0
+    end_announced = False
 
     while not stop_event.is_set():
         log_lines, log_offset = _read_workflow_log_lines(working_dir, log_offset)
-        for line in log_lines:
-            print(f"\n[log] {line}")
+        if not QUIET_MONITOR:
+            for line in log_lines:
+                print(f"\n[log] {line}")
 
         progress = _read_workflow_progress(working_dir)
         if progress:
             signature = _workflow_progress_signature(progress)
             if signature != last_signature:
-                print(f"\n[workflow] {_format_workflow_progress(progress)}")
+                if not QUIET_MONITOR:
+                    print(f"\n[workflow] {_format_workflow_progress(progress)}")
                 last_signature = signature
             if progress.get("status") in {"completed", "failed"}:
+                _announce_workflow_end(progress, working_dir)
+                end_announced = True
                 return
 
         try:
@@ -127,14 +165,17 @@ async def _monitor_workflow_progress(working_dir: str, stop_event: asyncio.Event
             continue
 
     log_lines, log_offset = _read_workflow_log_lines(working_dir, log_offset)
-    for line in log_lines:
-        print(f"\n[log] {line}")
+    if not QUIET_MONITOR:
+        for line in log_lines:
+            print(f"\n[log] {line}")
 
     progress = _read_workflow_progress(working_dir)
     if progress:
         signature = _workflow_progress_signature(progress)
-        if signature != last_signature:
+        if signature != last_signature and not QUIET_MONITOR:
             print(f"\n[workflow] {_format_workflow_progress(progress)}")
+        if not end_announced and progress.get("status") in {"completed", "failed"}:
+            _announce_workflow_end(progress, working_dir)
 
 
 async def _stop_background_monitor(background_state: BackgroundMonitorState) -> BackgroundMonitorState:
@@ -157,7 +198,11 @@ async def _maybe_start_background_monitor(
     background_state = await _stop_background_monitor(background_state)
     stop_event = asyncio.Event()
     task = asyncio.create_task(_monitor_workflow_progress(resolved_dir, stop_event))
-    print(f"[workflow] Local progress/log monitor started for {resolved_dir}")
+    display_dir = _display_path(resolved_dir)
+    if QUIET_MONITOR:
+        print(f"[workflow] running in background — tail {display_dir}/{WORKFLOW_LOG_FILE} for live events")
+    else:
+        print(f"[workflow] Local progress/log monitor started for {display_dir}")
     return BackgroundMonitorState(task=task, stop_event=stop_event, working_dir=resolved_dir)
 
 

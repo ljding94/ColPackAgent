@@ -33,3 +33,4 @@ _maybe_start_background_monitor = _workflow_monitor._maybe_start_background_moni
 _stop_background_monitor = _workflow_monitor._stop_background_monitor
 _tool_name_matches = _workflow_monitor._tool_name_matches
 _tool_supports_local_monitor = _workflow_monitor._tool_supports_local_monitor
+set_quiet_monitor = _workflow_monitor.set_quiet_monitor

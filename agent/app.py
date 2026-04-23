@@ -3,9 +3,46 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 import contextlib
 from typing import Any
+
+# Enables arrow-key line editing and history for input() at the "You:" prompt.
+with contextlib.suppress(ImportError):
+    import readline
+
+    _ = readline  # imported for input()'s side effect; reference silences unused-import warnings
+
+
+AGENT_ICON = " ʕง•ᴥ•ʔง ColPackAgent:"
+
+
+class SessionLogger:
+    """Append-only markdown record of the user/agent conversation for one session."""
+
+    def __init__(self, log_dir: Path, agent_name: str) -> None:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.path = log_dir / f"session_{timestamp}.md"
+        with self.path.open("a", encoding="utf-8") as f:
+            f.write(f"# {agent_name} session\n")
+            f.write(f"_started {datetime.now().isoformat(timespec='seconds')}_\n\n")
+
+    def _append(self, label: str, text: str) -> None:
+        stamp = datetime.now().strftime("%H:%M:%S")
+        with self.path.open("a", encoding="utf-8") as f:
+            f.write(f"## {label} [{stamp}]\n\n{text}\n\n")
+
+    def log_user(self, text: str) -> None:
+        self._append("You", text)
+
+    def log_agent(self, text: str) -> None:
+        self._append("Agent", text)
+
+    def log_error(self, text: str) -> None:
+        self._append("Error", text)
+
 
 from opencode_agent_sdk import AgentOptions, SDKClient
 from opencode_agent_sdk.types import AssistantMessage, ResultMessage, SystemMessage, TextBlock, ToolUseBlock
@@ -18,6 +55,7 @@ try:
         _stop_background_monitor,
         _tool_name_matches,
         _tool_supports_local_monitor,
+        set_quiet_monitor,
     )
 except ImportError:
     from workflow_monitor_loader import (
@@ -27,6 +65,7 @@ except ImportError:
         _stop_background_monitor,
         _tool_name_matches,
         _tool_supports_local_monitor,
+        set_quiet_monitor,
     )
 
 try:
@@ -82,7 +121,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--model",
-        default="openrouter/google/gemini-3-flash-preview",
+        default="openrouter/anthropic/claude-opus-4.7",
         help="Underlying LLM model name passed to OpenCode (for OpenRouter, use provider-qualified ids like openrouter/google/gemini-3-flash-preview).",
     )
     parser.add_argument(
@@ -106,6 +145,16 @@ def _build_parser() -> argparse.ArgumentParser:
         "--sdk-trace",
         action="store_true",
         help="Enable very verbose opencode_agent_sdk internal transport/ACP logs.",
+    )
+    parser.add_argument(
+        "--verbose-monitor",
+        action="store_true",
+        help="Echo every workflow monitor event to the terminal as it happens. Default: only a one-line start and one-line end summary; full events remain in <working_dir>/workflow_events.log.",
+    )
+    parser.add_argument(
+        "--show-tools",
+        action="store_true",
+        help="Print a [tool] line for each tool the agent invokes (e.g. bash polling, MCP calls). Default: hidden, so the conversation reads cleanly. The agent's reply still summarises what it did.",
     )
     return parser
 
@@ -169,11 +218,24 @@ def _resolve_model_and_provider(model: str) -> tuple[str, str]:
     return cleaned, "openrouter"
 
 
+def _shorten_paths_for_display(text: str) -> str:
+    """Replace cwd prefixes with './' for terminal-friendly output. Used only
+    for what is printed; session log and tool inputs to the agent keep absolute
+    paths so they remain unambiguous later."""
+    try:
+        cwd_prefix = str(Path.cwd().resolve()) + "/"
+    except Exception:
+        return text
+    return text.replace(cwd_prefix, "./")
+
+
 def _format_tool_input(tool_input: dict[str, Any], max_length: int = 160) -> str:
     try:
         compact = json.dumps(tool_input, ensure_ascii=True, separators=(",", ": "))
     except Exception:
         compact = str(tool_input)
+
+    compact = _shorten_paths_for_display(compact)
 
     if len(compact) <= max_length:
         return compact
@@ -335,27 +397,49 @@ async def _bootstrap_skill_session(
     return background_state
 
 
-def _print_query_outcome(response_state: QueryResponseState, agent_name: str) -> None:
+def _print_query_outcome(
+    response_state: QueryResponseState,
+    agent_name: str,
+    session_logger: SessionLogger | None = None,
+) -> None:
+    del agent_name  # replies are prefixed with AGENT_ICON instead of the agent name
+
+    def _log_agent(text: str) -> None:
+        if session_logger is not None:
+            session_logger.log_agent(text)
+
+    def _log_error(text: str) -> None:
+        if session_logger is not None:
+            session_logger.log_error(text)
+
     if response_state.final_text:
-        print(f"\n{agent_name}: {response_state.final_text}")
+        print(f"\n{AGENT_ICON} {_shorten_paths_for_display(response_state.final_text)}")
+        _log_agent(response_state.final_text)
         return
 
     if response_state.system_errors:
-        print(f"\nAgent Error: {response_state.system_errors[-1]}")
-        lowered = response_state.system_errors[-1].lower()
+        last_error = response_state.system_errors[-1]
+        print(f"\nAgent Error: {_shorten_paths_for_display(last_error)}")
+        _log_error(last_error)
+        lowered = last_error.lower()
         if "request timed out" in lowered or "mcp error -32001" in lowered:
             print("Hint: long simulation calls should use async execution and rely on the local workflow monitor.")
         return
 
     if response_state.query_had_error:
         print("\nAgent Error: query failed.")
+        _log_error("query failed.")
         return
 
     if response_state.had_assistant_message:
-        print(f"\n{agent_name}: [Agent returned non-text output]")
+        msg = "[Agent returned non-text output]"
+        print(f"\n{AGENT_ICON} {msg}")
+        _log_agent(msg)
         return
 
-    print(f"\n{agent_name}: [No text response]")
+    msg = "[No text response]"
+    print(f"\n{AGENT_ICON} {msg}")
+    _log_agent(msg)
     print("Hint: the selected model may be unavailable. Try another --model id, for example:")
     print("  openrouter/google/gemini-3-flash-preview")
     print("  openrouter/google/gemini-2.5-flash")
@@ -398,12 +482,19 @@ async def run_agent(
     mcp_command: str,
     model: str,
     bootstrap_skill: bool,
+    show_tools: bool = False,
 ) -> None:
     agent_definition = load_agent_definition(agent_path, skill_path_override=skill_path)
     normalized_model, provider_id = _resolve_model_and_provider(model)
     client: SDKClient | None = None
     background_monitor_state = BackgroundMonitorState()
     workflow_session_active = False
+
+    session_logger: SessionLogger | None = None
+    try:
+        session_logger = SessionLogger(Path.cwd() / "session_logs", agent_definition.name)
+    except Exception as exc:
+        print(f"Warning: could not start session log: {exc}")
 
     print(f"Booting {agent_definition.name}...")
     print(f"Using agent: {agent_definition.name}")
@@ -413,6 +504,8 @@ async def run_agent(
     print(f"Using provider: {provider_id}")
     print(f"Using model: {normalized_model}")
     print(f"Skill bootstrap: {'enabled' if bootstrap_skill else 'disabled'}")
+    if session_logger is not None:
+        print(f"Session log: {session_logger.path}")
 
     try:
         client = await _connect_client(
@@ -455,6 +548,9 @@ async def run_agent(
             if not user_input:
                 continue
 
+            if session_logger is not None:
+                session_logger.log_user(user_input)
+
             if user_input == "/help":
                 _print_local_help()
                 continue
@@ -473,12 +569,14 @@ async def run_agent(
                         client=client,
                         background_state=background_monitor_state,
                         workflow_session_active=workflow_session_active,
+                        show_tool_use=show_tools,
                     )
                     background_monitor_state = await _finalize_query_monitoring(
                         background_state=background_monitor_state,
                         response_state=response_state,
+                        show_status_output=show_tools,
                     )
-                    _print_query_outcome(response_state, agent_definition.name)
+                    _print_query_outcome(response_state, agent_definition.name, session_logger)
                     break
                 except Exception as exc:
                     err_text = str(exc)
@@ -493,6 +591,8 @@ async def run_agent(
                         continue
 
                     print(f"\nAgent Error: {exc}")
+                    if session_logger is not None:
+                        session_logger.log_error(str(exc))
                     break
     except KeyboardInterrupt:
         print("\nShutting down ColPackAgent...")
@@ -509,6 +609,7 @@ async def run_agent(
 def main() -> None:
     args = _build_parser().parse_args()
     _configure_logging(verbose=args.verbose, log_level=args.log_level, sdk_trace=args.sdk_trace)
+    set_quiet_monitor(not args.verbose_monitor)
     asyncio.run(
         run_agent(
             agent_path=args.agent_path,
@@ -516,6 +617,7 @@ def main() -> None:
             mcp_command=args.mcp_command,
             model=args.model,
             bootstrap_skill=args.bootstrap_skill,
+            show_tools=args.show_tools,
         )
     )
 

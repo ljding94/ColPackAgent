@@ -4,6 +4,26 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Activate the hoomd-env conda environment
+CONDA_ENV_NAME="hoomd-env"
+if command -v conda >/dev/null 2>&1; then
+    CONDA_BASE="$(conda info --base 2>/dev/null)"
+    if [[ -n "$CONDA_BASE" && -f "$CONDA_BASE/etc/profile.d/conda.sh" ]]; then
+        # shellcheck disable=SC1091
+        source "$CONDA_BASE/etc/profile.d/conda.sh"
+        conda activate "$CONDA_ENV_NAME" || {
+            echo "Error: Failed to activate conda environment '$CONDA_ENV_NAME'."
+            exit 1
+        }
+    else
+        echo "Error: Could not locate conda.sh to activate '$CONDA_ENV_NAME'."
+        exit 1
+    fi
+else
+    echo "Error: conda not found on PATH. Install conda or activate '$CONDA_ENV_NAME' manually."
+    exit 1
+fi
+
 resolve_python_bin() {
     if [[ -n "${CONDA_PREFIX:-}" && -x "$CONDA_PREFIX/bin/python" ]]; then
         echo "$CONDA_PREFIX/bin/python"
