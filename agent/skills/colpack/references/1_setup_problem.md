@@ -1,6 +1,6 @@
 # Guide: Setup Simulation Problem
 
-When calling `setup_simulation_problem_tool`, your payload must match one of these shapes:
+Call `setup_simulation_problem_tool` with **exactly these four fields** — nothing else:
 
 ```json
 {
@@ -11,98 +11,50 @@ When calling `setup_simulation_problem_tool`, your payload must match one of the
 }
 ```
 
-## Required Rules
+The tool resolves `working_dir` itself. Do not pass it, do not ask for it.
 
-- `dimension` must be `2` or `3`.
-- `total_particle_number` must be a positive integer.
-- `particle_shape_list` must be a non-empty list of strings.
-- `ensemble` must be `NVT` or `NPT`.
-- `setup_simulation_problem_tool` resolves `working_dir` deterministically under project root `data/` from `dimension`, `ensemble`, and `particle_shape_list`.
-- If environment variable `COLPACK_WORKING_DIR_ROOT` is set, setup resolves `working_dir` under that directory instead. This is intended for isolated experiment runs.
-- Treat this `working_dir` as the workflow anchor directory and reuse the exact same value in planning and execution.
-- ColPack packing workflows here are athermal hard-particle simulations. Do not ask for or include temperature unless the user explicitly requests a thermal model outside this workflow.
-- In the standalone wrapper, setup-stage questions should be limited to setup-stage requirements only. Do not ask for planning or execution parameters before setup is complete.
-- Setup requires `dimension`, `total_particle_number`, `particle_shape_list`, and `ensemble` only. Do not ask the user to provide or confirm `working_dir` during setup.
-- Do not ask for or include initial volume fraction, `volume_fraction`, number density, pressure sweeps, sampling steps, boundary conditions, box shape, initial box length, or any other box initialization control in the setup payload.
-- For NVT workflows, `volume_fraction` belongs in planning via `plan_simulation_runs_tool`, not in setup. For NPT workflows, pressure belongs in planning, not in setup.
-- Boundary conditions are implicit defaults in this workflow and are not a normal user input for setup.
+## Field Rules
 
-## Default Folder Rule
-
-Do not include `working_dir` in the setup payload. `setup_simulation_problem_tool` is authoritative for computing the canonical workflow directory from the setup inputs.
-If the user explicitly asks for the default working directory, the wrapper may show the resolved path before the call, but the setup tool determines the same path itself.
-
-Naming template:
-
-- `working_dir = data/{dimension}d_{ensemble}_{shape_slug}`
-- `ensemble` must be lowercase (`nvt` or `npt`).
-- `shape_slug` is `particle_shape_list` joined by `_`, preserving order.
-
-If `COLPACK_WORKING_DIR_ROOT` is set, replace the `data/` prefix with that directory.
-
-Examples:
-
-- `data/2d_nvt_disk_capsule`
-- `data/3d_npt_sphere_ellipsoid`
-
-If folder exists, append `_v2`, `_v3`, and so on.
+- `dimension`: `2` or `3`.
+- `ensemble`: `"NVT"` or `"NPT"`.
+- `total_particle_number`: positive integer.
+- `particle_shape_list`: non-empty list drawn from Allowed Shapes below.
 
 ## Allowed Shapes
 
-### 2D
+- **2D**: `disk`, `ellipse`, `triangle`, `square`, `rectangle`, `capsule`
+- **3D**: `sphere`, `ellipsoid`, `cube`, `octahedron`, `tetrahedron`, `capsule`
 
-- `disk`
-- `ellipse`
-- `triangle`
-- `square`
-- `rectangle`
-- `capsule`
+## What to Ask (and What NOT to Ask)
 
-### 3D
+Setup collects **only** the four fields above. In interactive mode, ask for every missing field in a single consolidated message with common-choice suggestions.
 
-- `sphere`
-- `ellipsoid`
-- `cube`
-- `octahedron`
-- `tetrahedron`
-- `capsule`
+Inference rules:
 
-## Valid Example: Binary 2D NVT With Default Working Directory
+- Infer `dimension` only when every named shape is dimension-locked (e.g. "cube" → 3D, "disk" → 2D). State the inference so the user can override.
+- `ensemble` and `total_particle_number` are never inferable — always ask if missing.
+- `particle_shape_list` is taken verbatim from the user's named shapes.
 
-```json
-{
-  "dimension": 2,
-  "total_particle_number": 256,
-  "particle_shape_list": ["disk", "capsule"],
-  "ensemble": "NVT"
-}
-```
+Do **not** mention, ask about, or include in the payload any of: `working_dir`, `volume_fraction`, pressure, sweep values, sampling steps, temperature, boundary conditions, box shape, or box length. Those either belong to a later stage (planning/execution) or are auto-resolved. Move on to planning in the next turn — after setup is confirmed.
 
-The setup tool resolves `working_dir` to `data/2d_nvt_disk_capsule` if that folder is unused.
+## Anti-Example
 
-## Valid Example: 3D NPT Mixture
+Bad — mixes setup + planning + forbidden `working_dir`:
 
-```json
-{
-  "dimension": 3,
-  "total_particle_number": 512,
-  "particle_shape_list": ["sphere", "ellipsoid"],
-  "ensemble": "NPT"
-}
-```
+> - Ensemble: NVT or NPT?
+> - Number of particles: 512, 1000, 2048?
+> - What volume fractions to sweep?        ← planning, wrong stage
+> - Where should I set up the simulation?  ← forbidden; setup resolves working_dir
 
-## Expected Result
+Good — setup-only, consolidated:
 
-On success, `simulation_problem.json` is written to `working_dir`.
+> I'll infer 3D from "cube". I need two more setup details:
+>
+> - **Ensemble**: NVT (fixed volume) or NPT (fixed pressure)?
+> - **Number of particles**: e.g. 256 / 512 / 1024?
+>
+> I'll move on to planning (volume fraction or pressure sweep) after setup.
 
-## Path State Rule
+## Output
 
-After setup, store the returned `working_dir` from the tool result as workflow state:
-
-```json
-{
-  "WORKING_DIR": "data/2d_nvt_disk_capsule"
-}
-```
-
-Then pass this exact same `WORKING_DIR` in step 2 and step 3.
+On success, `simulation_problem.json` is written to the resolved `working_dir`, and the tool returns that path. Reuse the returned `working_dir` verbatim in planning and execution.

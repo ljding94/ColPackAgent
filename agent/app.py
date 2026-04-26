@@ -15,7 +15,8 @@ with contextlib.suppress(ImportError):
     _ = readline  # imported for input()'s side effect; reference silences unused-import warnings
 
 
-AGENT_ICON = " ʕง•ᴥ•ʔง ColPackAgent:"
+#AGENT_ICON = " ʕง•ᴥ•ʔง ColPackAgent:"
+AGENT_ICON = "ColPackAgent:"
 
 
 class SessionLogger:

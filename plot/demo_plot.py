@@ -3,11 +3,16 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import FuncFormatter
 
 
-def _default_run_path():
+def _default_run_path(mode="autonomous"):
     repo_root = Path(__file__).resolve().parents[1]
-    return repo_root / "demo" / "data" / "2d_nvt_capsule_disk_v2"
+    if mode == "autonomous":
+        return repo_root / "plot" / "illustrative_data" / "2d_nvt_capsule_disk"
+    elif mode == "interactive":
+        return repo_root / "plot" / "illustrative_data" / "3d_npt_cube_interactive"
+    raise ValueError(f"Unknown mode: {mode!r}. Expected 'autonomous' or 'interactive'.")
 
 
 def _sorted_run_dirs(run_path):
@@ -47,32 +52,23 @@ def _load_run_payload(run_dir):
     return config, results
 
 
-def _extract_rdf_capsule_capsule(results):
-    if "rdf_capsule_0_capsule_0" in results:
-        rdf = results["rdf_capsule_0_capsule_0"]
+def _extract_rdf(results, particle_type):
+    primary_key = f"rdf_{particle_type}_0_{particle_type}_0"
+    if primary_key in results:
+        rdf = results[primary_key]
         return rdf["r"], rdf["g_r"]
 
+    prefix = f"rdf_{particle_type}"
+    suffix = f"_{particle_type}"
     for key, value in results.items():
-        if key.startswith("rdf_capsule") and "_capsule" in key:
+        if key.startswith(prefix) and suffix in key[len(prefix):]:
             return value["r"], value["g_r"]
 
-    raise KeyError("Could not find capsule-capsule RDF in analysis results.")
+    raise KeyError(f"Could not find {particle_type}-{particle_type} RDF in analysis results.")
 
 
-def _extract_rdf_disk_disk(results):
-    if "rdf_disk_0_disk_0" in results:
-        rdf = results["rdf_disk_0_disk_0"]
-        return rdf["r"], rdf["g_r"]
-
-    for key, value in results.items():
-        if key.startswith("rdf_disk") and "_disk" in key:
-            return value["r"], value["g_r"]
-
-    raise KeyError("Could not find disk-disk RDF in analysis results.")
-
-
-def plot_autonomous_demo(run_path=None, output_path=None):
-    run_path = Path(run_path).expanduser().resolve() if run_path else _default_run_path()
+def plot_autonomous_demo():
+    run_path = _default_run_path("autonomous")
     if not run_path.exists():
         raise FileNotFoundError(f"Run path does not exist: {run_path}")
 
@@ -83,8 +79,8 @@ def plot_autonomous_demo(run_path=None, output_path=None):
     run_series = []
     for run_dir in run_dirs:
         config, results = _load_run_payload(run_dir)
-        r_capsule, g_r_capsule = _extract_rdf_capsule_capsule(results)
-        r_disk, g_r_disk = _extract_rdf_disk_disk(results)
+        r_capsule, g_r_capsule = _extract_rdf(results, "capsule")
+        r_disk, g_r_disk = _extract_rdf(results, "disk")
         volume_fraction = config.get("volume_fraction")
         label = run_dir.name if volume_fraction is None else f"{run_dir.name} (phi={volume_fraction})"
         run_series.append(
@@ -135,7 +131,58 @@ def plot_autonomous_demo(run_path=None, output_path=None):
     plt.close(fig)
 
 
+def plot_interactive_demo():
+    run_path = _default_run_path("interactive")
+    if not run_path.exists():
+        raise FileNotFoundError(f"Run path does not exist: {run_path}")
+
+    run_dirs = _sorted_run_dirs(run_path)
+    if len(run_dirs) != 5:
+        raise ValueError(f"Expected exactly 4 run folders under {run_path}, found {len(run_dirs)}")
+
+    run_series = []
+    for run_dir in run_dirs:
+        config, results = _load_run_payload(run_dir)
+        volume_fraction = np.asarray(results["system"]["volume_fraction"], dtype=float)
+        cubatic = np.asarray(results["cube_0"]["cubatic"], dtype=float)
+        pressure = config.get("P")
+        sample_steps = config.get("sample_steps", len(volume_fraction))
+        steps = np.linspace(0, sample_steps, len(volume_fraction))
+        run_series.append(
+            {
+                "pressure": pressure,
+                "steps": steps,
+                "volume_fraction": volume_fraction,
+                "cubatic": cubatic,
+            }
+        )
+
+    fig, axes = plt.subplots(1, 2, figsize=(3.3, 3.3*0.45))
+    axes = np.asarray(axes).reshape(-1)
+
+    for series in run_series:
+        label = f"${series['pressure']:.0f}$"
+        axes[0].plot(series["steps"], series["volume_fraction"], linewidth=1, label=label)
+        axes[1].plot(series["steps"], series["cubatic"], linewidth=1, label=label)
+
+    axes[0].set_ylabel(r"$\phi$", fontsize=9, labelpad=0)
+    axes[1].set_ylabel(r"$P_4$", fontsize=9, labelpad=0)
+    for ax in axes:
+        ax.set_xlabel(r"Frame ($\times 10^5$)", fontsize=9, labelpad=0)
+        ax.tick_params(axis="both", which="both", direction="in", top=True, right=True, labelsize=7)
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x / 1e5:.0f}"))
+    axes[0].legend(frameon=False, fontsize=7, loc="upper left", ncol=2, columnspacing=0.5, handlelength=0.8, handletextpad=0.3, labelspacing=0.2, title=r"$P$", title_fontsize=7)
+    axes[1].legend(frameon=False, fontsize=7, loc="best", ncol=2, columnspacing=0.5, handlelength=0.8, handletextpad=0.3, labelspacing=0.2, title=r"$P$", title_fontsize=7)
+
+    axes[0].set_ylim(None, 0.72)
+    fig.tight_layout(pad=0.1)
+
+    fig.savefig("./figures/demo_interactive.png", dpi=600)
+    fig.savefig("./figures/demo_interactive.pdf", format="pdf")
+    plt.show()
+    plt.close(fig)
 
 
 if __name__ == "__main__":
     plot_autonomous_demo()
+    plot_interactive_demo()

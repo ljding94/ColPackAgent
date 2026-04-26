@@ -213,3 +213,106 @@ async def _cleanup_completed_background_monitor(background_state: BackgroundMoni
     with contextlib.suppress(Exception):
         await background_state.task
     return BackgroundMonitorState()
+
+
+# ---------------------------------------------------------------------------
+# CLI entrypoint
+#
+# Usage from the agent (via Bash):
+#   python agent/skills/colpack/scripts/workflow_monitor.py status --working-dir <WD>
+#   python agent/skills/colpack/scripts/workflow_monitor.py wait   --working-dir <WD> [--timeout N]
+#
+# `status` reads workflow_progress.json once and exits immediately.
+# `wait` blocks until status is "completed" or "failed", then prints the final
+# progress snapshot as JSON and exits (0 = completed, 1 = failed/timeout/missing).
+#
+# Using `wait` is the canonical way for the agent to implement "run analysis
+# when it's finished" — it returns control cleanly so the agent can continue
+# its turn. Never substitute ad-hoc `tail -f` / `sleep` loops in Bash; those
+# do not exit on completion.
+# ---------------------------------------------------------------------------
+
+_TERMINAL_STATUSES = {"completed", "failed"}
+
+
+async def _wait_for_workflow_completion(
+    working_dir: str,
+    poll_interval: float = 2.0,
+    timeout: float | None = None,
+) -> dict[str, Any] | None:
+    loop = asyncio.get_event_loop()
+    start = loop.time()
+    while True:
+        progress = _read_workflow_progress(working_dir)
+        if progress and progress.get("status") in _TERMINAL_STATUSES:
+            return progress
+        if timeout is not None and loop.time() - start > timeout:
+            return progress
+        await asyncio.sleep(poll_interval)
+
+
+def _cli_main(argv: list[str] | None = None) -> int:
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "ColPack workflow progress monitor. Also wired into the agent wrapper "
+            "as a background tailer; the subcommands below are the agent-facing CLI."
+        )
+    )
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    status_p = sub.add_parser(
+        "status",
+        help="Print current workflow_progress.json snapshot as JSON and exit.",
+    )
+    status_p.add_argument("--working-dir", required=True)
+
+    wait_p = sub.add_parser(
+        "wait",
+        help=(
+            "Block until the workflow reaches 'completed' or 'failed', then print "
+            "final progress as JSON and exit (0=completed, 1=failed/timeout/missing)."
+        ),
+    )
+    wait_p.add_argument("--working-dir", required=True)
+    wait_p.add_argument("--poll-interval", type=float, default=2.0)
+    wait_p.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Abort after N seconds if still not terminal. Default: wait indefinitely.",
+    )
+
+    args = parser.parse_args(argv)
+
+    if args.cmd == "status":
+        progress = _read_workflow_progress(args.working_dir)
+        if progress is None:
+            print("{}")
+            return 1
+        print(json.dumps(progress, indent=2))
+        return 0
+
+    if args.cmd == "wait":
+        progress = asyncio.run(
+            _wait_for_workflow_completion(
+                args.working_dir,
+                poll_interval=args.poll_interval,
+                timeout=args.timeout,
+            )
+        )
+        if progress is None:
+            print("{}")
+            return 1
+        print(json.dumps(progress, indent=2))
+        return 0 if progress.get("status") == "completed" else 1
+
+    return 2
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(_cli_main())

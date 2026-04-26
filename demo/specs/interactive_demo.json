@@ -8,25 +8,26 @@
   "bootstrap_skill": true,
   "tasks": [
     {
-      "task_id": "interactive_capsule_sphere",
-      "description": "Interactive 2D NPT capsule+sphere workflow with explicit stage confirmations.",
+      "task_id": "interactive_3d_cube",
+      "description": "Interactive 3D NPT cube workflow with explicit stage confirmations.",
       "difficulty_level": 2,
       "user_messages": [
-        "Please set up a 2D NPT colloidal packing simulation for a mixture of capsule and sphere particles with total_particle_number=120. Use the default working directory.",
-        "yes",
-        "For planning, sweep pressure values [4.0, 6.0, 8.0], use 3000 compress sweeps and 3000 sample sweeps.",
-        "yes",
-        "yes"
+        "Can you set up a simulation for cube particles?",
+        "sure, let's try 300 particles in NPT ensemble",
+        "let's use particle side 1, let's sample 5e5 steps and sweep 5 pressure from 2 to 10",
+        "go ahead",
+        "ok, also please run analysis when it's finished"
       ],
       "expected_outcomes": [
+        "After the first ambiguous cube setup request, the agent should ask for missing setup parameters instead of choosing default particle count or ensemble.",
         "The agent should step through setup, plan, execute, and analyze with confirmations."
       ]
     }
   ],
   "models": [
     {
-      "model_id": "openrouter/google/gemini-3-flash-preview",
-      "label": "gemini-3-flash-preview"
+      "model_id": "openrouter/anthropic/claude-opus-4.7",
+      "label": "anthropic/claude-opus-4.7"
     }
   ],
   "skills": [

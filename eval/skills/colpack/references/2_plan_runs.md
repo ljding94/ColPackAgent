@@ -1,158 +1,101 @@
 # Guide: Plan Simulation Runs
 
-When calling `plan_simulation_runs_tool`, use this exact top-level payload:
+`plan_simulation_runs_tool` payload:
 
 ```json
 {
   "baseline_parameters": {},
   "tunable_parameters": {},
-  "working_dir": "/absolute/or/user/provided/path"
+  "working_dir": "<WORKING_DIR>"
 }
 ```
+
+## Mental Model
+
+`simulation_problem.json` is the source of truth. Planning overlays it to produce per-run configs.
+
+- `baseline_parameters`: single-value overrides applied to **every** run.
+- `tunable_parameters`: per-parameter **lists** — each value produces one run. Sweep is one-parameter-at-a-time, not a grid.
+- Single run = one `tunable_parameters` entry with a single-element list (e.g. `[1.0]`). `tunable_parameters` must be non-empty.
+
+### Fixed vs Tunable
+
+Fixed at setup, cannot change in planning:
+
+- `dimension`, `ensemble`, `total_particle_number`, `particle_specs[*].shape`
+
+**Everything else in `simulation_problem.json` is tunable** — `volume_fraction`, `P`, `sampling_steps`, every shape parameter, `relative_volume_fraction`, etc. A `"Nan"` placeholder is no more special than a concrete value; both are equally valid as baseline or tunable. `"Nan"` just signals that setup did not pick a default — if left out, the config fallback is used.
 
 ## Required Rules
 
-- `baseline_parameters` must be a dictionary.
-- `tunable_parameters` must be a non-empty dictionary.
-- Each `tunable_parameters` entry must map to a non-empty list.
-- `working_dir` must be exactly the same string used in setup (`WORKING_DIR`).
-- Read `working_dir/simulation_problem.json` before building the payload.
-- Every key in `baseline_parameters` and `tunable_parameters` must already exist in `simulation_problem.json`.
-- Do not invent new top-level keys during planning.
-- Shape parameters belong under `particle_specs.N.*`, not at top level.
-- Recommended default location is under project root `data/` using setup naming rules.
-- For NVT workflows, `volume_fraction` belongs here in planning, not in setup.
-- For NPT workflows, pressure `P` belongs here in planning, not in setup.
-- Boundary conditions are not part of the normal planning payload.
+- `baseline_parameters`: dict.
+- `tunable_parameters`: non-empty dict; each value is a non-empty list.
+- `working_dir`: exact string returned by setup.
+- Every key must already exist as a dot-path in `simulation_problem.json` — do not invent top-level keys.
+- Shape parameters live under `particle_specs.N.*` (zero-based), not flat. Copy paths verbatim from the JSON.
 
-## Understanding `simulation_problem.json`
+## Interactive Flow
 
-Read `working_dir/simulation_problem.json` before building the payload. It defines the dot-paths available for `baseline_parameters` and `tunable_parameters`. Shape parameters start as `"Nan"` placeholders that must be filled during planning.
+1. **Read** `working_dir/simulation_problem.json`.
+2. **Enumerate** every non-fixed parameter with its dot-path and current value. Example:
 
-Example (2D NVT, disk + capsule):
+   ```text
+   Tunable candidates (any can be baseline OR tunable):
+     • P                                            current: 1.0
+     • sampling_steps                               current: 20000
+     • particle_specs.0.side                        Nan
+     • particle_specs.0.relative_volume_fraction    current: 1
+   ```
+
+3. **Ask** which parameters (if any) to sweep and at what values. A single run is valid. Do not presuppose `P` for NPT or `volume_fraction` for NVT.
+4. **Show the draft payload** and wait for approval before calling the tool.
+
+## Example: Single Run, No Sweep
+
+NPT cubes, default pressure, `side = 1.0`:
+
 ```json
 {
-  "dimension": 2,
-  "total_particle_number": 200,
-  "ensemble": "NVT",
-  "working_dir": "data/2d_nvt_disk_capsule",
-  "sampling_steps": 20000,
-  "volume_fraction": 0.3,
-  "particle_specs": [
-    { "type": 0, "shape": "disk", "relative_volume_fraction": 1, "diameter": "Nan" },
-    { "type": 1, "shape": "capsule", "relative_volume_fraction": 0.5, "length": "Nan", "diameter": "Nan" }
-  ]
+  "baseline_parameters": { "sampling_steps": 200000 },
+  "tunable_parameters": { "particle_specs.0.side": [1.0] },
+  "working_dir": "data/3d_npt_cube"
 }
 ```
 
-Example (3D NPT, sphere + ellipsoid):
-```json
-{
-  "dimension": 3,
-  "total_particle_number": 512,
-  "ensemble": "NPT",
-  "working_dir": "data/3d_npt_sphere_ellipsoid",
-  "sampling_steps": 20000,
-  "P": 1.0,
-  "particle_specs": [
-    { "type": 0, "shape": "sphere", "relative_volume_fraction": 1, "diameter": "Nan" },
-    { "type": 1, "shape": "ellipsoid", "relative_volume_fraction": 0.5, "a": "Nan", "b": "Nan", "c": "Nan" }
-  ]
-}
-```
+## Example: Multi-Run Sweep
 
-Valid dot-paths from these examples: `volume_fraction`, `P`, `sampling_steps`, `particle_specs.0.diameter`, `particle_specs.1.length`, `particle_specs.1.a`, etc.
-
-## Dot-Path Convention
-
-Use dot paths to address nested fields, including particle specs:
-
-- `volume_fraction`
-- `P`
-- `particle_specs.0.diameter`
-- `particle_specs.1.length`
-- `particle_specs.1.relative_volume_fraction`
-
-Indexing in `particle_specs.N.*` is zero-based.
-
-Planning rule:
-
-- Treat `simulation_problem.json` as the source of truth for allowed paths. If the file contains `particle_specs.0.length`, use that exact path. Do not replace it with a guessed top-level field like `length`.
-
-## Valid Example: 2D NVT Parameter Sweep
+2D NVT disk+capsule, sweep `volume_fraction` with fixed shape geometry:
 
 ```json
 {
   "baseline_parameters": {
-    "volume_fraction": 0.35,
     "sampling_steps": 200000,
     "particle_specs.0.diameter": 1.0,
     "particle_specs.1.length": 2.0,
     "particle_specs.1.diameter": 0.5
   },
   "tunable_parameters": {
-    "volume_fraction": [0.30, 0.35, 0.40],
-    "particle_specs.1.length": [1.5, 2.0, 2.5]
+    "volume_fraction": [0.30, 0.35, 0.40, 0.45]
   },
   "working_dir": "data/2d_nvt_disk_capsule"
 }
 ```
 
-## Valid Example: 3D NPT Pressure Sweep
+## Invalid: Flat Shape Keys
 
 ```json
 {
-  "baseline_parameters": {
-    "P": 1.0,
-    "sampling_steps": 300000,
-    "particle_specs.0.diameter": 1.0,
-    "particle_specs.1.a": 1.0,
-    "particle_specs.1.b": 0.6,
-    "particle_specs.1.c": 0.5
-  },
-  "tunable_parameters": {
-    "P": [0.5, 1.0, 2.0],
-    "particle_specs.1.a": [0.8, 1.0, 1.2]
-  },
-  "working_dir": "data/3d_npt_sphere_ellipsoid"
+  "baseline_parameters": { "width": 1.0 },
+  "tunable_parameters":  { "length": [3.0, 5.0, 7.0] }
 }
 ```
 
-## Invalid Example: Top-Level Shape Parameters
-
-```json
-{
-  "baseline_parameters": {
-    "width": 1.0,
-    "volume_fraction": 0.5
-  },
-  "tunable_parameters": {
-    "length": [3.0, 5.0, 7.0]
-  },
-  "working_dir": "data/2d_nvt_rectangle"
-}
-```
-
-Reason: rectangle geometry lives in `particle_specs.0.length` and `particle_specs.0.width` in `simulation_problem.json`, so those exact nested paths must be used.
+Shape parameters must use the nested path (`particle_specs.0.width`, `particle_specs.0.length`).
 
 ## Expected Result
 
-On success, the tool writes:
+Writes `simulation_baseline.json`, `simulation_plan.json`, and `run_0`, `run_1`, ... directories each containing `simulation_config.json`.
 
-- `simulation_baseline.json`
-- `simulation_plan.json`
-- `run_0`, `run_1`, ... directories with per-run `simulation_config.json`
+## Consistency Check
 
-## Consistency Check Before Call
-
-Verify that the planning `working_dir` matches the one returned by setup:
-
-```json
-{
-  "setup_working_dir": "<WORKING_DIR>",
-  "plan_working_dir": "<WORKING_DIR>",
-  "match": true
-}
-```
-
-Only call the tool when `match` is true.
+Verify `setup_working_dir == plan_working_dir` before calling. If they differ, stop and reconcile.

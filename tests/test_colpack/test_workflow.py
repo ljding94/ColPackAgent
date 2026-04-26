@@ -539,13 +539,13 @@ def main():
             "total_particle_number": 300,
             "particle_shape_list": ["cube"],
             "baseline_parameters": {
-                "sample_steps": 1e3,
+                "sample_steps": 5e5,
                 "particle_specs.0.side": 1.0,
             },
             "tunable_parameters": {
-                "P": [1.0, 5.0, 10.0],
+                "P": [2.0, 4.0, 6.0, 8.0, 10.0],
             },
-            "expected_runs": 3,
+            "expected_runs": 5,
             "extra_order_params": [
                 {
                     "name": "solid_liquid_q6_extra",

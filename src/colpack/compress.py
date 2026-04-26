@@ -141,8 +141,8 @@ def compress_system_NVT(run_dir: str, simulation_config: dict):
     simulation_config_compress["compress_gsd_path"] = gsd_path
     simulation_config_compress["target_volume_fraction"] = target_volume_fraction
     simulation_config_compress["target_box_volume"] = target_box_volume
-    simulation_config_compress["final_volume_fraction"] = achieved_volume_fraction
-    simulation_config_compress["final_box_volume"] = achieved_box_volume
+    simulation_config_compress["compress_volume_fraction"] = achieved_volume_fraction
+    simulation_config_compress["compress_box_volume"] = achieved_box_volume
 
     simulation_config_compress_path = os.path.join(run_dir, "simulation_config_compress.json")
     with open(simulation_config_compress_path, "w") as f:
