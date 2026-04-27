@@ -2,7 +2,27 @@
 
 This folder is the experiment harness for comparing prompt variants, LLMs, and skill versions without changing `agent/app.py`.
 
-The baseline skill used by eval lives under `eval/skills/colpack/`. This keeps experiment-specific skill edits and ablations separate from the production `agent/skills/colpack/` tree.
+Skills used by eval are built into `eval/skills/<variant_id>/colpack/` from the production `agent/skills/colpack/` tree via `build_skill_variant.py`. This keeps experiment artifacts out of git (the directory is gitignored) and lets ablations omit specific reference files without touching the production skill.
+
+## Building a Skill Variant
+
+Run the builder before any experiment that references the variant:
+
+```bash
+# Full skill, no ablation
+python eval/build_skill_variant.py --variant-id full
+
+# Ablation: drop a single reference file
+python eval/build_skill_variant.py --variant-id no_setup_ref \
+    --exclude references/1_setup_problem.md
+
+# Ablation: drop multiple reference files
+python eval/build_skill_variant.py --variant-id minimal \
+    --exclude references/1_setup_problem.md \
+    --exclude references/2_plan_runs.md
+```
+
+Each variant's `SKILL.md` then lives at `eval/skills/<variant_id>/colpack/SKILL.md`, which is what the experiment spec's `skills[*].skill_path` should point to.
 
 ## Current Scope
 
@@ -34,34 +54,146 @@ python -m eval.run_experiments run --spec eval/experiment_spec.example.json --dr
 
 under the experiment `output_dir`.
 
-## Suggested User Types
+## Two Evaluation Tracks
 
-These are the user archetypes worth covering as you build out the task set:
+The eval runs two parallel studies. Both use the same JSON spec format and runner; they differ in which axis of the run matrix they vary.
 
-1. `novice_workflow_user`
-   Asks for a simulation in plain language and relies on the agent to structure the workflow.
-2. `partially_specified_user`
-   Knows some simulation parameters but omits others, forcing the agent to ask targeted follow-up questions.
-3. `expert_operator`
-   Uses domain-specific language and expects concise workflow handling with minimal handholding.
-4. `analysis_focused_user`
-   Cares more about interpreting outputs, order parameters, and summary conclusions than setup details.
-5. `noisy_or_ambiguous_user`
-   Uses incomplete, slightly inconsistent, or poorly phrased requests to test robustness.
+| Track | Varies | Held fixed | Question being asked |
+| --- | --- | --- | --- |
+| **1 — LLM Evaluation** | `models` | `skills` = `full` | Which LLM reasons best at each isolated workflow stage? |
+| **2 — Skill Ablation** | `skills` | `models` = one chosen LLM | How does removing parts of the skill affect end-to-end behavior? |
 
-The scaffold already lets each task point at a `user_profile_id` so you can grow this later without changing the runner.
+Both tracks share the difficulty + user-persona convention defined below, but apply it differently: Track 1 isolates each stage and uses adversarial prompts at the top of the ladder; Track 2 runs end-to-end and stays constructive across the ladder (the variable is the skill, not the prompt).
 
-## Suggested Task Ladder
+## Difficulty Ladder & User Personas
 
-Your planned difficulty ladder fits the schema, but the current example spec is intentionally narrower and only exercises setup:
+Each task carries a numeric `difficulty_level` (1–5) and a `user_profile_id` naming the prompt style. The two axes are tightly correlated — easier problems are usually expressed in plain language, and adversarial problems usually arrive in noisier or contradictory ones — so we treat them as a single ladder, with the persona naming the prompt style at each level:
 
-1. setup only
-2. setup + planning
-3. setup + planning + execution
-4. setup + planning + execution + analysis
-5. setup + planning + execution + analysis + result summary
+| Level | Persona (`user_profile_id`) | Prompt style | What the level tests |
+| --- | --- | --- | --- |
+| 1 | `novice_workflow_user` | Plain language, complete request | Single shape, single sweep axis; clean parsing |
+| 2 | `partially_specified_user` | Some parameters omitted; agent should ask the right follow-ups | Same-shape mixtures (bidisperse), basic dot-path use |
+| 3 | `expert_operator` | Domain-specific terms, concise | Multi-component mixtures, multi-axis sweeps |
+| 4 | `noisy_or_ambiguous_user` | Slightly inconsistent or under-specified | **Adversarial**: physically/mechanically impossible (e.g., HPMC-incompatible 2D mix, P on NVT) |
+| 5 | `noisy_or_ambiguous_user` | Contradictory premises | **Adversarial**: dimension mismatch or other internal contradictions |
 
-The example spec currently includes only `setup_only` and uses a single user message so the run stops after setup. Add follow-up messages like `yes` only when you intentionally want later workflow stages to execute.
+`analysis_focused_user` is reserved for analysis-stage questions — it cuts across difficulty levels because analysis questions can be easy or hard regardless of prompt phrasing.
+
+For levels 4–5, tasks carry `metadata.adversarial: true` and `metadata.expected_failure_mode` so reviewers can score on the agent's refusal / clarification behavior rather than tool-call success. Track 2 (ablation) typically stays at levels 1–3 (constructive only); levels 4–5 are primarily a Track 1 concern.
+
+The mapping is typical, not strict — a task author can pair any persona with any difficulty when it makes sense.
+
+## Track 1 — LLM Evaluation (Three Dimensions, Full Skill)
+
+Compare LLMs on **isolated workflow stages** using the production skill in full. Each workflow stage is treated as an independent evaluation axis to isolate that stage's reasoning without confounding from the others.
+
+### Dimensions
+
+1. **Setup** — given a user prompt, extract dimension / ensemble / shape list / particle count and call `setup_simulation_problem_tool` with the right arguments. Higher difficulty introduces multi-component mixtures and prompts that are physically or mechanically impossible (e.g., HPMC-incompatible 2D mix of ellipse + capsule, or a 2D shape mixed with a 3D shape).
+2. **Planning** — given a setup, translate sweep intent into the correct `baseline_parameters` and `tunable_parameters` for `plan_simulation_runs_tool`. Higher difficulty covers per-component shape parameters, relative volume fractions, multi-axis sweeps, and adversarial requests like a pressure sweep on an NVT setup.
+3. **Analysis** — given a completed simulation, answer questions about packing fraction, order parameters, RDF, etc., and call `analyze_simulation_runs_tool` with appropriate `extra_order_params` when needed. *(Suite to be authored.)*
+
+**Execution is intentionally excluded** as a separate dimension. Once a plan is in place the agent's role in execution is mechanical (call the tool, wait, surface failures from `workflow_status.csv`) rather than reasoning-driven; a dedicated suite would test wait/poll behavior, not agent intelligence. Execution is exercised implicitly by any analysis task that needs a finished run.
+
+### Suites
+
+| Dimension | Tasks file | Spec | Difficulty | Status |
+| --- | --- | --- | --- | --- |
+| Setup | [tasks/setup_tasks.json](tasks/setup_tasks.json) | [specs/setup_eval.json](specs/setup_eval.json) | 1–5 (incl. 2 adversarial) | Authored |
+| Planning | [tasks/planning_tasks.json](tasks/planning_tasks.json) | [specs/planning_eval.json](specs/planning_eval.json) | 1–4 (incl. 1 adversarial) | Authored |
+| Analysis | [tasks/analysis_tasks.json](tasks/analysis_tasks.json) | [specs/analysis_eval.json](specs/analysis_eval.json) | 1–5 (incl. 1 adversarial) | Authored |
+
+The bare-bones `experiment_spec.example.json` (one `setup_only` task) is kept as a smoke test of the runner.
+
+### Suite dependencies (avoiding redundant simulation work)
+
+The three Track 1 dimensions are intentionally **chained via shared fixtures** so we don't re-run expensive simulation work for every analysis task. The dependency chain is:
+
+```text
+Setup suite       ──→ run all setup tasks (cheap; one tool call each)
+                            │
+                            ▼  pick 1–2 setup outputs as fixture working_dirs
+Planning suite    ──→ each task starts from a fixture working_dir
+                            (skips re-doing setup)
+                            │
+                            ▼  pick 2 of the resulting plans
+[Execution]       ──→ execute exactly those 2 plans
+                            │
+                            ▼  yields 2 simulation-data fixtures
+Analysis suite    ──→ every task reads one of the 2 pre-executed working_dirs
+                       and calls only analyze_simulation_runs_tool
+```
+
+A full Track 1 pass therefore incurs:
+
+- **N** setup tool calls (one per setup task, no execution).
+- **M** planning tool calls (each starts from a fixture setup, no re-setup).
+- **Exactly 2 simulation executions** — the expensive step, shared across the entire analysis suite.
+- **K** analysis tool calls (each reads pre-existing data; no setup/plan/execute redo).
+
+Without this dependency, every analysis task would redo setup + plan + execute end-to-end — costing K full pipelines instead of 2.
+
+> **Current state.** The dependency design is documented here; the existing analysis tasks (`tasks/analysis_tasks.json`) currently redo the full pipeline within each task. Refactoring them to reference fixture `working_dir`s — plus a small "fixture-bootstrap" command that runs the 2 chosen executions before the analysis suite — is the next infra step. Same applies to the planning tasks reusing setup fixtures rather than running setup themselves.
+
+### Running the LLM evaluation
+
+```bash
+python eval/build_skill_variant.py --variant-id full
+python -m eval.run_experiments run --spec eval/specs/setup_eval.json
+python -m eval.run_experiments run --spec eval/specs/planning_eval.json
+python -m eval.run_experiments run --spec eval/specs/analysis_eval.json
+```
+
+Vary `models` in each spec to add LLMs to the matrix. Until the fixture-sharing refactor lands, the analysis suite drives a small end-to-end simulation per task (100–200 particles, sample_steps=5–10k) — expect 1–3 minutes per analysis task. Once fixtures are in place this drops to near-instant for analysis, with the only expense being the 2 fixture executions run once up front.
+
+## Track 2 — Skill Ablation Study (End-to-End, Fixed LLM)
+
+Compare **skill variants** on a fixed LLM using a single end-to-end task per level (setup → plan → execute → analyze in one conversation). The question is whether removing parts of the skill — a single reference, all references, or the SKILL.md body itself — materially degrades the agent's ability to complete the workflow.
+
+### Skill variants
+
+`build_skill_variant.py` produces six pre-defined variants for ablation:
+
+| Variant | What's removed | What it tests |
+| --- | --- | --- |
+| `full` | nothing | Baseline; full skill |
+| `no_analysis` | `references/4_analyze_simulation.md` | Can the agent still run analysis? |
+| `no_analysis_execution` | + `references/3_execute_simulation.md` | + Can it still execute? |
+| `no_analysis_execution_plan` | + `references/2_plan_runs.md` | + Can it still plan? |
+| `no_references` | entire `references/` directory | Can SKILL.md alone carry the workflow? |
+| `no_skill` | `references/`, `scripts/`; SKILL.md body stripped to frontmatter | Lower bound: agent has zero procedural guidance |
+
+Build commands for each variant are listed in the [Building a Skill Variant](#building-a-skill-variant) section above.
+
+### End-to-end task ladder
+
+Each level is a constructive (non-adversarial) end-to-end prompt of increasing problem complexity. The prompt phrasing is held fixed as `expert_operator` style at all levels — the level varies the underlying *problem*, not the *prompt*, so any degradation is attributable to the missing skill content rather than prompt difficulty:
+
+| Level | Underlying task |
+| --- | --- |
+| 1 | Single shape, single-axis sweep (e.g., 2D NVT disks, sweep `volume_fraction` at 3 values, then analyze). |
+| 2 | Bidisperse / same-shape mixture, single-axis sweep. |
+| 3 | Multi-component mixture (different shapes), single-axis sweep. |
+| 4 | Multi-component mixture, multi-axis sweep (one-at-a-time). |
+| 5 | Multi-component mixture, multi-axis sweep with non-default analysis (extra `extra_order_params`). |
+
+### Suite
+
+| Tasks file | Spec | Status |
+| --- | --- | --- |
+| `tasks/ablation_tasks.json` | `specs/ablation_eval.json` | Not yet authored |
+
+### Running the ablation study
+
+```bash
+# Build all variants once (see "Building a Skill Variant" for the per-variant args)
+python eval/build_skill_variant.py --variant-id full
+python eval/build_skill_variant.py --variant-id no_analysis --exclude references/4_analyze_simulation.md
+# ... (build the rest of the variants) ...
+
+# Run the suite — spec varies skills, holds model fixed
+python -m eval.run_experiments run --spec eval/specs/ablation_eval.json
+```
 
 ## Spec Structure
 
@@ -74,9 +206,11 @@ Key fields in the JSON spec:
 - `repeats`
 - `bootstrap_skill`
 - `user_profiles`
-- `tasks`
+- `tasks` (inline) **or** `tasks_file` (path to a JSON array of tasks)
 - `models`
 - `skills`
+
+`tasks_file` lets multiple specs share the same task collection (e.g. swap out the model list while keeping the same task ladder). Specifying both `tasks` and `tasks_file` is an error.
 
 The runner supports:
 

@@ -1,0 +1,117 @@
+[
+  {
+    "task_id": "plan_vf_sweep_nvt",
+    "description": "Difficulty 1 — basic volume-fraction sweep on a 2D NVT binary mixture. Tests the canonical NVT sweep path.",
+    "difficulty_level": 1,
+    "user_profile_id": "novice_workflow_user",
+    "user_messages": [
+      "Set up a 2D NVT Monte Carlo simulation of 500 particles, a mixture of disks and capsules.",
+      "Now plan a sweep over volume fraction at 0.3, 0.5, and 0.7."
+    ],
+    "expected_outcomes": [
+      "Setup stage completes with particle_shape_list=['disk', 'capsule'], dimension=2, ensemble=NVT, total_particle_number=500.",
+      "plan_simulation_runs_tool is called with tunable_parameters={'volume_fraction': [0.3, 0.5, 0.7]}.",
+      "Three runs are planned."
+    ],
+    "metadata": {
+      "stage": "planning",
+      "tags": ["volume_fraction_sweep", "nvt", "2d", "binary_mixture"]
+    }
+  },
+  {
+    "task_id": "plan_p_sweep_npt",
+    "description": "Difficulty 1 — basic pressure sweep on a 2D NPT binary mixture. Tests the canonical NPT sweep path.",
+    "difficulty_level": 1,
+    "user_profile_id": "novice_workflow_user",
+    "user_messages": [
+      "Set up a 2D NPT Monte Carlo simulation of 500 particles: a mixture of disks and capsules.",
+      "Plan a pressure sweep at P = 1.0, 5.0, and 10.0."
+    ],
+    "expected_outcomes": [
+      "Setup completes with ensemble=NPT.",
+      "plan_simulation_runs_tool is called with tunable_parameters={'P': [1.0, 5.0, 10.0]}.",
+      "Three runs are planned."
+    ],
+    "metadata": {
+      "stage": "planning",
+      "tags": ["pressure_sweep", "npt", "2d", "binary_mixture"]
+    }
+  },
+  {
+    "task_id": "plan_diameter_sweep_bidisperse",
+    "description": "Difficulty 2 — sweep a per-component shape parameter (first disk type's diameter) on a 2D NVT bidisperse mixture. Tests dot-path support for particle_specs.<i>.diameter.",
+    "difficulty_level": 2,
+    "user_profile_id": "expert_operator",
+    "user_messages": [
+      "Set up a 2D NVT simulation of 1000 disks as a binary mixture (two disk types). Use volume_fraction = 0.5 as the baseline.",
+      "Plan a sweep over the first disk type's diameter at 0.5, 1.0, 1.5, with the second disk type fixed at diameter 1.0."
+    ],
+    "expected_outcomes": [
+      "Setup completes with particle_shape_list=['disk', 'disk'].",
+      "Planner is called with baseline_parameters including 'volume_fraction': 0.5 and 'particle_specs.1.diameter': 1.0, and tunable_parameters={'particle_specs.0.diameter': [0.5, 1.0, 1.5]}.",
+      "Three runs are planned."
+    ],
+    "metadata": {
+      "stage": "planning",
+      "tags": ["shape_parameter_sweep", "diameter", "bidisperse", "nvt", "dot_path"]
+    }
+  },
+  {
+    "task_id": "plan_relative_vf_sweep",
+    "description": "Difficulty 3 — sweep per-component relative volume fraction in a 2D NVT mixture. Tests that the agent maps the user's mixing ratio request to particle_specs.<i>.relative_volume_fraction.",
+    "difficulty_level": 3,
+    "user_profile_id": "expert_operator",
+    "user_messages": [
+      "Set up a 2D NVT simulation of 500 particles: a mixture of disks (component 0) and capsules (component 1). Use volume_fraction = 0.4 as the baseline.",
+      "Plan a sweep where capsule volume fraction relative to disks is 0.5, 1.0, and 2.0. The disk component stays as the reference (relative_volume_fraction = 1)."
+    ],
+    "expected_outcomes": [
+      "Setup completes with particle_shape_list=['disk', 'capsule'] and ensemble=NVT.",
+      "Planner is called with tunable_parameters={'particle_specs.1.relative_volume_fraction': [0.5, 1.0, 2.0]}, the disk component left at 1.",
+      "Three runs are planned."
+    ],
+    "metadata": {
+      "stage": "planning",
+      "tags": ["relative_volume_fraction_sweep", "mixture", "nvt"]
+    }
+  },
+  {
+    "task_id": "plan_two_axis_sweep",
+    "description": "Difficulty 3 — two independent sweep axes specified together. Tests that the agent submits BOTH as tunable_parameters and understands the planner's one-parameter-at-a-time semantics (NOT a Cartesian product).",
+    "difficulty_level": 3,
+    "user_profile_id": "expert_operator",
+    "user_messages": [
+      "Set up a 2D NVT simulation of 500 particles: disks and capsules. Use volume_fraction = 0.5 baseline.",
+      "Plan two separate sweeps: volume fraction at 0.3, 0.5, 0.7, and capsule length at 2.0, 3.0, 4.0. Each varied independently from the baseline."
+    ],
+    "expected_outcomes": [
+      "Planner is called once with tunable_parameters containing BOTH 'volume_fraction': [0.3, 0.5, 0.7] AND 'particle_specs.1.length': [2.0, 3.0, 4.0].",
+      "Six runs are planned (3 + 3, NOT 9 = 3x3 Cartesian).",
+      "Agent does not silently collapse the two axes into a Cartesian product."
+    ],
+    "metadata": {
+      "stage": "planning",
+      "tags": ["multi_axis_sweep", "one_at_a_time", "nvt"]
+    }
+  },
+  {
+    "task_id": "plan_invalid_p_on_nvt",
+    "description": "Difficulty 4 — adversarial. The setup is NVT but the user asks for a pressure sweep. P is an NPT-only system field; on NVT the planner should reject the path or the agent should refuse / propose switching to NPT.",
+    "difficulty_level": 4,
+    "user_profile_id": "noisy_or_ambiguous_user",
+    "user_messages": [
+      "Set up a 2D NVT Monte Carlo simulation of 500 particles: disks and capsules.",
+      "Plan a pressure sweep at P = 1.0, 5.0, and 10.0."
+    ],
+    "expected_outcomes": [
+      "Agent identifies that P (pressure) is not a valid sweep parameter under NVT.",
+      "Agent either (a) asks the user to switch the ensemble to NPT, or (b) refuses to call the planner with an invalid path — does NOT silently submit P as a tunable on an NVT problem."
+    ],
+    "metadata": {
+      "stage": "planning",
+      "tags": ["adversarial", "ensemble_mismatch", "nvt", "pressure"],
+      "adversarial": true,
+      "expected_failure_mode": "P is NPT-only; not applicable to NVT setup"
+    }
+  }
+]

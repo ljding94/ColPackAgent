@@ -1,0 +1,40 @@
+{
+  "experiment_id": "colpack_setup_eval",
+  "description": "Setup-stage evaluation suite. Tasks ladder from a single-shape 2D problem up to adversarial mixtures (HPMC-incompatible shapes, dimension mismatch). Build the 'full' skill variant before running: python eval/build_skill_variant.py --variant-id full",
+  "output_dir": "eval/runs/colpack_setup_eval",
+  "working_dir_root": "eval/data",
+  "repeats": 1,
+  "bootstrap_skill": true,
+  "user_profiles": [
+    {
+      "profile_id": "novice_workflow_user",
+      "description": "Describes the workflow in natural language and expects the agent to structure the process."
+    },
+    {
+      "profile_id": "expert_operator",
+      "description": "Uses domain-specific language and expects concise workflow handling with minimal handholding."
+    },
+    {
+      "profile_id": "noisy_or_ambiguous_user",
+      "description": "Uses incomplete, slightly inconsistent, or poorly phrased requests to test robustness."
+    }
+  ],
+  "tasks_file": "eval/tasks/setup_tasks.json",
+  "models": [
+    {
+      "model_id": "openrouter/google/gemini-3-flash-preview",
+      "label": "gemini-3-flash-preview"
+    }
+  ],
+  "skills": [
+    {
+      "skill_id": "full",
+      "skill_path": "eval/skills/full/colpack/SKILL.md",
+      "description": "Full skill, no ablation."
+    }
+  ],
+  "metadata": {
+    "axis": "task difficulty",
+    "stage": "setup"
+  }
+}

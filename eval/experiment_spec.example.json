@@ -37,9 +37,9 @@
   ],
   "skills": [
     {
-      "skill_id": "baseline",
-      "skill_path": "eval/skills/colpack/SKILL.md",
-      "description": "Eval-local baseline skill"
+      "skill_id": "full",
+      "skill_path": "eval/skills/full/colpack/SKILL.md",
+      "description": "Full skill, no ablation. Build with: python eval/build_skill_variant.py --variant-id full"
     }
   ],
   "metadata": {

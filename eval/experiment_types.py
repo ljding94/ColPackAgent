@@ -13,7 +13,7 @@ def _repo_root() -> Path:
 
 
 def _default_eval_skill_path() -> Path:
-    return _repo_root() / "eval" / "skills" / "colpack" / "SKILL.md"
+    return _repo_root() / "eval" / "skills" / "full" / "colpack" / "SKILL.md"
 
 
 def _resolve_path(path_text: str | None, *, default_path: Path | None = None) -> Path | None:
@@ -214,6 +214,20 @@ def load_experiment_spec(spec_path: Path) -> ExperimentSpec:
     if output_dir is None or working_dir_root is None or agent_path is None:
         raise ValueError("Experiment spec could not resolve output_dir, working_dir_root, or agent_path.")
 
+    raw_tasks_inline = raw_spec.get("tasks")
+    raw_tasks_file = raw_spec.get("tasks_file")
+    if raw_tasks_inline and raw_tasks_file:
+        raise ValueError("Experiment spec cannot define both 'tasks' and 'tasks_file'.")
+    if raw_tasks_file:
+        tasks_path = _resolve_path(raw_tasks_file)
+        if tasks_path is None or not tasks_path.exists():
+            raise ValueError(f"tasks_file not found: {raw_tasks_file}")
+        raw_tasks = json.loads(tasks_path.read_text(encoding="utf-8"))
+        if not isinstance(raw_tasks, list):
+            raise ValueError(f"tasks_file {tasks_path} must contain a JSON array of task entries.")
+    else:
+        raw_tasks = raw_tasks_inline or []
+
     spec = ExperimentSpec(
         experiment_id=experiment_id,
         description=str(raw_spec.get("description", "")),
@@ -224,7 +238,7 @@ def load_experiment_spec(spec_path: Path) -> ExperimentSpec:
         bootstrap_skill=bool(raw_spec.get("bootstrap_skill", True)),
         repeats=max(1, int(raw_spec.get("repeats", 1))),
         user_profiles=_load_user_profiles(raw_spec.get("user_profiles")),
-        tasks=_load_tasks(raw_spec.get("tasks", [])),
+        tasks=_load_tasks(raw_tasks),
         models=_load_models(raw_spec.get("models")),
         skills=_load_skills(raw_spec.get("skills")),
         metadata=dict(raw_spec.get("metadata", {})),
