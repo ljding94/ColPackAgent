@@ -5,7 +5,8 @@
     "difficulty_level": 1,
     "user_profile_id": "novice_workflow_user",
     "user_messages": [
-      "There is an existing simulation problem already set up at the working directory `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, mixture of disks and capsules). Plan a sweep over volume_fraction at 0.3, 0.5, and 0.7."
+      "There is an existing simulation problem already set up at the working directory `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, mixture of disks and capsules). Plan a sweep over volume_fraction at 0.3, 0.5, and 0.7.",
+      "Yes, please proceed."
     ],
     "expected_outcomes": [
       "plan_simulation_runs_tool is called with working_dir set to the fixture path and tunable_parameters={'volume_fraction': [0.3, 0.5, 0.7]}.",
@@ -14,7 +15,13 @@
     ],
     "metadata": {
       "stage": "planning",
-      "tags": ["volume_fraction_sweep", "nvt", "2d", "binary_mixture", "fixture_backed"],
+      "tags": [
+        "volume_fraction_sweep",
+        "nvt",
+        "2d",
+        "binary_mixture",
+        "fixture_backed"
+      ],
       "fixture_id": "2d_nvt_disk_capsule_setup"
     }
   },
@@ -24,7 +31,8 @@
     "difficulty_level": 1,
     "user_profile_id": "novice_workflow_user",
     "user_messages": [
-      "There is an existing simulation problem already set up at the working directory `{{fixture:2d_npt_disk_capsule_setup}}` (2D NPT, 500 particles, mixture of disks and capsules). Plan a pressure sweep at P = 1.0, 5.0, and 10.0."
+      "There is an existing simulation problem already set up at the working directory `{{fixture:2d_npt_disk_capsule_setup}}` (2D NPT, 500 particles, mixture of disks and capsules). Plan a pressure sweep at P = 1.0, 5.0, and 10.0.",
+      "Yes, please proceed."
     ],
     "expected_outcomes": [
       "plan_simulation_runs_tool is called with working_dir set to the fixture path and tunable_parameters={'P': [1.0, 5.0, 10.0]}.",
@@ -33,7 +41,13 @@
     ],
     "metadata": {
       "stage": "planning",
-      "tags": ["pressure_sweep", "npt", "2d", "binary_mixture", "fixture_backed"],
+      "tags": [
+        "pressure_sweep",
+        "npt",
+        "2d",
+        "binary_mixture",
+        "fixture_backed"
+      ],
       "fixture_id": "2d_npt_disk_capsule_setup"
     }
   },
@@ -43,7 +57,8 @@
     "difficulty_level": 2,
     "user_profile_id": "expert_operator",
     "user_messages": [
-      "There is an existing simulation problem set up at `{{fixture:2d_nvt_disk_disk_setup}}` (2D NVT, 1000 disks as a binary mixture of two disk types). Use volume_fraction = 0.5 as the baseline. Plan a sweep over the first disk type's diameter at 0.5, 1.0, 1.5, with the second disk type fixed at diameter 1.0."
+      "There is an existing simulation problem set up at `{{fixture:2d_nvt_disk_disk_setup}}` (2D NVT, 1000 disks as a binary mixture of two disk types). Use volume_fraction = 0.5 as the baseline. Plan a sweep over the first disk type's diameter at 0.5, 1.0, 1.5, with the second disk type fixed at diameter 1.0.",
+      "Yes, please proceed."
     ],
     "expected_outcomes": [
       "Planner is called with baseline_parameters including 'volume_fraction': 0.5 and 'particle_specs.1.diameter': 1.0, and tunable_parameters={'particle_specs.0.diameter': [0.5, 1.0, 1.5]}.",
@@ -52,7 +67,14 @@
     ],
     "metadata": {
       "stage": "planning",
-      "tags": ["shape_parameter_sweep", "diameter", "bidisperse", "nvt", "dot_path", "fixture_backed"],
+      "tags": [
+        "shape_parameter_sweep",
+        "diameter",
+        "bidisperse",
+        "nvt",
+        "dot_path",
+        "fixture_backed"
+      ],
       "fixture_id": "2d_nvt_disk_disk_setup"
     }
   },
@@ -62,7 +84,8 @@
     "difficulty_level": 3,
     "user_profile_id": "expert_operator",
     "user_messages": [
-      "There is an existing simulation problem at `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, mixture of disks (component 0) and capsules (component 1)). Use volume_fraction = 0.4 as the baseline. Plan a sweep where the capsule volume fraction relative to disks is 0.5, 1.0, and 2.0. The disk component stays as the reference (relative_volume_fraction = 1)."
+      "There is an existing simulation problem at `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, mixture of disks (component 0) and capsules (component 1)). Use volume_fraction = 0.4 as the baseline. Plan a sweep where the capsule volume fraction relative to disks is 0.5, 1.0, and 2.0. The disk component stays as the reference (relative_volume_fraction = 1).",
+      "Yes, please proceed."
     ],
     "expected_outcomes": [
       "Planner is called with tunable_parameters={'particle_specs.1.relative_volume_fraction': [0.5, 1.0, 2.0]}, the disk component left at 1.",
@@ -71,7 +94,12 @@
     ],
     "metadata": {
       "stage": "planning",
-      "tags": ["relative_volume_fraction_sweep", "mixture", "nvt", "fixture_backed"],
+      "tags": [
+        "relative_volume_fraction_sweep",
+        "mixture",
+        "nvt",
+        "fixture_backed"
+      ],
       "fixture_id": "2d_nvt_disk_capsule_setup"
     }
   },
@@ -81,7 +109,8 @@
     "difficulty_level": 3,
     "user_profile_id": "expert_operator",
     "user_messages": [
-      "There is an existing simulation problem at `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, disks and capsules). Use volume_fraction = 0.5 baseline. Plan two separate sweeps: volume_fraction at 0.3, 0.5, 0.7, and capsule length at 2.0, 3.0, 4.0. Each varied independently from the baseline."
+      "There is an existing simulation problem at `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, disks and capsules). Use volume_fraction = 0.5 baseline. Plan two separate sweeps: volume_fraction at 0.3, 0.5, 0.7, and capsule length at 2.0, 3.0, 4.0. Each varied independently from the baseline.",
+      "Yes, please proceed."
     ],
     "expected_outcomes": [
       "Planner is called once with tunable_parameters containing BOTH 'volume_fraction': [0.3, 0.5, 0.7] AND 'particle_specs.1.length': [2.0, 3.0, 4.0].",
@@ -90,7 +119,12 @@
     ],
     "metadata": {
       "stage": "planning",
-      "tags": ["multi_axis_sweep", "one_at_a_time", "nvt", "fixture_backed"],
+      "tags": [
+        "multi_axis_sweep",
+        "one_at_a_time",
+        "nvt",
+        "fixture_backed"
+      ],
       "fixture_id": "2d_nvt_disk_capsule_setup"
     }
   },
@@ -100,7 +134,8 @@
     "difficulty_level": 4,
     "user_profile_id": "noisy_or_ambiguous_user",
     "user_messages": [
-      "There is an existing simulation problem at `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, disks and capsules). Plan a pressure sweep at P = 1.0, 5.0, and 10.0."
+      "There is an existing simulation problem at `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, disks and capsules). Plan a pressure sweep at P = 1.0, 5.0, and 10.0.",
+      "Yes, please proceed."
     ],
     "expected_outcomes": [
       "Agent identifies that P (pressure) is not a valid sweep parameter under NVT.",
@@ -108,7 +143,13 @@
     ],
     "metadata": {
       "stage": "planning",
-      "tags": ["adversarial", "ensemble_mismatch", "nvt", "pressure", "fixture_backed"],
+      "tags": [
+        "adversarial",
+        "ensemble_mismatch",
+        "nvt",
+        "pressure",
+        "fixture_backed"
+      ],
       "adversarial": true,
       "expected_failure_mode": "P is NPT-only; not applicable to NVT setup",
       "fixture_id": "2d_nvt_disk_capsule_setup"
