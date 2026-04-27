@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import re
+import shutil
 import sys
 import time
 from dataclasses import replace
@@ -57,10 +58,27 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Disable the ColPack capability bootstrap even if the spec enables it.",
     )
     run_parser.add_argument(
+        "--clean-data",
+        action="store_true",
+        help="Before running, remove eval-generated working_dirs from spec.working_dir_root (preserving fixtures/).",
+    )
+    run_parser.add_argument(
         "--sdk-trace",
         action="store_true",
         help="Enable verbose opencode_agent_sdk transport logs (disabled by default).",
     )
+
+    clean_parser = subparsers.add_parser(
+        "clean",
+        help="Remove eval-generated working_dirs from a spec's working_dir_root, preserving fixtures/.",
+    )
+    clean_parser.add_argument("--spec", type=Path, required=True, help="Path to the experiment JSON spec.")
+    clean_parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip the confirmation step and delete immediately.",
+    )
+
     return parser
 
 
@@ -91,6 +109,36 @@ def _ensure_output_dir(spec: ExperimentSpec) -> Path:
 def _ensure_working_dir_root(spec: ExperimentSpec) -> Path:
     spec.working_dir_root.mkdir(parents=True, exist_ok=True)
     return spec.working_dir_root
+
+
+# Names under spec.working_dir_root that must NOT be deleted by clean operations.
+# 'fixtures' holds the bootstrap-built simulation/setup fixtures (expensive
+# to rebuild) referenced by planning and analysis specs via {{fixture:...}}.
+_PRESERVE_NAMES = frozenset({"fixtures"})
+
+
+def _clean_working_dir_root(
+    working_dir_root: Path,
+    *,
+    preserve: frozenset[str] = _PRESERVE_NAMES,
+) -> list[str]:
+    """Remove eval-generated content under working_dir_root, preserving the
+    named entries (by default, 'fixtures'). Returns a list of removed entry names.
+    """
+    if not working_dir_root.exists():
+        return []
+    removed: list[str] = []
+    for child in sorted(working_dir_root.iterdir()):
+        if child.name in preserve:
+            continue
+        if child.is_symlink() or child.is_file():
+            child.unlink()
+        elif child.is_dir():
+            shutil.rmtree(child)
+        else:
+            continue
+        removed.append(child.name)
+    return removed
 
 
 def _manifest_path(spec: ExperimentSpec) -> Path:
@@ -493,6 +541,27 @@ def _print_plan(spec: ExperimentSpec, *, write_manifest: bool) -> int:
     return 0
 
 
+def _do_clean(spec: ExperimentSpec, *, confirmed: bool) -> int:
+    root = spec.working_dir_root
+    if not root.exists():
+        print(f"[clean] {root} does not exist; nothing to do.")
+        return 0
+    candidates = sorted(c.name for c in root.iterdir() if c.name not in _PRESERVE_NAMES)
+    if not candidates:
+        print(f"[clean] {root} is already clean (only preserved entries remain: {sorted(_PRESERVE_NAMES)}).")
+        return 0
+    if not confirmed:
+        print(f"[clean] would remove {len(candidates)} entries from {root}:")
+        for name in candidates:
+            print(f"    {name}")
+        print(f"[clean] preserving: {sorted(_PRESERVE_NAMES)}")
+        print("[clean] re-run with --yes to proceed.")
+        return 0
+    removed = _clean_working_dir_root(root)
+    print(f"[clean] removed {len(removed)} entries from {root}: {removed}")
+    return 0
+
+
 def main() -> int:
     args = _build_parser().parse_args()
     _configure_eval_logging(sdk_trace=getattr(args, "sdk_trace", False))
@@ -500,6 +569,14 @@ def main() -> int:
 
     if args.command == "plan":
         return _print_plan(spec, write_manifest=args.write_manifest)
+
+    if args.command == "clean":
+        return _do_clean(spec, confirmed=args.yes)
+
+    if getattr(args, "clean_data", False):
+        removed = _clean_working_dir_root(spec.working_dir_root)
+        if removed:
+            print(f"[clean] removed {len(removed)} entries from {spec.working_dir_root} (preserving {sorted(_PRESERVE_NAMES)})")
 
     return asyncio.run(
         _run_experiment(
