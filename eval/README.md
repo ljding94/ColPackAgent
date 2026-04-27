@@ -166,6 +166,21 @@ python -m eval.run_experiments run --spec eval/specs/analysis_eval.json
 
 Vary `models` in each spec to add LLMs to the matrix. The two prerequisite commands (skill build + fixture bootstrap) run once per environment; thereafter each analysis run only exercises the analyze stage and is near-instant. The planning suite still redoes setup per task and will get faster once it's migrated to fixtures.
 
+## Scoring
+
+**Current state — liveness only.** A run is marked `success` if no turn reported a query or system error — i.e., the runner did not crash. This is *liveness*, not *correctness*: it does **not** verify that the agent called the right tool with the right arguments, refused adversarial requests, or interpreted analysis results correctly. `n_success` and `success_rate` in `summary.json` inherit this coarseness.
+
+Until proper scoring lands, **score adversarial tasks (L4–L5) and the L2 analysis interpretation task by reading the conversation transcripts** in `eval/runs/<experiment_id>/conversations/`. Do not trust `success_rate` for those tasks.
+
+> [!todo] Future — hybrid scoring (programmatic + LLM-judge)
+>
+> Plan to layer real scoring on top of liveness in two stages:
+>
+> 1. **Programmatic assertions per task.** Persist structured tool-use records per turn (currently the runner consumes them but doesn't store them in `TurnResult`), then add an assertion block in each task's metadata — for example `expected_tool_calls: [{name: setup_simulation_problem_tool, args: {dimension: 2, ...}}]` and `assert_no_drift: true`. Runner verifies these post-run. Free, deterministic; catches tool-call payload errors and stage drift.
+> 2. **LLM-as-judge for refusal + interpretation.** Where programmatic rules can't help (adversarial refusal quality, the L2 freezing-transition reasoning), ship the conversation transcript + `expected_outcomes` to a judge model and parse a pass/fail + rubric. Invoke via an opt-in `--with-judge` flag on the runner so basic loops stay free.
+>
+> Open: which judge model (independent strong model vs. self-judge vs. a small mini-judge), and how to design the rubric prompt so it's stable across LLMs being evaluated.
+
 ## Skill ablation lives in ColPackBench
 
 `build_skill_variant.py` can produce more than just the `full` variant — it supports `--exclude` (drop reference files) and `--strip-skill-body` (frontmatter-only SKILL.md). That machinery is intentionally retained here, but the **skill ablation study itself** (end-to-end tasks varying the `skills` axis on a fixed LLM) is out of scope for the ColPackAgent paper. It moved to a separate project, **ColPackBench**, along with the broader benchmark scope (more LLMs, automated scoring, additional task dimensions). See your project notes for `ColPackBench` for design and status.
@@ -199,4 +214,4 @@ By default, eval-generated ColPack workflow directories are rooted under `eval/d
 
 - The runner reuses the same prompt loading and MCP connection logic as the standalone wrapper.
 - Skill bootstrap is enabled by default to mirror `app.py`.
-- Success scoring is intentionally simple in the scaffold: a run is marked successful when no turn reports a query error or system error. More detailed rubric-based scoring can be added later.
+- Success scoring is currently liveness-only — see the [Scoring](#scoring) section above for what that catches and what it doesn't, plus the planned hybrid replacement.
