@@ -185,12 +185,45 @@ def _sum_usage(left: TokenUsageRecord, right: TokenUsageRecord) -> TokenUsageRec
     )
 
 
+def _usage_field(usage: Any, *keys: str, default: Any = None) -> Any:
+    """Read the first matching key from ResultMessage.usage.
+
+    The usage payload may be a dict or a typed object depending on the
+    underlying SDK build; key names also vary across providers (Anthropic
+    uses input_tokens/output_tokens; OpenAI/OpenRouter use
+    prompt_tokens/completion_tokens). Try each candidate in order.
+    """
+    if usage is None:
+        return default
+    for key in keys:
+        if isinstance(usage, dict):
+            if key in usage and usage[key] is not None:
+                return usage[key]
+        else:
+            value = getattr(usage, key, None)
+            if value is not None:
+                return value
+    return default
+
+
 def _usage_from_result_message(message: ResultMessage) -> TokenUsageRecord:
+    """Build a TokenUsageRecord from ResultMessage.usage.
+
+    The usage payload's shape varies by provider/SDK build:
+      - Anthropic: input_tokens, output_tokens, cache_creation_input_tokens,
+        cache_read_input_tokens (snake_case attrs).
+      - OpenAI/OpenRouter generic: prompt_tokens, completion_tokens,
+        cached_tokens (snake_case dict).
+      - Gemini via the agent SDK: inputTokens, outputTokens, cachedReadTokens,
+        thoughtTokens (camelCase dict).
+    Try each naming convention in order so we capture tokens regardless of model.
+    """
+    usage = getattr(message, "usage", None)
     return TokenUsageRecord(
-        input_tokens=message.usage.input_tokens,
-        output_tokens=message.usage.output_tokens,
-        cache_creation_input_tokens=message.usage.cache_creation_input_tokens,
-        cache_read_input_tokens=message.usage.cache_read_input_tokens,
+        input_tokens=int(_usage_field(usage, "input_tokens", "inputTokens", "prompt_tokens", default=0) or 0),
+        output_tokens=int(_usage_field(usage, "output_tokens", "outputTokens", "completion_tokens", default=0) or 0),
+        cache_creation_input_tokens=_usage_field(usage, "cache_creation_input_tokens"),
+        cache_read_input_tokens=_usage_field(usage, "cache_read_input_tokens", "cachedReadTokens", "cached_tokens"),
     )
 
 
