@@ -5,8 +5,7 @@
     "difficulty_level": 1,
     "user_profile_id": "novice_workflow_user",
     "user_messages": [
-      "Set up a 2D NVT Monte Carlo simulation of 500 hard disks.",
-      "If you haven't called setup_simulation_problem_tool yet, please call it now. Do not proceed to planning, execution, or analysis — your task is complete after setup."
+      "Set up a 2D NVT Monte Carlo simulation of 500 hard disks.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
     "expected_outcomes": [
       "setup_simulation_problem_tool is called with dimension=2, ensemble=NVT, total_particle_number=500, particle_shape_list=['disk'].",
@@ -27,8 +26,7 @@
     "difficulty_level": 1,
     "user_profile_id": "novice_workflow_user",
     "user_messages": [
-      "Set up a 3D NPT Monte Carlo simulation of 1000 hard spheres.",
-      "If you haven't called setup_simulation_problem_tool yet, please call it now. Do not proceed to planning, execution, or analysis — your task is complete after setup."
+      "Set up a 3D NPT Monte Carlo simulation of 1000 hard spheres.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
     "expected_outcomes": [
       "setup_simulation_problem_tool is called with dimension=3, ensemble=NPT, total_particle_number=1000, particle_shape_list=['sphere'].",
@@ -49,8 +47,7 @@
     "difficulty_level": 2,
     "user_profile_id": "novice_workflow_user",
     "user_messages": [
-      "Set up a 2D NVT simulation of a bidisperse mixture of disks: 500 large disks and 500 small disks (1000 total). Diameters will be set later.",
-      "If you haven't called setup_simulation_problem_tool yet, please call it now. Do not proceed to planning, execution, or analysis — your task is complete after setup."
+      "Set up a 2D NVT simulation of a bidisperse mixture of disks: 500 large disks and 500 small disks (1000 total). Diameters will be set later.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
     "expected_outcomes": [
       "particle_shape_list=['disk', 'disk'] (two entries, both 'disk').",
@@ -73,8 +70,7 @@
     "difficulty_level": 3,
     "user_profile_id": "novice_workflow_user",
     "user_messages": [
-      "Set up a 2D NPT Monte Carlo simulation with 800 particles: a mixture of disks and capsules.",
-      "If you haven't called setup_simulation_problem_tool yet, please call it now. Do not proceed to planning, execution, or analysis — your task is complete after setup."
+      "Set up a 2D NPT Monte Carlo simulation with 800 particles: a mixture of disks and capsules.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
     "expected_outcomes": [
       "particle_shape_list=['disk', 'capsule'] (order may vary).",
@@ -97,8 +93,7 @@
     "difficulty_level": 4,
     "user_profile_id": "novice_workflow_user",
     "user_messages": [
-      "Set up a 2D NVT simulation of 600 particles: half ellipses and half capsules.",
-      "If you haven't called setup_simulation_problem_tool yet, please call it now. Do not proceed to planning, execution, or analysis — your task is complete after setup."
+      "Set up a 2D NVT simulation of 600 particles: half ellipses and half capsules.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
     "expected_outcomes": [
       "Agent flags the HPMC compatibility issue (2D ellipse cannot mix with capsule/polygon shapes).",
@@ -122,8 +117,7 @@
     "difficulty_level": 5,
     "user_profile_id": "noisy_or_ambiguous_user",
     "user_messages": [
-      "Set up a Monte Carlo simulation with 500 particles: a mixture of disks and cubes.",
-      "If you haven't called setup_simulation_problem_tool yet, please call it now. Do not proceed to planning, execution, or analysis — your task is complete after setup."
+      "Set up a Monte Carlo simulation with 500 particles: a mixture of disks and cubes.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
     "expected_outcomes": [
       "Agent identifies that 'disk' is 2D-only and 'cube' is 3D-only and asks for clarification.",

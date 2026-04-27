@@ -154,6 +154,10 @@ class TurnResult:
     # plan_simulation_runs_tool while the task is a setup-stage task). Each
     # entry is a dict {"tool_name": str, "matched_suffix": str}.
     off_rail_tool_calls: tuple[dict[str, str], ...] = ()
+    # All controlled ColPack tool suffixes the agent invoked this turn
+    # (in call order, deduped per turn). Used by the run-level aggregator
+    # to determine whether the expected stage tool was ever called.
+    called_tool_suffixes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -184,6 +188,13 @@ class RunResult:
     # also preserved in turn_results[*].off_rail_tool_calls.
     off_rail: bool = False
     off_rail_tool_calls: tuple[dict[str, str], ...] = ()
+    # Deduped set of all controlled ColPack tool suffixes the agent called
+    # across every turn of this run. Used to determine whether the expected
+    # stage tool was ever called; serves as the failure signal for runs
+    # where the agent stayed waiting for confirmation despite explicit
+    # "no confirmation needed" instruction in the prompt.
+    tools_called: tuple[str, ...] = ()
+    expected_tool_called: bool = True
     metadata: dict[str, Any] = field(default_factory=dict)
 
 

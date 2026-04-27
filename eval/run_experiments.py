@@ -144,6 +144,16 @@ _STAGE_ALLOWED_SUFFIXES: dict[str, frozenset[str]] = {
     "analysis": frozenset({"get_colpack_capabilities_tool", "analyze_simulation_runs_tool"}),
 }
 
+# The single primary tool a task at each stage is expected to call. If the
+# agent never calls this tool (e.g. it stayed waiting for a confirmation that
+# wasn't coming despite explicit "no confirmation needed" instruction in the
+# prompt), the run is treated as a failure-to-act.
+_STAGE_EXPECTED_TOOL: dict[str, str] = {
+    "setup": "setup_simulation_problem_tool",
+    "planning": "plan_simulation_runs_tool",
+    "analysis": "analyze_simulation_runs_tool",
+}
+
 
 def _tool_name_matches_suffix(tool_name: str, suffix: str) -> bool:
     return tool_name == suffix or tool_name.endswith(f"_{suffix}")
@@ -399,6 +409,7 @@ async def _collect_turn_result(
     total_cost_usd = 0.0
     response_duration_ms = 0.0
     off_rail_tool_calls: list[dict[str, str]] = []
+    called_tool_suffixes: list[str] = []
 
     async for message in client.receive_response():
         if isinstance(message, AssistantMessage):
@@ -408,12 +419,14 @@ async def _collect_turn_result(
                     continue
                 seen_tool_ids.add(tool_use.id)
 
-                # Off-rail detection: if this is a controlled colpack tool that
-                # is NOT in the task's allowed set, record it. Non-colpack tools
-                # (Read, Bash, etc.) and never-controlled tools pass through.
-                if allowed_tool_suffixes is not None:
-                    matched = _match_controlled_suffix(tool_use.name)
-                    if matched is not None and matched not in allowed_tool_suffixes:
+                # Track all controlled-colpack-tool calls. Non-colpack tools
+                # (Read, Bash, etc.) don't count toward the called/off-rail set.
+                matched = _match_controlled_suffix(tool_use.name)
+                if matched is not None:
+                    if matched not in called_tool_suffixes:
+                        called_tool_suffixes.append(matched)
+                    # Off-rail detection: controlled tool NOT in the task's allowed set.
+                    if allowed_tool_suffixes is not None and matched not in allowed_tool_suffixes:
                         off_rail_tool_calls.append({
                             "tool_name": tool_use.name,
                             "matched_suffix": matched,
@@ -463,6 +476,7 @@ async def _collect_turn_result(
         session_id=session_id,
         sdk_turn_count=sdk_turn_count,
         off_rail_tool_calls=tuple(off_rail_tool_calls),
+        called_tool_suffixes=tuple(called_tool_suffixes),
     )
     return turn_result, background_state, workflow_session_active
 
@@ -488,6 +502,12 @@ async def _execute_run_case(
     total_cost_usd = 0.0
     client = None
 
+    # Derive task-level scope info up front so it's available even if the
+    # SDK/client fails before we get into the conversation loop.
+    task_stage = planned_run.task.metadata.get("stage") if planned_run.task.metadata else None
+    allowed_tool_suffixes = _allowed_suffixes_for_task_stage(task_stage)
+    agent_mode_suffix = f"\n\nAGENT_MODE = {spec.agent_mode}" if spec.agent_mode else ""
+
     try:
         client = await agent_app._connect_client(
             agent_path=agent_definition.source_path,
@@ -499,13 +519,6 @@ async def _execute_run_case(
         )
         if bootstrap_skill:
             background_state = await agent_app._bootstrap_skill_session(client, background_state)
-
-        agent_mode_suffix = f"\n\nAGENT_MODE = {spec.agent_mode}" if spec.agent_mode else ""
-
-        # Derive allowed colpack tool suffixes from the task's stage so we can
-        # detect (and shortcut on) any tool calls that fall outside scope.
-        task_stage = planned_run.task.metadata.get("stage") if planned_run.task.metadata else None
-        allowed_tool_suffixes = _allowed_suffixes_for_task_stage(task_stage)
 
         run_off_rail = False  # short-circuits the user-message loop on first off-rail turn
 
@@ -585,10 +598,20 @@ async def _execute_run_case(
     # when the user has set OpenRouter account-level provider preferences).
     model_metadata = dict(planned_run.model.metadata) if planned_run.model.metadata else {}
 
-    # Aggregate off-rail tool calls across every turn for run-level reporting.
+    # Aggregate off-rail and called-tool sets across every turn for run-level reporting.
     aggregated_off_rail: list[dict[str, str]] = []
+    tools_called_set: list[str] = []
     for turn in turn_results:
         aggregated_off_rail.extend(turn.off_rail_tool_calls)
+        for suffix in turn.called_tool_suffixes:
+            if suffix not in tools_called_set:
+                tools_called_set.append(suffix)
+
+    # Was the expected stage tool ever called? If not, the agent stayed
+    # waiting (or hallucinated something else) despite the explicit
+    # "no confirmation needed" instruction — that's a failure-to-act.
+    expected_tool = _STAGE_EXPECTED_TOOL.get(task_stage) if task_stage else None
+    expected_tool_called = (expected_tool is None) or (expected_tool in tools_called_set)
 
     return RunResult(
         run_id=planned_run.run_id,
@@ -608,6 +631,8 @@ async def _execute_run_case(
         turn_results=tuple(turn_results),
         off_rail=bool(aggregated_off_rail),
         off_rail_tool_calls=tuple(aggregated_off_rail),
+        tools_called=tuple(tools_called_set),
+        expected_tool_called=expected_tool_called,
         metadata={
             "agent_path": str(spec.agent_path),
             "resolved_skill_path": str(planned_run.skill.skill_path),
@@ -616,7 +641,8 @@ async def _execute_run_case(
             "normalized_model": normalized_model,
             "model_label": planned_run.model.label,
             "model_metadata": model_metadata,
-            "task_stage": planned_run.task.metadata.get("stage") if planned_run.task.metadata else None,
+            "task_stage": task_stage,
+            "expected_tool": expected_tool,
             "allowed_tool_suffixes": sorted(allowed_tool_suffixes) if allowed_tool_suffixes else None,
         },
     )
@@ -634,6 +660,7 @@ def _aggregate_block(results: list[RunResult]) -> dict[str, Any]:
     n = len(results)
     n_success = sum(1 for r in results if r.success)
     n_off_rail = sum(1 for r in results if r.off_rail)
+    n_no_call = sum(1 for r in results if not r.expected_tool_called)
     cache_read = sum((r.usage.cache_read_input_tokens or 0) for r in results)
     fresh_input = sum(r.usage.input_tokens for r in results)
     return {
@@ -642,6 +669,8 @@ def _aggregate_block(results: list[RunResult]) -> dict[str, Any]:
         "success_rate": (n_success / n) if n else 0.0,
         "n_off_rail": n_off_rail,
         "off_rail_rate": (n_off_rail / n) if n else 0.0,
+        "n_no_expected_tool_call": n_no_call,
+        "no_expected_tool_call_rate": (n_no_call / n) if n else 0.0,
         "total_cost_usd": sum(r.total_cost_usd for r in results),
         "total_wall_time_seconds": sum(r.wall_time_seconds for r in results),
         "total_input_tokens": fresh_input,
