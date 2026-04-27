@@ -23,6 +23,10 @@
   "tasks_file": "eval/tasks/setup_tasks.json",
   "models": [
     {
+      "model_id": "openrouter/anthropic/claude-opus-4.7",
+      "label": "anthropic/claude-opus-4.7"
+    },
+    {
       "model_id": "openrouter/google/gemini-3-flash-preview",
       "label": "gemini-3-flash-preview"
     }

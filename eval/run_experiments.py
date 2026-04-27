@@ -438,11 +438,17 @@ async def _execute_run_case(
     success = all(not turn.query_had_error and not turn.system_errors for turn in turn_results)
     completed_at = _utc_now()
     wall_time_seconds = time.perf_counter() - wall_start
+    # Pull any user-supplied routing documentation from the model spec so it
+    # round-trips into results.jsonl (e.g. expected_backend="google-vertex"
+    # when the user has set OpenRouter account-level provider preferences).
+    model_metadata = dict(planned_run.model.metadata) if planned_run.model.metadata else {}
+
     return RunResult(
         run_id=planned_run.run_id,
         experiment_id=spec.experiment_id,
         task_id=planned_run.task.task_id,
         model_id=planned_run.model.model_id,
+        provider_id=provider_id,
         skill_id=planned_run.skill.skill_id,
         repeat_index=planned_run.repeat_index,
         user_profile_id=planned_run.user_profile.profile_id if planned_run.user_profile is not None else None,
@@ -458,6 +464,9 @@ async def _execute_run_case(
             "resolved_skill_path": str(planned_run.skill.skill_path),
             "working_dir_root": str(spec.working_dir_root),
             "bootstrap_skill": bootstrap_skill,
+            "normalized_model": normalized_model,
+            "model_label": planned_run.model.label,
+            "model_metadata": model_metadata,
         },
     )
 
@@ -494,11 +503,27 @@ def _summarize_results(spec: ExperimentSpec, run_results: list[RunResult]) -> di
     for r in run_results:
         per_model.setdefault(r.model_id, []).append(r)
 
+    # Pull spec-level model metadata (label, expected_backend, etc.) by id so
+    # the per-model summary can surface it without grepping results.jsonl.
+    spec_models = {m.model_id: m for m in spec.models}
+
+    def _per_model_block(model_id: str, runs: list[RunResult]) -> dict[str, Any]:
+        block = _aggregate_block(runs)
+        # provider_id is fixed per (model_id) since it's resolved from the model id.
+        block["provider_id"] = runs[0].provider_id if runs else ""
+        m = spec_models.get(model_id)
+        if m is not None:
+            if m.label:
+                block["label"] = m.label
+            if m.metadata:
+                block["model_metadata"] = dict(m.metadata)
+        return block
+
     summary = {
         "experiment_id": spec.experiment_id,
         "generated_at": _utc_now(),
         **_aggregate_block(run_results),
-        "per_model": {model_id: _aggregate_block(runs) for model_id, runs in per_model.items()},
+        "per_model": {model_id: _per_model_block(model_id, runs) for model_id, runs in per_model.items()},
     }
     return summary
 

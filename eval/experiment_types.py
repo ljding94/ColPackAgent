@@ -168,6 +168,12 @@ class RunResult:
     total_cost_usd: float
     usage: TokenUsageRecord
     turn_results: tuple[TurnResult, ...]
+    # SDK provider id used for the run (e.g. "openrouter"). When routing through
+    # OpenRouter, the actual sub-backend (e.g. Google Vertex vs direct Anthropic)
+    # is decided by OpenRouter per its account-level provider preferences and
+    # is not exposed via the SDK. Use the OpenRouter activity dashboard for
+    # post-hoc audit of which sub-backend served a given request.
+    provider_id: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
 
 

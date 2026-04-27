@@ -125,6 +125,27 @@ Just append entries to the spec's `models` array — no code changes:
 
 Each entry needs `model_id` (the SDK passes this through to the provider router); `label` is optional and shows up in run-ids and transcript filenames. For apples-to-apples comparison, paste the same `models` block into all three specs.
 
+### Provider routing and the audit trail
+
+Today every model_id of the form `openrouter/<vendor>/<model>` routes through OpenRouter's API; OpenRouter then chooses a sub-backend (Google Vertex, direct Anthropic, AWS Bedrock, etc.) per its account-level **provider preferences** at `https://openrouter.ai/settings/privacy`. Pinning a sub-backend (e.g. routing all traffic through Google Vertex for fairness) is configured there, not in the spec.
+
+The eval *records* what we sent to the SDK (`provider_id` from the model_id prefix, e.g. `"openrouter"`) but cannot programmatically read OpenRouter's actual sub-backend choice — that information lives on the OpenRouter activity dashboard at `https://openrouter.ai/activity`. For paper-grade auditability:
+
+1. Pin the desired sub-backend in OpenRouter's privacy settings (allowed/ignored providers).
+2. Optionally annotate each model in the spec with `metadata.expected_backend` for documentation:
+
+   ```json
+   {
+     "model_id": "openrouter/anthropic/claude-opus-4.7",
+     "label": "claude-opus-4.7",
+     "metadata": { "expected_backend": "google-vertex" }
+   }
+   ```
+
+   The runner echoes this into `results.jsonl` (`metadata.model_metadata`) and `summary.json` (`per_model[*].model_metadata`). Reviewers can then cross-check the OpenRouter activity dashboard to confirm runs landed on the expected backend.
+
+3. The summary's `per_model` block also exposes the resolved `provider_id` (e.g. `"openrouter"`) per model so you can see the SDK-level routing target at a glance.
+
 ### End-to-end pipeline
 
 ```text
