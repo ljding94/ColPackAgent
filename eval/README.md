@@ -133,7 +133,28 @@ A full Track 1 pass therefore incurs:
 
 Without this dependency, every analysis task would redo setup + plan + execute end-to-end — costing K full pipelines instead of 2.
 
-> **Current state.** The dependency design is documented here; the existing analysis tasks (`tasks/analysis_tasks.json`) currently redo the full pipeline within each task. Refactoring them to reference fixture `working_dir`s — plus a small "fixture-bootstrap" command that runs the 2 chosen executions before the analysis suite — is the next infra step. Same applies to the planning tasks reusing setup fixtures rather than running setup themselves.
+#### Bootstrapping fixtures
+
+`eval/bootstrap_fixtures.py` builds the 2 simulation fixtures by calling `setup_simulation_problem` → `plan_simulaiton_runs` → `execute_simulation_workflow` directly (no agent in the loop), so fixtures are deterministic and decoupled from the LLM under test:
+
+```bash
+python eval/bootstrap_fixtures.py                       # build any missing fixtures
+python eval/bootstrap_fixtures.py --force               # rebuild all fixtures from scratch
+python eval/bootstrap_fixtures.py --only 2d_nvt_disk    # build a single fixture
+```
+
+The two default fixtures (chosen for single-shape vs mixture coverage):
+
+| Fixture id | System | Sweep |
+| --- | --- | --- |
+| `2d_nvt_disk` | 2D NVT, 100 hard disks | `volume_fraction` ∈ {0.4, 0.6} |
+| `2d_nvt_disk_capsule` | 2D NVT, 100 particles in a disk+capsule mixture | `volume_fraction` ∈ {0.4, 0.6} |
+
+Outputs land at `eval/data/fixtures/<fixture_id>/` (gitignored under `eval/data/`). Each fixture directory holds the standard `simulation_problem.json`, `simulation_baseline.json`, `simulation_plan.json`, per-run trajectories (`init.gsd`, `compress.gsd`, `sample_trajectory.gsd`, `sample_final.gsd`), `workflow_status.csv`, and a fresh `analyze=X` column ready to be filled in by the analysis suite.
+
+A combined `eval/data/fixtures/_index.json` records the mapping from fixture id → absolute `working_dir` plus the params used to build it. Downstream specs and tasks should resolve fixture paths through this index rather than hardcoding them.
+
+> **Current state.** Bootstrap script is in place and validated. The existing analysis tasks (`tasks/analysis_tasks.json`) and planning tasks (`tasks/planning_tasks.json`) still redo earlier stages within each task; refactoring them to reference fixture `working_dir`s through the index is the next infra step.
 
 ### Running the LLM evaluation
 
