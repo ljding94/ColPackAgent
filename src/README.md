@@ -6,6 +6,22 @@ ColPack orchestrates the full pipeline — problem setup, parameter sweep
 planning, simulation execution, and analysis — and exposes it both as a Python
 API and as an MCP tool surface for agent-driven workflows.
 
+## Installation
+
+ColPack depends on **HOOMD-blue** and **OVITO**, which are not available on
+PyPI and must be installed from conda-forge. The recommended setup is a conda
+environment with those two packages, then `pip install colpack` on top:
+
+```bash
+conda create -n colpack python=3.11
+conda activate colpack
+conda install -c conda-forge hoomd ovito
+pip install colpack
+```
+
+The remaining dependencies (`numpy`, `gsd`, `freud-analysis`, `matplotlib`,
+`pydantic`, `mcp`) are resolved automatically by pip.
+
 ## Capabilities
 
 ### Dimensions, shapes, and ensembles
@@ -205,8 +221,14 @@ both the Python API and the agent.
 
 ## Dependencies
 
+Provided by conda-forge (system prerequisites, see Installation above):
+
 - [hoomd-blue](https://glotzerlab.engin.umich.edu/hoomd-blue/) (HPMC integrator)
+- [ovito](https://www.ovito.org/) (rendering / per-frame visualization)
+
+Resolved automatically by pip:
+
 - [freud](https://freud.readthedocs.io) (analysis)
 - [gsd](https://gsd.readthedocs.io) (trajectory I/O)
-- [ovito](https://www.ovito.org/) (rendering / per-frame visualization)
-- numpy, matplotlib
+- [pydantic](https://docs.pydantic.dev/), [mcp](https://modelcontextprotocol.io/),
+  numpy, matplotlib

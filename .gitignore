@@ -48,6 +48,10 @@
 # Git and project files
 !/.gitignore
 
+# GitHub Actions workflows
+!/.github/
+!/.github/**
+
 # AGENTS.md lives in agent/ — Codex finds it by running from agent/ as CWD
 !/agent/AGENTS.md
 
