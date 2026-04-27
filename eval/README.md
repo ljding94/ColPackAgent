@@ -53,6 +53,99 @@ python -m eval.run_experiments run --spec eval/specs/setup_eval.json --limit 1
 
 under the experiment `output_dir`.
 
+## How the Runner Works
+
+The cleanest way to think about this is: **specs are recipes, tasks are the menu, the runner is the kitchen**. Every experiment is just one spec pointing at one task collection plus axes saying "which models / which skills / how many repeats."
+
+### Specs vs. tasks — the conceptual split
+
+| Folder | Holds | Changes when… |
+|---|---|---|
+| [`eval/tasks/`](tasks/) | The actual prompts: `user_messages`, `expected_outcomes`, `difficulty_level`, `user_profile_id`, `metadata`. **Pure test cases — no notion of which LLM or skill evaluates them.** | You want to add a new prompt or tweak wording. |
+| [`eval/specs/`](specs/) | The experiment recipe: `experiment_id`, `output_dir`, `tasks_file` (pointer to a tasks JSON), `models` array, `skills` array, `agent_mode`, `repeats`. **No prompts inside.** | You want to add an LLM, change the skill variant, change repeats, or run the same prompts under a different output dir. |
+
+The split is what lets you reuse a task collection across many experiments (e.g., the same `setup_tasks.json` evaluated against four different model panels) without copy-pasting prompts.
+
+### How a spec becomes a list of runs
+
+The runner expands the matrix in this nesting order ([experiment_types.py:243](experiment_types.py#L243)):
+
+```python
+for repeat in range(repeats):
+    for task in tasks:
+        for model in models:
+            for skill in skills:
+                # ← one planned_run per innermost iteration
+```
+
+So with the current [`setup_eval.json`](specs/setup_eval.json) (6 tasks × 1 model × 1 skill × 1 repeat) the matrix has **6 planned runs**. If you append three more LLMs to `models`, it expands to 6 × 4 × 1 × 1 = **24 planned runs** — same prompts, four times the LLM coverage.
+
+The loop nesting matters when you slice the matrix:
+
+```text
+With 4 models x 6 tasks x 1 skill x 1 repeat:
+
+   index   task                  model      skill   repeat
+   -----   --------------------  ---------  ------  ------
+    0      setup_2d_disk         gemini     full    r01      <-- --limit 1 stops here
+    1      setup_2d_disk         claude     full    r01      <-- --limit 4 includes
+    2      setup_2d_disk         gpt-4o     full    r01          all four LLMs on task 0
+    3      setup_2d_disk         llama      full    r01      <--
+    4      setup_3d_sphere       gemini     full    r01
+    5      setup_3d_sphere       claude     full    r01
+    ...    ...                   ...        ...     ...
+   23      setup_dim_mismatch    llama      full    r01      <-- no --limit runs all 24
+```
+
+Because `model` is *inside* `task`, all models cycle through before `task` advances. That's why `--limit N_models` is a great smoke test when you add a new LLM: it gives you "task 0 across every model" in one shot.
+
+### What `--limit N` actually does
+
+It's a slice on the already-expanded matrix ([run_experiments.py:574](run_experiments.py#L574)):
+
+```python
+planned_runs = expand_planned_runs(spec)
+if limit > 0:
+    planned_runs = planned_runs[:limit]
+```
+
+It only changes the **count** of LLM calls, not how prompts are constructed or which prompts get included. The order is fully determined by the loop nesting above.
+
+### Adding more LLMs
+
+Just append entries to the spec's `models` array — no code changes:
+
+```json
+"models": [
+  { "model_id": "openrouter/google/gemini-3-flash-preview",   "label": "gemini" },
+  { "model_id": "openrouter/anthropic/claude-sonnet-4-6",     "label": "claude-sonnet" },
+  { "model_id": "openrouter/openai/gpt-4o",                   "label": "gpt-4o" },
+  { "model_id": "openrouter/meta-llama/llama-3.3-70b-instruct", "label": "llama-3.3-70b" }
+]
+```
+
+Each entry needs `model_id` (the SDK passes this through to the provider router); `label` is optional and shows up in run-ids and transcript filenames. For apples-to-apples comparison, paste the same `models` block into all three specs.
+
+### End-to-end pipeline
+
+```text
+spec.json ── tasks_file ──→ tasks.json
+   │              │
+   └── + models, skills, repeats ──→ expand_planned_runs() ──→ [run_0, run_1, …, run_N-1]
+                                                                       │
+                                                                  --limit K slices
+                                                                       │
+                                                                       ▼
+                                                              [run_0, …, run_K-1]
+                                                                       │
+                                                                       ▼
+                                                  runner executes K LLM-driven runs
+                                                                       │
+                                                                       ▼
+                                                  writes results.jsonl, summary.json,
+                                                  conversations/<run_id>.md
+```
+
 ## Difficulty Ladder & User Personas
 
 Each task carries a numeric `difficulty_level` (1–5) and a `user_profile_id` naming the prompt style. The two axes are tightly correlated — easier problems are usually expressed in plain language, and adversarial problems usually arrive in noisier or contradictory ones — so we treat them as a single ladder, with the persona naming the prompt style at each level:
