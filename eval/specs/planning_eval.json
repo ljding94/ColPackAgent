@@ -1,6 +1,6 @@
 {
   "experiment_id": "colpack_planning_eval",
-  "description": "Planning-stage evaluation suite (fixture-backed). Each task points at a setup-only fixture built by eval/bootstrap_fixtures.py and tests only the planning stage — no per-task setup call. Covers volume-fraction (NVT), pressure (NPT), per-component shape parameters, relative volume fraction, two-axis sweeps, and an adversarial NVT+pressure mismatch. Prereqs: python eval/bootstrap_fixtures.py && python eval/build_skill_variant.py --variant-id full",
+  "description": "Planning-stage evaluation suite (fixture-backed). Each task points at a setup-only fixture built by eval/bootstrap_fixtures.py and tests only the planning stage — no per-task setup call. Covers volume-fraction (NVT), pressure (NPT), per-component shape parameters, relative volume fraction, two-axis sweeps, and an adversarial NVT+pressure mismatch. Prereq: python eval/bootstrap_fixtures.py",
   "output_dir": "eval/runs/colpack_planning_eval",
   "working_dir_root": "eval/data",
   "repeats": 1,
@@ -30,7 +30,7 @@
   "skills": [
     {
       "skill_id": "full",
-      "skill_path": "eval/skills/full/colpack/SKILL.md",
+      "skill_path": "agent/skills/colpack/SKILL.md",
       "description": "Full skill, no ablation."
     }
   ],

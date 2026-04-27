@@ -1,6 +1,6 @@
 {
   "experiment_id": "colpack_setup_eval",
-  "description": "Setup-stage evaluation suite. Tasks ladder from a single-shape 2D problem up to adversarial mixtures (HPMC-incompatible shapes, dimension mismatch). Build the 'full' skill variant before running: python eval/build_skill_variant.py --variant-id full",
+  "description": "Setup-stage evaluation suite. Tasks ladder from a single-shape 2D problem up to adversarial mixtures (HPMC-incompatible shapes, dimension mismatch). No prerequisites — specs reference the production skill at agent/skills/colpack/SKILL.md directly.",
   "output_dir": "eval/runs/colpack_setup_eval",
   "working_dir_root": "eval/data",
   "repeats": 1,
@@ -30,8 +30,8 @@
   "skills": [
     {
       "skill_id": "full",
-      "skill_path": "eval/skills/full/colpack/SKILL.md",
-      "description": "Full skill, no ablation."
+      "skill_path": "agent/skills/colpack/SKILL.md",
+      "description": "Production agent skill at agent/skills/colpack/."
     }
   ],
   "metadata": {

@@ -4,21 +4,9 @@ This folder is the experiment harness for comparing prompt variants, LLMs, and s
 
 > **What this framework tests — and what it doesn't.** The eval harness measures **agent behavior**: how an LLM + the production skill navigates the ColPack workflow. It does **not** test the ColPack Python package itself; that's covered separately by `tests/test_colpack/`. Fixtures, tool implementations, and underlying simulation results are infrastructure assumed correct — they are not subjects of evaluation. For adversarial tasks (HPMC-incompatible mixtures, dimension mismatches, ensemble/parameter mismatches, inappropriate order parameters), score on whether the agent refused or clarified — *not* on whether the underlying tool happened to error or return numbers. If a ColPack bug causes a run to fail, that's noise in the agent score, to be discounted by inspecting the conversation transcript.
 
-**Scope (2026-04-27).** This eval is intentionally lean: a few LLMs scored against the `full` production skill across three workflow stages (setup, planning, analysis). The more comprehensive benchmark — skill ablation, broader LLM coverage, automated scoring — moved to a separate project, **ColPackBench**, as a follow-up paper. The variant-builder script (`build_skill_variant.py`) and the underlying ablation infra are kept here as reusable plumbing.
+**Scope (2026-04-27).** This eval is intentionally lean: a few LLMs scored against the production agent skill across three workflow stages (setup, planning, analysis). The more comprehensive benchmark — skill ablation, broader LLM coverage, automated scoring — moved to a separate project, **ColPackBench**, as a follow-up paper.
 
-Skills used by eval are built into `eval/skills/<variant_id>/colpack/` from the production `agent/skills/colpack/` tree via `build_skill_variant.py`. This keeps experiment artifacts out of git (the directory is gitignored) and lets ablations omit specific reference files without touching the production skill.
-
-## Building a Skill Variant
-
-For this paper's eval we only need the `full` variant. Build it once before running any experiment:
-
-```bash
-python eval/build_skill_variant.py --variant-id full
-```
-
-The variant lands at `eval/skills/full/colpack/SKILL.md`, which is what the experiment spec's `skills[*].skill_path` points to.
-
-`build_skill_variant.py` also supports `--exclude <ref-or-dir>` (drop a reference file or the whole `references/` directory) and `--strip-skill-body` (replace SKILL.md with frontmatter only). Those flags are used by the ColPackBench ablation study, not here.
+Specs reference the production skill directly at `agent/skills/colpack/SKILL.md`. There is no per-eval skill build step in this folder. Variant building lives in ColPackBench, where it's actually exercised by ablation experiments.
 
 ## Current Scope
 
@@ -60,9 +48,9 @@ The cleanest way to think about this is: **specs are recipes, tasks are the menu
 ### Specs vs. tasks — the conceptual split
 
 | Folder | Holds | Changes when… |
-|---|---|---|
+| --- | --- | --- |
 | [`eval/tasks/`](tasks/) | The actual prompts: `user_messages`, `expected_outcomes`, `difficulty_level`, `user_profile_id`, `metadata`. **Pure test cases — no notion of which LLM or skill evaluates them.** | You want to add a new prompt or tweak wording. |
-| [`eval/specs/`](specs/) | The experiment recipe: `experiment_id`, `output_dir`, `tasks_file` (pointer to a tasks JSON), `models` array, `skills` array, `agent_mode`, `repeats`. **No prompts inside.** | You want to add an LLM, change the skill variant, change repeats, or run the same prompts under a different output dir. |
+| [`eval/specs/`](specs/) | The experiment recipe: `experiment_id`, `output_dir`, `tasks_file` (pointer to a tasks JSON), `models` array, `skills` array, `agent_mode`, `repeats`. **No prompts inside.** | You want to add an LLM, change repeats, or run the same prompts under a different output dir. |
 
 The split is what lets you reuse a task collection across many experiments (e.g., the same `setup_tasks.json` evaluated against four different model panels) without copy-pasting prompts.
 
@@ -261,14 +249,13 @@ Outputs land at `eval/data/fixtures/<fixture_id>/` (gitignored under `eval/data/
 ### Running the LLM evaluation
 
 ```bash
-python eval/build_skill_variant.py --variant-id full        # one-time: skill snapshot
-python eval/bootstrap_fixtures.py                           # one-time: 2 simulation fixtures (~2 min)
+python eval/bootstrap_fixtures.py                           # one-time: 2 simulation + 3 setup-only fixtures (~2 min)
 python -m eval.run_experiments run --spec eval/specs/setup_eval.json
 python -m eval.run_experiments run --spec eval/specs/planning_eval.json
 python -m eval.run_experiments run --spec eval/specs/analysis_eval.json
 ```
 
-Vary `models` in each spec to add LLMs to the matrix. The two prerequisite commands (skill build + fixture bootstrap) run once per environment; thereafter each analysis run only exercises the analyze stage and is near-instant. The planning suite still redoes setup per task and will get faster once it's migrated to fixtures.
+Vary `models` in each spec to add LLMs to the matrix. The fixture bootstrap runs once per environment; thereafter each planning / analysis task exercises only its target stage. Specs reference the production skill at `agent/skills/colpack/SKILL.md` directly — no per-eval skill build step.
 
 ## Scoring
 
@@ -284,10 +271,6 @@ Until proper scoring lands, **score adversarial tasks (L4–L5) and the L2 analy
 > 2. **LLM-as-judge for refusal + interpretation.** Where programmatic rules can't help (adversarial refusal quality, the L2 freezing-transition reasoning), ship the conversation transcript + `expected_outcomes` to a judge model and parse a pass/fail + rubric. Invoke via an opt-in `--with-judge` flag on the runner so basic loops stay free.
 >
 > Open: which judge model (independent strong model vs. self-judge vs. a small mini-judge), and how to design the rubric prompt so it's stable across LLMs being evaluated.
-
-## Skill ablation lives in ColPackBench
-
-`build_skill_variant.py` can produce more than just the `full` variant — it supports `--exclude` (drop reference files) and `--strip-skill-body` (frontmatter-only SKILL.md). That machinery is intentionally retained here, but the **skill ablation study itself** (end-to-end tasks varying the `skills` axis on a fixed LLM) is out of scope for the ColPackAgent paper. It moved to a separate project, **ColPackBench**, along with the broader benchmark scope (more LLMs, automated scoring, additional task dimensions). See your project notes for `ColPackBench` for design and status.
 
 ## Spec Structure
 

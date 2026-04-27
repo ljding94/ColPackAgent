@@ -9,13 +9,15 @@ spec's ``models`` list points at) to be exported in the shell.
     # 0. One-time setup (skip if already done locally)
     # ──────────────────────────────────────────────────────────────────────
 
-    # Build the skill variant referenced by every spec (~few seconds).
-    python eval/build_skill_variant.py --variant-id full
-
     # Build the simulation + setup-only fixtures referenced by planning
     # and analysis specs (~2 minutes total; only the 2 full-sim fixtures
     # actually run simulations, the 3 setup-only fixtures are millisecond).
+    # The setup_eval suite needs no fixtures.
     python eval/bootstrap_fixtures.py
+
+    # No skill build step is needed: specs reference the production skill
+    # directly at agent/skills/colpack/. (Skill ablation lives in the
+    # sibling ColPackBench project, not here.)
 
     # ──────────────────────────────────────────────────────────────────────
     # 1. Inspect the matrix without calling any LLM

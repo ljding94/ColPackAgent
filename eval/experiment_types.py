@@ -14,7 +14,7 @@ def _repo_root() -> Path:
 
 
 def _default_eval_skill_path() -> Path:
-    return _repo_root() / "eval" / "skills" / "full" / "colpack" / "SKILL.md"
+    return _repo_root() / "agent" / "skills" / "colpack" / "SKILL.md"
 
 
 def _fixture_index_path() -> Path:
