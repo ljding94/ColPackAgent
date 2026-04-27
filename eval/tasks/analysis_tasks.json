@@ -6,7 +6,7 @@
     "user_profile_id": "analysis_focused_user",
     "user_messages": [
       "An existing simulation has already been run end-to-end at the working directory `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep at 0.3, 0.5, 0.7, 0.8). Run the analysis with default parameters.",
-      "Yes, please proceed."
+      "If you haven't called analyze_simulation_runs_tool yet, please call it now."
     ],
     "expected_outcomes": [
       "analyze_simulation_runs_tool is called with working_dir set to the fixture path and no extra_order_params; per-shape defaults (Hexatic ψ6) apply.",
@@ -32,7 +32,7 @@
     "user_profile_id": "analysis_focused_user",
     "user_messages": [
       "An existing simulation has already been run end-to-end at the working directory `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep at 0.3, 0.5, 0.7, 0.8). Run the analysis with default parameters and tell me at which volume fraction the disks start to show clear hexagonal order. Use the Hexatic ψ6 trend across the sweep to back up your answer.",
-      "Yes, please proceed."
+      "If you haven't called analyze_simulation_runs_tool yet, please call it now."
     ],
     "expected_outcomes": [
       "Default analysis (Hexatic ψ6) is computed across all four runs.",
@@ -59,7 +59,7 @@
     "user_profile_id": "analysis_focused_user",
     "user_messages": [
       "An existing simulation has been run at `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep). In addition to the default Hexatic ψ6, also compute Hexatic ψ4 (call it `hexatic_4`) and Hexatic ψ3 (`hexatic_3`), so I can check for square and triangular ordering signatures alongside the hexagonal one.",
-      "Yes, please proceed."
+      "If you haven't called analyze_simulation_runs_tool yet, please call it now."
     ],
     "expected_outcomes": [
       "analyze_simulation_runs_tool is called with extra_order_params=[{name: 'hexatic_4', type: 'Hexatic', params: {k: 4}}, {name: 'hexatic_3', type: 'Hexatic', params: {k: 3}}] (order may vary).",
@@ -85,7 +85,7 @@
     "user_profile_id": "analysis_focused_user",
     "user_messages": [
       "An existing simulation has been run at `{{fixture:2d_nvt_disk_capsule}}` (2D NVT, 100 particles, 50 disks + 50 capsules, volume_fraction sweep at 0.4 and 0.6). Analyze the runs. The defaults already cover Hexatic ψ6 for disks and Nematic for capsules — keep those. Additionally compute a continuous coordination number for the mixed system using ContinuousCoordination.",
-      "Yes, please proceed."
+      "If you haven't called analyze_simulation_runs_tool yet, please call it now."
     ],
     "expected_outcomes": [
       "analyze_simulation_runs_tool is called with extra_order_params=[{name: '<some_name>', type: 'ContinuousCoordination', params: {...}}] using sensible defaults from the config or values supplied by the agent.",
@@ -113,7 +113,7 @@
     "user_profile_id": "noisy_or_ambiguous_user",
     "user_messages": [
       "An existing simulation has been run at `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep). Analyze the runs and include a Cubatic order parameter in the analysis.",
-      "Yes, please proceed."
+      "If you haven't called analyze_simulation_runs_tool yet, please call it now."
     ],
     "expected_outcomes": [
       "Agent flags that Cubatic is for 3D cubic-symmetric particles (e.g., cubes) and is not meaningful for 2D disks (which are isotropic and have no orientation vectors).",
