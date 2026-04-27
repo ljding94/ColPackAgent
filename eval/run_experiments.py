@@ -462,19 +462,45 @@ async def _execute_run_case(
     )
 
 
-def _summarize_results(spec: ExperimentSpec, run_results: list[RunResult]) -> dict[str, Any]:
-    success_count = sum(1 for result in run_results if result.success)
+def _aggregate_block(results: list[RunResult]) -> dict[str, Any]:
+    """Aggregate stats across a list of run results.
+
+    `effective_input_tokens` = input_tokens + cache_read_input_tokens — the
+    true context the model processed (cache-read tokens are *real* input
+    served from the provider's prompt cache at discounted price). The bare
+    `input_tokens` counts only the "fresh" portion and is provider-dependent,
+    so use `effective_input_tokens` when comparing workload across providers.
+    """
+    n = len(results)
+    n_success = sum(1 for r in results if r.success)
+    cache_read = sum((r.usage.cache_read_input_tokens or 0) for r in results)
+    fresh_input = sum(r.usage.input_tokens for r in results)
     return {
+        "n_runs": n,
+        "n_success": n_success,
+        "success_rate": (n_success / n) if n else 0.0,
+        "total_cost_usd": sum(r.total_cost_usd for r in results),
+        "total_wall_time_seconds": sum(r.wall_time_seconds for r in results),
+        "total_input_tokens": fresh_input,
+        "total_cache_read_input_tokens": cache_read,
+        "total_effective_input_tokens": fresh_input + cache_read,
+        "total_output_tokens": sum(r.usage.output_tokens for r in results),
+    }
+
+
+def _summarize_results(spec: ExperimentSpec, run_results: list[RunResult]) -> dict[str, Any]:
+    # Group by model_id for the benchmarking breakdown.
+    per_model: dict[str, list[RunResult]] = {}
+    for r in run_results:
+        per_model.setdefault(r.model_id, []).append(r)
+
+    summary = {
         "experiment_id": spec.experiment_id,
         "generated_at": _utc_now(),
-        "n_runs": len(run_results),
-        "n_success": success_count,
-        "success_rate": (success_count / len(run_results)) if run_results else 0.0,
-        "total_cost_usd": sum(result.total_cost_usd for result in run_results),
-        "total_wall_time_seconds": sum(result.wall_time_seconds for result in run_results),
-        "total_input_tokens": sum(result.usage.input_tokens for result in run_results),
-        "total_output_tokens": sum(result.usage.output_tokens for result in run_results),
+        **_aggregate_block(run_results),
+        "per_model": {model_id: _aggregate_block(runs) for model_id, runs in per_model.items()},
     }
+    return summary
 
 
 async def _run_experiment(spec: ExperimentSpec, *, limit: int, dry_run: bool, bootstrap_skill: bool) -> int:
