@@ -280,6 +280,69 @@ python -m eval.run_experiments run --spec eval/specs/analysis_eval.json
 
 Vary `models` in each spec to add LLMs to the matrix. The fixture bootstrap runs once per environment; thereafter each planning / analysis task exercises only its target stage. Specs reference the production skill at `agent/skills/colpack/SKILL.md` directly — no per-eval skill build step.
 
+## Stage scope and off-rail detection
+
+A real concern when benchmarking: with `agent_mode: "interactive"` and a generic confirmation turn ("Yes, please proceed."), some LLMs interpret "proceed" as *the entire workflow* and call setup → plan → execute back-to-back, while others stop at the requested stage. That's both unfair (different work scope per model on the same prompt) and expensive (the off-rail model actually runs simulations).
+
+Rather than fight this with prompt engineering — which biases scoring toward "how well does each LLM parse our hints" — we treat **drift past the requested stage as evaluation signal**. The runner enforces a stage scope per task and records any tool calls that fall outside it.
+
+### How it works
+
+Each task already declares `metadata.stage` (`"setup"` / `"planning"` / `"analysis"`). The runner derives an allowed set of ColPack MCP tools per stage:
+
+| Stage | Allowed ColPack tools |
+| --- | --- |
+| `setup` | `setup_simulation_problem_tool`, `get_colpack_capabilities_tool` |
+| `planning` | `plan_simulation_runs_tool`, `get_colpack_capabilities_tool` |
+| `analysis` | `analyze_simulation_runs_tool`, `get_colpack_capabilities_tool` |
+
+`get_colpack_capabilities_tool` is always allowed because `bootstrap_skill: true` calls it once at session start. Non-ColPack tools (Read, Bash, Grep, etc.) pass through unchecked — only the controlled ColPack workflow tools count toward off-rail.
+
+When a turn returns with at least one off-rail tool call, the runner:
+
+1. Logs `[off-rail] task stage='<stage>' but agent called: <suffixes> — stopping run early` to stdout.
+2. Marks the run with `off_rail: true` and records the offending tool calls.
+3. Breaks the user-message loop for that run — no further turns get sent, so we don't pay for additional drift.
+
+Tool-name matching is suffix-based (`tool_name == suffix or tool_name.endswith("_" + suffix)`) so it handles both bare names (`setup_simulation_problem_tool`) and SDK-prefixed names (`colpack__setup_simulation_problem_tool`).
+
+### Where it shows up in the outputs
+
+**`results.jsonl`** — per run:
+
+```json
+{
+  "off_rail": true,
+  "off_rail_tool_calls": [
+    {"tool_name": "plan_simulation_runs_tool",        "matched_suffix": "plan_simulation_runs_tool"},
+    {"tool_name": "execute_simulation_workflow_tool", "matched_suffix": "execute_simulation_workflow_tool"}
+  ],
+  "metadata": {
+    "task_stage": "setup",
+    "allowed_tool_suffixes": ["get_colpack_capabilities_tool", "setup_simulation_problem_tool"]
+  }
+}
+```
+
+Per-turn detail is also kept in `turn_results[*].off_rail_tool_calls`.
+
+**`summary.json`** — both the grand-total block and each `per_model` entry add:
+
+```json
+"n_off_rail":            1,                                              // count of runs that drifted
+"off_rail_rate":         0.5,
+"off_rail_tools_seen":   ["execute_simulation_workflow_tool",            // deduped per model
+                          "plan_simulation_runs_tool"]
+```
+
+So a one-line read: *"Opus 0/1 off-rail; Gemini 1/1 off-rail, drove all the way through `execute_simulation_workflow_tool`."*
+
+### Caveat — detection is post-dispatch
+
+The runner sees a tool call after the SDK has already emitted the message containing it. The off-rail tool *will* execute once through the SDK / MCP path before the run terminates — we cannot intercept the dispatch from outside the SDK. The cost-saving is "no further turns after off-rail," not "zero off-rail tool execution." For analysis purposes this is actually a feature (you see the full off-rail behavior in the transcript), but be aware that one off-rail simulation run can still be expensive.
+
+Patching the SDK's tool-dispatch path to deny disallowed calls before they reach MCP would close that gap, but it's a real SDK fork — not worth it for the ColPackAgent paper. Saved as an enhancement candidate if ColPackBench needs it.
+
 ## Scoring
 
 **Current state — liveness only.** A run is marked `success` if no turn reported a query or system error — i.e., the runner did not crash. This is *liveness*, not *correctness*: it does **not** verify that the agent called the right tool with the right arguments, refused adversarial requests, or interpreted analysis results correctly. `n_success` and `success_rate` in `summary.json` inherit this coarseness.
