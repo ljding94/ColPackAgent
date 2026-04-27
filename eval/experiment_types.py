@@ -114,6 +114,7 @@ class ExperimentSpec:
     tasks: tuple[TaskSpec, ...]
     models: tuple[ModelSpec, ...]
     skills: tuple[SkillVariantSpec, ...]
+    agent_mode: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -282,6 +283,16 @@ def load_experiment_spec(spec_path: Path) -> ExperimentSpec:
     else:
         raw_tasks = raw_tasks_inline or []
 
+    raw_agent_mode = raw_spec.get("agent_mode")
+    if raw_agent_mode is not None:
+        if not isinstance(raw_agent_mode, str):
+            raise ValueError("Spec 'agent_mode' must be a string ('interactive' or 'autonomous') or omitted.")
+        agent_mode = raw_agent_mode.strip().lower()
+        if agent_mode not in {"interactive", "autonomous"}:
+            raise ValueError(f"Spec 'agent_mode' must be 'interactive' or 'autonomous'; got '{raw_agent_mode}'.")
+    else:
+        agent_mode = None
+
     spec = ExperimentSpec(
         experiment_id=experiment_id,
         description=str(raw_spec.get("description", "")),
@@ -295,6 +306,7 @@ def load_experiment_spec(spec_path: Path) -> ExperimentSpec:
         tasks=_load_tasks(raw_tasks),
         models=_load_models(raw_spec.get("models")),
         skills=_load_skills(raw_spec.get("skills")),
+        agent_mode=agent_mode,
         metadata=dict(raw_spec.get("metadata", {})),
     )
     if not spec.tasks:

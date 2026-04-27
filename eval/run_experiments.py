@@ -327,11 +327,14 @@ async def _execute_run_case(
         if bootstrap_skill:
             background_state = await agent_app._bootstrap_skill_session(client, background_state)
 
+        agent_mode_suffix = f"\n\nAGENT_MODE = {spec.agent_mode}" if spec.agent_mode else ""
+
         for index, user_message in enumerate(planned_run.task.user_messages, start=1):
+            routed_message = user_message + agent_mode_suffix
             attempt = 0
             while attempt < 2:
                 try:
-                    await client.query(user_message)
+                    await client.query(routed_message)
                     turn_result, background_state, workflow_session_active = await _collect_turn_result(
                         client=client,
                         background_state=background_state,
@@ -341,8 +344,8 @@ async def _execute_run_case(
                         turn_result,
                         turn_index=index,
                         user_input=user_message,
-                        routed_user_input=user_message,
-                        route_kind=None,
+                        routed_user_input=routed_message,
+                        route_kind=("agent_mode_" + spec.agent_mode) if spec.agent_mode else None,
                     )
                     turn_results.append(turn_result)
                     total_usage = _sum_usage(total_usage, turn_result.usage)
@@ -365,8 +368,8 @@ async def _execute_run_case(
                         TurnResult(
                             turn_index=index,
                             user_input=user_message,
-                            routed_user_input=user_message,
-                            route_kind=None,
+                            routed_user_input=routed_message,
+                            route_kind=("agent_mode_" + spec.agent_mode) if spec.agent_mode else None,
                             assistant_text="",
                             system_errors=(str(exc),),
                             query_had_error=True,

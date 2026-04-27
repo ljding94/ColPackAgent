@@ -5,6 +5,7 @@
   "working_dir_root": "eval/data",
   "repeats": 1,
   "bootstrap_skill": true,
+  "agent_mode": "interactive",
   "user_profiles": [
     {
       "profile_id": "novice_workflow_user",
