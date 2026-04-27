@@ -120,6 +120,55 @@ def _ensure_working_dir_root(spec: ExperimentSpec) -> Path:
 _PRESERVE_NAMES = frozenset({"fixtures"})
 
 
+# Off-rail detection ----------------------------------------------------------
+#
+# The set of ColPack MCP tool suffixes the runner watches. Tool names from the
+# SDK may arrive prefixed (e.g. ``colpack__setup_simulation_problem_tool``),
+# bare, or with other separators — match by suffix.
+_COLPACK_CONTROLLED_SUFFIXES: tuple[str, ...] = (
+    "get_colpack_capabilities_tool",
+    "setup_simulation_problem_tool",
+    "plan_simulation_runs_tool",
+    "execute_simulation_workflow_tool",
+    "analyze_simulation_runs_tool",
+    "get_simulation_workflow_status_tool",
+)
+
+# Per-stage allowed colpack tools. `get_colpack_capabilities_tool` is always
+# allowed — bootstrap_skill calls it once at session start. Tasks at a given
+# stage may call only the listed tool plus capabilities; anything else from
+# `_COLPACK_CONTROLLED_SUFFIXES` is "off-rail".
+_STAGE_ALLOWED_SUFFIXES: dict[str, frozenset[str]] = {
+    "setup": frozenset({"get_colpack_capabilities_tool", "setup_simulation_problem_tool"}),
+    "planning": frozenset({"get_colpack_capabilities_tool", "plan_simulation_runs_tool"}),
+    "analysis": frozenset({"get_colpack_capabilities_tool", "analyze_simulation_runs_tool"}),
+}
+
+
+def _tool_name_matches_suffix(tool_name: str, suffix: str) -> bool:
+    return tool_name == suffix or tool_name.endswith(f"_{suffix}")
+
+
+def _match_controlled_suffix(tool_name: str) -> str | None:
+    """Return the controlled-suffix this tool matches, or None if it isn't a
+    controlled colpack tool (so non-colpack tools like Read/Bash never count
+    as off-rail)."""
+    for suffix in _COLPACK_CONTROLLED_SUFFIXES:
+        if _tool_name_matches_suffix(tool_name, suffix):
+            return suffix
+    return None
+
+
+def _allowed_suffixes_for_task_stage(stage: str | None) -> frozenset[str] | None:
+    """Look up the allowed colpack tool suffixes for a task's stage.
+
+    Returns None if the stage is unknown or empty (no constraint enforced).
+    """
+    if not stage:
+        return None
+    return _STAGE_ALLOWED_SUFFIXES.get(stage)
+
+
 def _probe_openrouter_served_by(model_id_full: str, api_key: str) -> tuple[str | None, str | None]:
     """Send a 1-token chat-completion to OpenRouter and read back which
     sub-backend served it (e.g. "Google" for google-vertex, "Amazon Bedrock",
@@ -340,6 +389,7 @@ async def _collect_turn_result(
     client,
     background_state,
     workflow_session_active: bool,
+    allowed_tool_suffixes: frozenset[str] | None = None,
 ) -> tuple[TurnResult, Any, bool]:
     response_state = agent_app.QueryResponseState()
     seen_tool_ids: set[str] = set()
@@ -348,6 +398,7 @@ async def _collect_turn_result(
     usage = TokenUsageRecord()
     total_cost_usd = 0.0
     response_duration_ms = 0.0
+    off_rail_tool_calls: list[dict[str, str]] = []
 
     async for message in client.receive_response():
         if isinstance(message, AssistantMessage):
@@ -356,6 +407,18 @@ async def _collect_turn_result(
                 if tool_use.id in seen_tool_ids:
                     continue
                 seen_tool_ids.add(tool_use.id)
+
+                # Off-rail detection: if this is a controlled colpack tool that
+                # is NOT in the task's allowed set, record it. Non-colpack tools
+                # (Read, Bash, etc.) and never-controlled tools pass through.
+                if allowed_tool_suffixes is not None:
+                    matched = _match_controlled_suffix(tool_use.name)
+                    if matched is not None and matched not in allowed_tool_suffixes:
+                        off_rail_tool_calls.append({
+                            "tool_name": tool_use.name,
+                            "matched_suffix": matched,
+                        })
+
                 background_state, response_state, workflow_session_active = await agent_app._handle_tool_use(
                     tool_use=tool_use,
                     background_state=background_state,
@@ -399,6 +462,7 @@ async def _collect_turn_result(
         usage=usage,
         session_id=session_id,
         sdk_turn_count=sdk_turn_count,
+        off_rail_tool_calls=tuple(off_rail_tool_calls),
     )
     return turn_result, background_state, workflow_session_active
 
@@ -438,7 +502,16 @@ async def _execute_run_case(
 
         agent_mode_suffix = f"\n\nAGENT_MODE = {spec.agent_mode}" if spec.agent_mode else ""
 
+        # Derive allowed colpack tool suffixes from the task's stage so we can
+        # detect (and shortcut on) any tool calls that fall outside scope.
+        task_stage = planned_run.task.metadata.get("stage") if planned_run.task.metadata else None
+        allowed_tool_suffixes = _allowed_suffixes_for_task_stage(task_stage)
+
+        run_off_rail = False  # short-circuits the user-message loop on first off-rail turn
+
         for index, user_message in enumerate(planned_run.task.user_messages, start=1):
+            if run_off_rail:
+                break
             routed_message = user_message + agent_mode_suffix
             attempt = 0
             while attempt < 2:
@@ -448,6 +521,7 @@ async def _execute_run_case(
                         client=client,
                         background_state=background_state,
                         workflow_session_active=workflow_session_active,
+                        allowed_tool_suffixes=allowed_tool_suffixes,
                     )
                     turn_result = replace(
                         turn_result,
@@ -459,6 +533,13 @@ async def _execute_run_case(
                     turn_results.append(turn_result)
                     total_usage = _sum_usage(total_usage, turn_result.usage)
                     total_cost_usd += turn_result.total_cost_usd
+                    if turn_result.off_rail_tool_calls:
+                        # Don't send any further user messages for this run —
+                        # the agent already proceeded out of scope. We log
+                        # what was attempted so it shows up in the report.
+                        run_off_rail = True
+                        offending = ", ".join(c["matched_suffix"] for c in turn_result.off_rail_tool_calls)
+                        print(f"  [off-rail] task stage='{task_stage}' but agent called: {offending} — stopping run early")
                     break
                 except Exception as exc:
                     if attempt == 0 and agent_app._is_timeout_like_error(str(exc)):
@@ -504,6 +585,11 @@ async def _execute_run_case(
     # when the user has set OpenRouter account-level provider preferences).
     model_metadata = dict(planned_run.model.metadata) if planned_run.model.metadata else {}
 
+    # Aggregate off-rail tool calls across every turn for run-level reporting.
+    aggregated_off_rail: list[dict[str, str]] = []
+    for turn in turn_results:
+        aggregated_off_rail.extend(turn.off_rail_tool_calls)
+
     return RunResult(
         run_id=planned_run.run_id,
         experiment_id=spec.experiment_id,
@@ -520,6 +606,8 @@ async def _execute_run_case(
         total_cost_usd=total_cost_usd,
         usage=total_usage,
         turn_results=tuple(turn_results),
+        off_rail=bool(aggregated_off_rail),
+        off_rail_tool_calls=tuple(aggregated_off_rail),
         metadata={
             "agent_path": str(spec.agent_path),
             "resolved_skill_path": str(planned_run.skill.skill_path),
@@ -528,6 +616,8 @@ async def _execute_run_case(
             "normalized_model": normalized_model,
             "model_label": planned_run.model.label,
             "model_metadata": model_metadata,
+            "task_stage": planned_run.task.metadata.get("stage") if planned_run.task.metadata else None,
+            "allowed_tool_suffixes": sorted(allowed_tool_suffixes) if allowed_tool_suffixes else None,
         },
     )
 
@@ -543,12 +633,15 @@ def _aggregate_block(results: list[RunResult]) -> dict[str, Any]:
     """
     n = len(results)
     n_success = sum(1 for r in results if r.success)
+    n_off_rail = sum(1 for r in results if r.off_rail)
     cache_read = sum((r.usage.cache_read_input_tokens or 0) for r in results)
     fresh_input = sum(r.usage.input_tokens for r in results)
     return {
         "n_runs": n,
         "n_success": n_success,
         "success_rate": (n_success / n) if n else 0.0,
+        "n_off_rail": n_off_rail,
+        "off_rail_rate": (n_off_rail / n) if n else 0.0,
         "total_cost_usd": sum(r.total_cost_usd for r in results),
         "total_wall_time_seconds": sum(r.wall_time_seconds for r in results),
         "total_input_tokens": fresh_input,
@@ -585,6 +678,14 @@ def _summarize_results(
                 block["served_by_provider"] = info["served_by"]
             if info.get("error"):
                 block["routing_probe_error"] = info["error"]
+        # Deduped list of off-rail tool suffixes this model called across all
+        # runs, so reviewers can see at a glance "this model drifted to X, Y."
+        off_rail_tools_seen: set[str] = set()
+        for r in runs:
+            for call in r.off_rail_tool_calls:
+                off_rail_tools_seen.add(call["matched_suffix"])
+        if off_rail_tools_seen:
+            block["off_rail_tools_seen"] = sorted(off_rail_tools_seen)
         m = spec_models.get(model_id)
         if m is not None:
             if m.label:

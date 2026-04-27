@@ -150,6 +150,10 @@ class TurnResult:
     usage: TokenUsageRecord
     session_id: str = ""
     sdk_turn_count: int = 0
+    # Tool calls that fell outside the task's stage scope (e.g. agent called
+    # plan_simulation_runs_tool while the task is a setup-stage task). Each
+    # entry is a dict {"tool_name": str, "matched_suffix": str}.
+    off_rail_tool_calls: tuple[dict[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -174,6 +178,12 @@ class RunResult:
     # is not exposed via the SDK. Use the OpenRouter activity dashboard for
     # post-hoc audit of which sub-backend served a given request.
     provider_id: str = ""
+    # True if the agent called any tool outside the task's stage scope (e.g.
+    # invoked plan_simulation_runs_tool during a setup-stage task). The list
+    # of offending calls lives in `off_rail_tool_calls`; turn-level detail is
+    # also preserved in turn_results[*].off_rail_tool_calls.
+    off_rail: bool = False
+    off_rail_tool_calls: tuple[dict[str, str], ...] = ()
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
