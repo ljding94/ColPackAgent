@@ -19,6 +19,11 @@
 # Keep Python cache ignored
 /src/**/__pycache__/
 
+# Build artifacts from python -m build
+/src/dist/
+/src/build/
+/src/**/*.egg-info/
+
 !/agent/
 !/agent/**
 !/eval/

@@ -1,6 +1,11 @@
 # ColPackAgent
 
-ColPackAgent is an AI agent for Hard Particle Monte Carlo simulations.
+[![PyPI version](https://img.shields.io/pypi/v/colpack.svg)](https://pypi.org/project/colpack/)
+
+ColPackAgent is an AI agent for Hard Particle Monte Carlo simulations. It is
+built on the [`colpack`](https://pypi.org/project/colpack/) simulation package,
+which is also available standalone via `pip install colpack` for users who
+want the simulation engine and MCP tool surface without the full agent stack.
 
 ## 🚀 How to Use ColPackAgent
 
@@ -42,33 +47,32 @@ Launch ColPackAgent inside your preferred AI client. Each mode loads the MCP too
 
 ## Setup
 
-This project relies on `hoomd-blue`, which is installed via conda.
-Install and run everything from the conda environment first, then install the local `colpack` package.
+`colpack` depends on `hoomd-blue` and `ovito`, which are not on PyPI and must
+come from conda-forge. The recommended setup is a conda environment for those
+two, then `pip install colpack` on top.
 
-### 1. create and activate conda environment for hoomd-blue
-
-```bash
-
-From the project root:
+### 1. Create and activate the conda environment
 
 ```bash
-conda create --name hoomd-env
-conda activate hoomd-env
-conda install conda-forge::hoomd
+conda create -n colpack python=3.11
+conda activate colpack
+conda install -c conda-forge hoomd ovito
 ```
 
-### 2. Install local package (editable)
+### 2. Install the colpack package
 
-Install from `src` so CLI commands and imports are available in the active environment.
+From PyPI (the standard path):
 
 ```bash
-python -m pip install -e ./src
+pip install colpack
 ```
 
-Notes:
+For development on the package itself, install editable from the cloned repo
+instead:
 
-- `hoomd-blue` is managed by conda, not pip.
-- Use `python -m pip ...` to ensure install goes to the active interpreter.
+```bash
+pip install -e ./src
+```
 
 ### 3. Install agent dependencies
 
@@ -76,7 +80,7 @@ Notes:
 pip install -r agent/requirements.txt
 ```
 
-### 4. Verify installation (mcp)
+### 4. Verify installation
 
 ```bash
 python -c "import sys, colpack; print(sys.executable); print(colpack.__file__)"
@@ -85,16 +89,18 @@ which colpack-mcp
 
 `which colpack-mcp` should point to your active conda environment path.
 
-### 5. install opencode (or alternative AI client) and link skill
+### 5. Install opencode (or alternative AI client) and link the skill
+
 ```bash
 curl -fsSL https://opencode.ai/install | bash
+./run_colpack.sh setup
 ```
 
 ## Quick Troubleshooting
 
 - Symptom: `ModuleNotFoundError: No module named 'colpack'`
-- Fix: reinstall with active env interpreter.
-- Command: `python -m pip install -e ./src --no-deps --force-reinstall`
+- Fix: reactivate the conda env and reinstall — `pip install --force-reinstall colpack`
+  (or `pip install -e ./src --no-deps --force-reinstall` if you use the editable install).
 
-- Symptom: `which colpack-mcp` points to wrong python environment
-- Fix: reactivate env and reinstall package as above.
+- Symptom: `which colpack-mcp` points to the wrong python environment
+- Fix: reactivate the env and reinstall the package as above.
