@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
 """Bootstrap shared simulation fixtures for Track 1 evaluation.
 
-Runs setup → plan → execute deterministically for a small set of baseline
-scenarios so that downstream planning and analysis evaluation tasks can
-reuse the resulting working_dirs instead of redoing the full pipeline per
-task.
+Two tiers of fixtures:
 
-Two fixtures are built by default:
-  - 2d_nvt_disk         single-shape disk system, vf sweep at [0.4, 0.6]
-  - 2d_nvt_disk_capsule disk+capsule mixture,    vf sweep at [0.4, 0.6]
+1. Full simulation fixtures (`setup_only=False`, default).
+   Run setup → plan → execute deterministically. Produce executed
+   trajectories that downstream analysis tasks read from.
 
-Both land under eval/data/fixtures/<fixture_id>/ (eval/data/ is gitignored,
-so the produced GSD trajectories stay out of git). An index file at
+2. Setup-only fixtures (`setup_only=True`).
+   Run only `setup_simulation_problem` — no plan, no execute. Cheap
+   (millisecond) starting points that planning tasks build on top of
+   without redoing setup themselves.
+
+Default fixtures:
+  - 2d_nvt_disk                       full;    vf sweep at [0.3, 0.5, 0.7, 0.8]
+  - 2d_nvt_disk_capsule               full;    vf sweep at [0.4, 0.6]
+  - 2d_nvt_disk_capsule_setup         setup-only (2D NVT mix, 500 particles)
+  - 2d_npt_disk_capsule_setup         setup-only (2D NPT mix, 500 particles)
+  - 2d_nvt_disk_disk_setup            setup-only (2D NVT bidisperse, 1000 particles)
+
+All fixtures land under eval/data/fixtures/<fixture_id>/ (eval/data/ is
+gitignored, so the produced files stay out of git). An index file at
 eval/data/fixtures/_index.json records the mapping fixture_id → working_dir
-and the params used, so planning/analysis specs can resolve fixture paths
-without parsing this script.
+and the params used.
 
 Examples:
   # Build all fixtures (skip ones that already exist)
@@ -24,7 +32,7 @@ Examples:
   python eval/bootstrap_fixtures.py --force
 
   # Build only one fixture
-  python eval/bootstrap_fixtures.py --only 2d_nvt_disk
+  python eval/bootstrap_fixtures.py --only 2d_nvt_disk_capsule_setup
 """
 from __future__ import annotations
 
@@ -77,6 +85,40 @@ FIXTURES: list[dict] = [
             "volume_fraction": [0.4, 0.6],
         },
     },
+    # ---- Setup-only fixtures (planning-suite starting points) ----
+    {
+        "fixture_id": "2d_nvt_disk_capsule_setup",
+        "description": "Setup-only fixture: 2D NVT, 500 particles in a disk+capsule mixture. Planning tasks build sweeps on top of this simulation_problem.json without redoing setup.",
+        "setup_only": True,
+        "setup": {
+            "dimension": 2,
+            "total_particle_number": 500,
+            "particle_shape_list": ["disk", "capsule"],
+            "ensemble": "NVT",
+        },
+    },
+    {
+        "fixture_id": "2d_npt_disk_capsule_setup",
+        "description": "Setup-only fixture: 2D NPT, 500 particles in a disk+capsule mixture. Used by NPT pressure-sweep planning tasks.",
+        "setup_only": True,
+        "setup": {
+            "dimension": 2,
+            "total_particle_number": 500,
+            "particle_shape_list": ["disk", "capsule"],
+            "ensemble": "NPT",
+        },
+    },
+    {
+        "fixture_id": "2d_nvt_disk_disk_setup",
+        "description": "Setup-only fixture: 2D NVT, 1000 particles as a bidisperse disk mixture (two disk components). Used by diameter-sweep planning tasks.",
+        "setup_only": True,
+        "setup": {
+            "dimension": 2,
+            "total_particle_number": 1000,
+            "particle_shape_list": ["disk", "disk"],
+            "ensemble": "NVT",
+        },
+    },
 ]
 
 
@@ -95,6 +137,7 @@ def _build_one(fixture: dict, fixture_root: Path, force: bool) -> Path:
 
     fixture_id = fixture["fixture_id"]
     expected_path = (fixture_root / fixture_id).resolve()
+    setup_only = bool(fixture.get("setup_only", False))
 
     if expected_path.exists():
         if not force:
@@ -103,11 +146,49 @@ def _build_one(fixture: dict, fixture_root: Path, force: bool) -> Path:
         print(f"[clean]   {fixture_id}: removing existing {expected_path}")
         shutil.rmtree(expected_path)
 
+    setup = fixture["setup"]
+    summary = (f"dimension={setup['dimension']}, ensemble={setup['ensemble']}, "
+               f"shapes={setup['particle_shape_list']}, N={setup['total_particle_number']}")
+
+    if setup_only:
+        # Use a per-fixture scratch sub-root so setup's canonical-slug naming
+        # ('<dim>d_<ens>_<shape>...') does not collide with existing full-sim
+        # fixtures already at the same slug under fixture_root.
+        scratch_root = fixture_root / f"_scratch_{fixture_id}"
+        if scratch_root.exists():
+            shutil.rmtree(scratch_root)
+        scratch_root.mkdir(parents=True)
+        try:
+            os.environ["COLPACK_WORKING_DIR_ROOT"] = str(scratch_root)
+            print(f"[setup]   {fixture_id} (setup-only): {summary}")
+            setup_simulation_problem(**setup)
+
+            produced = [p for p in scratch_root.iterdir() if p.is_dir()]
+            if len(produced) != 1:
+                raise RuntimeError(
+                    f"setup_simulation_problem produced unexpected number of dirs in scratch: {produced}"
+                )
+            shutil.move(str(produced[0]), str(expected_path))
+        finally:
+            if scratch_root.exists():
+                shutil.rmtree(scratch_root)
+
+        # Patch the stale working_dir field that setup baked in (pointed at the
+        # scratch path before the move). Without this, agents that Read the
+        # simulation_problem.json see a non-existent working_dir.
+        problem_path = expected_path / "simulation_problem.json"
+        with problem_path.open("r", encoding="utf-8") as f:
+            problem = json.load(f)
+        problem["working_dir"] = str(expected_path)
+        with problem_path.open("w", encoding="utf-8") as f:
+            json.dump(problem, f, indent=4)
+
+        print(f"[done]    {fixture_id} (setup-only): {expected_path}")
+        return expected_path
+
     os.environ["COLPACK_WORKING_DIR_ROOT"] = str(fixture_root)
 
-    setup = fixture["setup"]
-    print(f"[setup]   {fixture_id}: dimension={setup['dimension']}, ensemble={setup['ensemble']}, "
-          f"shapes={setup['particle_shape_list']}, N={setup['total_particle_number']}")
+    print(f"[setup]   {fixture_id}: {summary}")
     setup_simulation_problem(**setup)
 
     if not expected_path.exists():
@@ -189,13 +270,16 @@ def main() -> int:
     built: dict[str, dict] = {}
     for fixture in selected:
         path = _build_one(fixture, fixture_root, args.force)
-        built[fixture["fixture_id"]] = {
+        entry: dict = {
             "description": fixture["description"],
             "working_dir": str(path),
+            "setup_only": bool(fixture.get("setup_only", False)),
             "setup": fixture["setup"],
-            "baseline_parameters": fixture["baseline_parameters"],
-            "tunable_parameters": fixture["tunable_parameters"],
         }
+        if not fixture.get("setup_only"):
+            entry["baseline_parameters"] = fixture["baseline_parameters"]
+            entry["tunable_parameters"] = fixture["tunable_parameters"]
+        built[fixture["fixture_id"]] = entry
 
     index_path = _write_index(fixture_root, built)
     print(f"\nIndex updated: {index_path}")

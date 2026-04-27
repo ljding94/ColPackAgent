@@ -1,6 +1,6 @@
 {
   "experiment_id": "colpack_planning_eval",
-  "description": "Planning-stage evaluation suite. Each task drives the agent through setup then asks for a parameter sweep. Covers volume-fraction (NVT), pressure (NPT), per-component shape parameters, relative volume fraction, two-axis sweeps, and an adversarial NVT+pressure mismatch. Build the 'full' skill variant before running: python eval/build_skill_variant.py --variant-id full",
+  "description": "Planning-stage evaluation suite (fixture-backed). Each task points at a setup-only fixture built by eval/bootstrap_fixtures.py and tests only the planning stage — no per-task setup call. Covers volume-fraction (NVT), pressure (NPT), per-component shape parameters, relative volume fraction, two-axis sweeps, and an adversarial NVT+pressure mismatch. Prereqs: python eval/bootstrap_fixtures.py && python eval/build_skill_variant.py --variant-id full",
   "output_dir": "eval/runs/colpack_planning_eval",
   "working_dir_root": "eval/data",
   "repeats": 1,
@@ -35,6 +35,10 @@
   ],
   "metadata": {
     "axis": "task difficulty",
-    "stage": "planning"
+    "stage": "planning",
+    "track": "1 — LLM Evaluation",
+    "fixture_backed": true,
+    "fixtures_used": ["2d_nvt_disk_capsule_setup", "2d_npt_disk_capsule_setup", "2d_nvt_disk_disk_setup"],
+    "fixture_note": "Build setup-only fixtures with `python eval/bootstrap_fixtures.py` (~seconds). Each task then exercises only the planning step. NOTE: planning tasks append runs to the fixture's simulation_plan.json; for clean isolation between LLMs, --force rebuild the fixtures between full eval passes."
   }
 }

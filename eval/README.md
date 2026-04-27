@@ -102,7 +102,7 @@ Compare LLMs on **isolated workflow stages** using the production skill in full.
 | Dimension | Tasks file | Spec | Difficulty | Status |
 | --- | --- | --- | --- | --- |
 | Setup | [tasks/setup_tasks.json](tasks/setup_tasks.json) | [specs/setup_eval.json](specs/setup_eval.json) | 1–5 (incl. 2 adversarial) | Authored |
-| Planning | [tasks/planning_tasks.json](tasks/planning_tasks.json) | [specs/planning_eval.json](specs/planning_eval.json) | 1–4 (incl. 1 adversarial) | Authored |
+| Planning | [tasks/planning_tasks.json](tasks/planning_tasks.json) | [specs/planning_eval.json](specs/planning_eval.json) | 1–4 (incl. 1 adversarial) | Authored, fixture-backed |
 | Analysis | [tasks/analysis_tasks.json](tasks/analysis_tasks.json) | [specs/analysis_eval.json](specs/analysis_eval.json) | 1–5 (incl. 1 adversarial) | Authored, fixture-backed |
 
 The bare-bones `experiment_spec.example.json` (one `setup_only` task) is kept as a smoke test of the runner.
@@ -145,18 +145,28 @@ python eval/bootstrap_fixtures.py --force               # rebuild all fixtures f
 python eval/bootstrap_fixtures.py --only 2d_nvt_disk    # build a single fixture
 ```
 
-The two default fixtures (chosen for single-shape vs mixture coverage):
+Two tiers of fixtures:
+
+**Full simulation fixtures** — setup + plan + execute. Used by the analysis suite.
 
 | Fixture id | System | Sweep |
 | --- | --- | --- |
 | `2d_nvt_disk` | 2D NVT, 100 hard disks | `volume_fraction` ∈ {0.3, 0.5, 0.7, 0.8} (spans the freezing transition) |
-| `2d_nvt_disk_capsule` | 2D NVT, 100 particles in a disk+capsule mixture | `volume_fraction` ∈ {0.4, 0.6} |
+| `2d_nvt_disk_capsule` | 2D NVT, 100 particles, disk+capsule mix | `volume_fraction` ∈ {0.4, 0.6} |
 
-Outputs land at `eval/data/fixtures/<fixture_id>/` (gitignored under `eval/data/`). Each fixture directory holds the standard `simulation_problem.json`, `simulation_baseline.json`, `simulation_plan.json`, per-run trajectories (`init.gsd`, `compress.gsd`, `sample_trajectory.gsd`, `sample_final.gsd`), `workflow_status.csv`, and a fresh `analyze=X` column ready to be filled in by the analysis suite.
+**Setup-only fixtures** — only `simulation_problem.json`, no plan/execute. Cheap (millisecond builds) starting points used by the planning suite.
 
-A combined `eval/data/fixtures/_index.json` records the mapping from fixture id → absolute `working_dir` plus the params used to build it. Tasks reference fixtures via the placeholder `{{fixture:<fixture_id>}}` in their `user_messages`; the spec loader substitutes the absolute `working_dir` from the index at load time. Missing fixtures fail loudly with a hint to run the bootstrap script.
+| Fixture id | System |
+| --- | --- |
+| `2d_nvt_disk_capsule_setup` | 2D NVT, 500 particles, disk+capsule mix |
+| `2d_npt_disk_capsule_setup` | 2D NPT, 500 particles, disk+capsule mix |
+| `2d_nvt_disk_disk_setup` | 2D NVT, 1000 particles, bidisperse disks |
 
-> **Current state.** The analysis suite is fully fixture-backed: each of its 5 tasks contains a single user message that references a fixture and exercises only the analyze stage. The planning suite (`tasks/planning_tasks.json`) still redoes setup within each task; migrating it to start from a fixture setup is the next step.
+Outputs land at `eval/data/fixtures/<fixture_id>/` (gitignored under `eval/data/`). A combined `eval/data/fixtures/_index.json` records the mapping fixture_id → absolute `working_dir`. Tasks reference fixtures via the placeholder `{{fixture:<fixture_id>}}` in their `user_messages`; the spec loader substitutes the absolute path at load time and errors loudly with a build hint if the fixture is missing.
+
+> **Note on planning-suite isolation.** Planning tasks call `plan_simulation_runs_tool`, which appends to the fixture's `simulation_plan.json` rather than replacing it. For a single LLM pass this is fine (the agent's tool-call payload is what we score); for a multi-LLM matrix run, `--force` rebuild the setup-only fixtures between full passes if you want clean isolation. The full simulation fixtures are not affected by planning runs.
+
+**Current state.** Both the analysis suite and the planning suite are fully fixture-backed: each task is a single turn that references a fixture and exercises only its target stage. Setup tasks remain self-contained (they have no upstream dependency to optimize away). Track 2 (skill ablation) is not yet authored.
 
 ### Running the LLM evaluation
 
