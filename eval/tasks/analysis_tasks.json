@@ -1,69 +1,49 @@
 [
   {
     "task_id": "analyze_2d_disks_default",
-    "description": "Difficulty 1 — single shape, default analysis. The agent runs a 2D NVT disk simulation end-to-end and analyzes with the per-shape defaults (Hexatic ψ6 for disks). Tests that the agent calls analyze_simulation_runs_tool with no extra_order_params and surfaces the right defaults.",
+    "description": "Difficulty 1 — single shape, default analysis. The agent reads a pre-executed simulation working_dir and analyzes with the per-shape defaults (Hexatic ψ6 for disks). Tests that the agent calls analyze_simulation_runs_tool with no extra_order_params and surfaces the right defaults.",
     "difficulty_level": 1,
     "user_profile_id": "analysis_focused_user",
     "user_messages": [
-      "Run a small 2D NVT simulation end-to-end: 100 hard disks. Plan a sweep over volume_fraction at 0.4 and 0.6 with sample_steps=5000. Go ahead and complete setup, planning, and execution autonomously — use reasonable defaults where unspecified and let me know when execution finishes.",
-      "Now run the analysis with default parameters."
+      "An existing simulation has already been run end-to-end at the working directory `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep at 0.3, 0.5, 0.7, 0.8). Run the analysis with default parameters."
     ],
     "expected_outcomes": [
-      "Setup, plan, and execute stages complete with n_failed=0.",
-      "analyze_simulation_runs_tool is called with no extra_order_params; per-shape defaults (Hexatic ψ6) apply.",
-      "Agent surfaces the Hexatic ψ6 results across both volume_fraction runs in the reply."
+      "analyze_simulation_runs_tool is called with working_dir set to the fixture path and no extra_order_params; per-shape defaults (Hexatic ψ6) apply.",
+      "Agent surfaces the Hexatic ψ6 results across all four volume_fraction runs in the reply.",
+      "Agent does NOT call setup or plan tools — the fixture is already set up, planned, and executed."
     ],
     "metadata": {
       "stage": "analysis",
-      "tags": ["default_params", "single_shape", "2d", "nvt"]
-    }
-  },
-  {
-    "task_id": "analyze_3d_spheres_default",
-    "description": "Difficulty 1 — 3D mirror of analyze_2d_disks_default. NPT spheres with default analysis (Steinhardt q4, q6, SolidLiquid).",
-    "difficulty_level": 1,
-    "user_profile_id": "analysis_focused_user",
-    "user_messages": [
-      "Run a small 3D NPT simulation end-to-end: 200 hard spheres. Plan a sweep over P at 1.0 and 5.0 with sample_steps=5000. Run setup, planning, and execution autonomously and let me know when finished.",
-      "Now analyze the runs with default parameters."
-    ],
-    "expected_outcomes": [
-      "All stages complete cleanly.",
-      "analyze_simulation_runs_tool is called with no extra_order_params; defaults for 'sphere' (Steinhardt q4, q6, SolidLiquid) apply.",
-      "Agent surfaces the order-parameter values across both pressure runs."
-    ],
-    "metadata": {
-      "stage": "analysis",
-      "tags": ["default_params", "single_shape", "3d", "npt"]
+      "tags": ["default_params", "single_shape", "2d", "nvt", "fixture_backed"],
+      "fixture_id": "2d_nvt_disk"
     }
   },
   {
     "task_id": "analyze_2d_disks_interpret",
-    "description": "Difficulty 2 — sweep volume fraction and ask the agent to INTERPRET results (not just report them). Tests that the agent reads order-parameter values across runs and identifies a physically meaningful trend (here: hexagonal-ordering onset for hard disks, expected near φ ≈ 0.7).",
+    "description": "Difficulty 2 — interpret order-parameter trends across the volume-fraction sweep. The fixture spans the 2D hard-disk freezing transition (~0.7), so the agent should read Hexatic ψ6 across runs and identify the φ at which clear hexagonal order emerges.",
     "difficulty_level": 2,
     "user_profile_id": "analysis_focused_user",
     "user_messages": [
-      "Run a small 2D NVT simulation end-to-end: 100 hard disks. Plan a sweep over volume_fraction at 0.3, 0.5, 0.7, and 0.8 with sample_steps=10000. Complete setup, planning, and execution autonomously and let me know when execution finishes.",
-      "Now analyze the runs with default parameters and tell me at which volume fraction the disks start to show clear hexagonal order. Use the Hexatic ψ6 trend across the sweep to back up your answer."
+      "An existing simulation has already been run end-to-end at the working directory `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep at 0.3, 0.5, 0.7, 0.8). Run the analysis with default parameters and tell me at which volume fraction the disks start to show clear hexagonal order. Use the Hexatic ψ6 trend across the sweep to back up your answer."
     ],
     "expected_outcomes": [
       "Default analysis (Hexatic ψ6) is computed across all four runs.",
-      "Agent reads ψ6 values, observes a sharp increase as φ approaches the freezing transition (~0.7), and identifies that volume fraction in its reply.",
-      "Answer is grounded in the numerical results, not generic physics knowledge."
+      "Agent reads ψ6 values, observes a sharp increase as φ approaches ~0.7, and identifies that volume fraction in its reply.",
+      "Answer is grounded in the numerical results from the analysis output, not in generic physics knowledge."
     ],
     "metadata": {
       "stage": "analysis",
-      "tags": ["interpretation", "single_shape", "2d", "nvt", "freezing_transition"]
+      "tags": ["interpretation", "single_shape", "2d", "nvt", "freezing_transition", "fixture_backed"],
+      "fixture_id": "2d_nvt_disk"
     }
   },
   {
     "task_id": "analyze_2d_disks_extra_hexatic",
-    "description": "Difficulty 3 — request a non-default order parameter. Tests that the agent constructs the extra_order_params dict correctly with the right freud class name and parameters.",
+    "description": "Difficulty 3 — request non-default order parameters via extra_order_params. Tests that the agent constructs the freud-class dict correctly with the right type names and parameters.",
     "difficulty_level": 3,
     "user_profile_id": "analysis_focused_user",
     "user_messages": [
-      "Run a 2D NVT simulation end-to-end: 100 hard disks. Plan a sweep over volume_fraction at 0.4, 0.6, and 0.75 with sample_steps=5000. Run setup, planning, and execution autonomously.",
-      "Analyze the runs. In addition to the default Hexatic ψ6, also compute Hexatic ψ4 (call it 'hexatic_4') and Hexatic ψ3 ('hexatic_3'), so I can check for square and triangular ordering signatures alongside the hexagonal one."
+      "An existing simulation has been run at `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep). In addition to the default Hexatic ψ6, also compute Hexatic ψ4 (call it `hexatic_4`) and Hexatic ψ3 (`hexatic_3`), so I can check for square and triangular ordering signatures alongside the hexagonal one."
     ],
     "expected_outcomes": [
       "analyze_simulation_runs_tool is called with extra_order_params=[{name: 'hexatic_4', type: 'Hexatic', params: {k: 4}}, {name: 'hexatic_3', type: 'Hexatic', params: {k: 3}}] (order may vary).",
@@ -72,37 +52,36 @@
     ],
     "metadata": {
       "stage": "analysis",
-      "tags": ["extra_order_params", "freud_dict_construction", "2d", "nvt"]
+      "tags": ["extra_order_params", "freud_dict_construction", "2d", "nvt", "fixture_backed"],
+      "fixture_id": "2d_nvt_disk"
     }
   },
   {
     "task_id": "analyze_2d_mixture_per_shape",
-    "description": "Difficulty 4 — multi-component mixture with extras that reference both species. The agent must analyze a disk+capsule mixture, accept that defaults already cover both shapes (Hexatic ψ6 for disks, Nematic for capsules), and add a coordination-style extra that applies system-wide.",
+    "description": "Difficulty 4 — multi-component mixture analysis. The agent must analyze a disk+capsule mixture, accept that defaults already cover both shapes (Hexatic ψ6 for disks, Nematic for capsules), and add a system-wide ContinuousCoordination extra.",
     "difficulty_level": 4,
     "user_profile_id": "analysis_focused_user",
     "user_messages": [
-      "Run a 2D NVT simulation end-to-end: 100 particles, 50 disks and 50 capsules. Plan a sweep over volume_fraction at 0.4 and 0.6 with sample_steps=5000. Run setup, planning, and execution autonomously.",
-      "Analyze the runs. The defaults already cover Hexatic ψ6 for disks and Nematic for capsules — keep those. Additionally compute a continuous coordination number for the mixed system using ContinuousCoordination."
+      "An existing simulation has been run at `{{fixture:2d_nvt_disk_capsule}}` (2D NVT, 100 particles, 50 disks + 50 capsules, volume_fraction sweep at 0.4 and 0.6). Analyze the runs. The defaults already cover Hexatic ψ6 for disks and Nematic for capsules — keep those. Additionally compute a continuous coordination number for the mixed system using ContinuousCoordination."
     ],
     "expected_outcomes": [
-      "Setup uses particle_shape_list=['disk', 'capsule'] (HPMC-compatible mixture).",
-      "analyze_simulation_runs_tool is called with extra_order_params=[{name: '<some_name>', type: 'ContinuousCoordination', params: {...}}] using sensible defaults from the config (powers=null, compute_log=true, compute_exp=true) or values supplied by the agent.",
+      "analyze_simulation_runs_tool is called with extra_order_params=[{name: '<some_name>', type: 'ContinuousCoordination', params: {...}}] using sensible defaults from the config or values supplied by the agent.",
       "Default per-shape order params (Hexatic ψ6 for disks, Nematic for capsules) still appear in the results.",
       "Reply summarizes both per-shape order and the continuous coordination across the two volume_fraction runs."
     ],
     "metadata": {
       "stage": "analysis",
-      "tags": ["extra_order_params", "mixture", "two_shapes", "2d", "nvt", "system_wide_extra"]
+      "tags": ["extra_order_params", "mixture", "two_shapes", "2d", "nvt", "system_wide_extra", "fixture_backed"],
+      "fixture_id": "2d_nvt_disk_capsule"
     }
   },
   {
     "task_id": "analyze_2d_disks_cubatic_adversarial",
-    "description": "Difficulty 5 — adversarial. The user requests a Cubatic order parameter on a 2D disk system. Cubatic measures cubic symmetry from per-particle orientation vectors, so it is meaningless for (a) 2D systems and (b) isotropic shapes like disks. The agent should refuse, ask for clarification, or warn the user that the requested parameter does not apply to this geometry rather than blindly forwarding the request to the analyze tool.",
+    "description": "Difficulty 5 — adversarial. The user requests a Cubatic order parameter on a 2D disk system. Cubatic measures cubic symmetry from per-particle orientation vectors, so it is meaningless for (a) 2D systems and (b) isotropic shapes like disks. The agent should refuse, ask for clarification, or warn the user that the requested parameter does not apply to this geometry rather than blindly forwarding the request to analyze_simulation_runs_tool.",
     "difficulty_level": 5,
     "user_profile_id": "noisy_or_ambiguous_user",
     "user_messages": [
-      "Run a 2D NVT simulation end-to-end: 100 hard disks. Plan a sweep over volume_fraction at 0.4 and 0.6 with sample_steps=5000. Run setup, planning, and execution autonomously.",
-      "Analyze the runs and include a Cubatic order parameter in the analysis."
+      "An existing simulation has been run at `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep). Analyze the runs and include a Cubatic order parameter in the analysis."
     ],
     "expected_outcomes": [
       "Agent flags that Cubatic is for 3D cubic-symmetric particles (e.g., cubes) and is not meaningful for 2D disks (which are isotropic and have no orientation vectors).",
@@ -111,9 +90,10 @@
     ],
     "metadata": {
       "stage": "analysis",
-      "tags": ["adversarial", "inappropriate_order_param", "2d", "nvt", "single_shape"],
+      "tags": ["adversarial", "inappropriate_order_param", "2d", "nvt", "single_shape", "fixture_backed"],
       "adversarial": true,
-      "expected_failure_mode": "Cubatic is a 3D cubic-symmetry order parameter; meaningless on 2D isotropic disks"
+      "expected_failure_mode": "Cubatic is a 3D cubic-symmetry order parameter; meaningless on 2D isotropic disks",
+      "fixture_id": "2d_nvt_disk"
     }
   }
 ]

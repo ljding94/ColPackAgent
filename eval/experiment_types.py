@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,45 @@ def _repo_root() -> Path:
 
 def _default_eval_skill_path() -> Path:
     return _repo_root() / "eval" / "skills" / "full" / "colpack" / "SKILL.md"
+
+
+def _fixture_index_path() -> Path:
+    return _repo_root() / "eval" / "data" / "fixtures" / "_index.json"
+
+
+_FIXTURE_PLACEHOLDER_RE = re.compile(r"\{\{fixture:([A-Za-z0-9_]+)\}\}")
+
+
+def _load_fixture_index() -> dict[str, str]:
+    """Load fixture_id -> absolute working_dir from eval/data/fixtures/_index.json.
+
+    Returns an empty dict if the index file is missing. Callers that
+    require a non-empty index should validate downstream.
+    """
+    index_path = _fixture_index_path()
+    if not index_path.exists():
+        return {}
+    try:
+        data = json.loads(index_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Could not parse fixture index at {index_path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"Fixture index at {index_path} must be a JSON object.")
+    return {fid: entry["working_dir"] for fid, entry in data.items() if isinstance(entry, dict) and "working_dir" in entry}
+
+
+def _resolve_fixture_placeholders(text: str, fixture_map: dict[str, str], *, task_id: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        fixture_id = match.group(1)
+        if fixture_id not in fixture_map:
+            raise ValueError(
+                f"Task '{task_id}' references {{{{fixture:{fixture_id}}}}}, "
+                f"but no such fixture is in the index. "
+                f"Build it with: python eval/bootstrap_fixtures.py --only {fixture_id}"
+            )
+        return fixture_map[fixture_id]
+
+    return _FIXTURE_PLACEHOLDER_RE.sub(replace, text)
 
 
 def _resolve_path(path_text: str | None, *, default_path: Path | None = None) -> Path | None:
@@ -145,17 +185,31 @@ def _load_user_profiles(raw_profiles: list[dict[str, Any]] | None) -> tuple[User
 
 def _load_tasks(raw_tasks: list[dict[str, Any]]) -> tuple[TaskSpec, ...]:
     tasks = []
+    fixture_map: dict[str, str] | None = None  # Lazy-loaded on first placeholder use.
+
     for raw_task in raw_tasks:
-        user_messages = tuple(str(message) for message in raw_task.get("user_messages", []))
-        if not user_messages:
-            raise ValueError(f"Task {raw_task.get('task_id', '<unknown>')} must define at least one user message.")
+        task_id = str(raw_task["task_id"])
+        raw_messages = [str(message) for message in raw_task.get("user_messages", [])]
+        if not raw_messages:
+            raise ValueError(f"Task {task_id} must define at least one user message.")
+
+        if any(_FIXTURE_PLACEHOLDER_RE.search(m) for m in raw_messages):
+            if fixture_map is None:
+                fixture_map = _load_fixture_index()
+                if not fixture_map:
+                    raise ValueError(
+                        f"Task '{task_id}' uses a {{fixture:...}} placeholder but no "
+                        f"fixture index was found at {_fixture_index_path()}. "
+                        "Run: python eval/bootstrap_fixtures.py"
+                    )
+            raw_messages = [_resolve_fixture_placeholders(m, fixture_map, task_id=task_id) for m in raw_messages]
 
         tasks.append(
             TaskSpec(
-                task_id=str(raw_task["task_id"]),
+                task_id=task_id,
                 description=str(raw_task.get("description", "")),
                 difficulty_level=int(raw_task.get("difficulty_level", 1)),
-                user_messages=user_messages,
+                user_messages=tuple(raw_messages),
                 user_profile_id=raw_task.get("user_profile_id"),
                 expected_outcomes=tuple(str(item) for item in raw_task.get("expected_outcomes", [])),
                 metadata=dict(raw_task.get("metadata", {})),

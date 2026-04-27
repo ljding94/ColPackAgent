@@ -2,6 +2,8 @@
 
 This folder is the experiment harness for comparing prompt variants, LLMs, and skill versions without changing `agent/app.py`.
 
+> **What this framework tests — and what it doesn't.** The eval harness measures **agent behavior**: how an LLM + skill combo navigates the ColPack workflow. It does **not** test the ColPack Python package itself; that's covered separately by `tests/test_colpack/`. Fixtures, tool implementations, and underlying simulation results are infrastructure assumed correct — they are not subjects of evaluation. For adversarial tasks (HPMC-incompatible mixtures, dimension mismatches, ensemble/parameter mismatches, inappropriate order parameters), score on whether the agent refused or clarified — *not* on whether the underlying tool happened to error or return numbers. If a ColPack bug causes a run to fail, that's noise in the agent score, to be discounted by inspecting the conversation transcript.
+
 Skills used by eval are built into `eval/skills/<variant_id>/colpack/` from the production `agent/skills/colpack/` tree via `build_skill_variant.py`. This keeps experiment artifacts out of git (the directory is gitignored) and lets ablations omit specific reference files without touching the production skill.
 
 ## Building a Skill Variant
@@ -101,7 +103,7 @@ Compare LLMs on **isolated workflow stages** using the production skill in full.
 | --- | --- | --- | --- | --- |
 | Setup | [tasks/setup_tasks.json](tasks/setup_tasks.json) | [specs/setup_eval.json](specs/setup_eval.json) | 1–5 (incl. 2 adversarial) | Authored |
 | Planning | [tasks/planning_tasks.json](tasks/planning_tasks.json) | [specs/planning_eval.json](specs/planning_eval.json) | 1–4 (incl. 1 adversarial) | Authored |
-| Analysis | [tasks/analysis_tasks.json](tasks/analysis_tasks.json) | [specs/analysis_eval.json](specs/analysis_eval.json) | 1–5 (incl. 1 adversarial) | Authored |
+| Analysis | [tasks/analysis_tasks.json](tasks/analysis_tasks.json) | [specs/analysis_eval.json](specs/analysis_eval.json) | 1–5 (incl. 1 adversarial) | Authored, fixture-backed |
 
 The bare-bones `experiment_spec.example.json` (one `setup_only` task) is kept as a smoke test of the runner.
 
@@ -147,25 +149,26 @@ The two default fixtures (chosen for single-shape vs mixture coverage):
 
 | Fixture id | System | Sweep |
 | --- | --- | --- |
-| `2d_nvt_disk` | 2D NVT, 100 hard disks | `volume_fraction` ∈ {0.4, 0.6} |
+| `2d_nvt_disk` | 2D NVT, 100 hard disks | `volume_fraction` ∈ {0.3, 0.5, 0.7, 0.8} (spans the freezing transition) |
 | `2d_nvt_disk_capsule` | 2D NVT, 100 particles in a disk+capsule mixture | `volume_fraction` ∈ {0.4, 0.6} |
 
 Outputs land at `eval/data/fixtures/<fixture_id>/` (gitignored under `eval/data/`). Each fixture directory holds the standard `simulation_problem.json`, `simulation_baseline.json`, `simulation_plan.json`, per-run trajectories (`init.gsd`, `compress.gsd`, `sample_trajectory.gsd`, `sample_final.gsd`), `workflow_status.csv`, and a fresh `analyze=X` column ready to be filled in by the analysis suite.
 
-A combined `eval/data/fixtures/_index.json` records the mapping from fixture id → absolute `working_dir` plus the params used to build it. Downstream specs and tasks should resolve fixture paths through this index rather than hardcoding them.
+A combined `eval/data/fixtures/_index.json` records the mapping from fixture id → absolute `working_dir` plus the params used to build it. Tasks reference fixtures via the placeholder `{{fixture:<fixture_id>}}` in their `user_messages`; the spec loader substitutes the absolute `working_dir` from the index at load time. Missing fixtures fail loudly with a hint to run the bootstrap script.
 
-> **Current state.** Bootstrap script is in place and validated. The existing analysis tasks (`tasks/analysis_tasks.json`) and planning tasks (`tasks/planning_tasks.json`) still redo earlier stages within each task; refactoring them to reference fixture `working_dir`s through the index is the next infra step.
+> **Current state.** The analysis suite is fully fixture-backed: each of its 5 tasks contains a single user message that references a fixture and exercises only the analyze stage. The planning suite (`tasks/planning_tasks.json`) still redoes setup within each task; migrating it to start from a fixture setup is the next step.
 
 ### Running the LLM evaluation
 
 ```bash
-python eval/build_skill_variant.py --variant-id full
+python eval/build_skill_variant.py --variant-id full        # one-time: skill snapshot
+python eval/bootstrap_fixtures.py                           # one-time: 2 simulation fixtures (~2 min)
 python -m eval.run_experiments run --spec eval/specs/setup_eval.json
 python -m eval.run_experiments run --spec eval/specs/planning_eval.json
 python -m eval.run_experiments run --spec eval/specs/analysis_eval.json
 ```
 
-Vary `models` in each spec to add LLMs to the matrix. Until the fixture-sharing refactor lands, the analysis suite drives a small end-to-end simulation per task (100–200 particles, sample_steps=5–10k) — expect 1–3 minutes per analysis task. Once fixtures are in place this drops to near-instant for analysis, with the only expense being the 2 fixture executions run once up front.
+Vary `models` in each spec to add LLMs to the matrix. The two prerequisite commands (skill build + fixture bootstrap) run once per environment; thereafter each analysis run only exercises the analyze stage and is near-instant. The planning suite still redoes setup per task and will get faster once it's migrated to fixtures.
 
 ## Track 2 — Skill Ablation Study (End-to-End, Fixed LLM)
 

@@ -1,6 +1,6 @@
 {
   "experiment_id": "colpack_analysis_eval",
-  "description": "Analysis-stage evaluation suite. Each task drives the agent through a small end-to-end simulation (setup, plan, execute autonomously) and then evaluates analysis behavior — default per-shape order parameters at L1, interpretation at L2, custom extra_order_params at L3, mixture extras at L4, and an adversarial inappropriate-order-parameter request at L5. Build the 'full' skill variant before running: python eval/build_skill_variant.py --variant-id full",
+  "description": "Analysis-stage evaluation suite (fixture-backed). Each task points at a pre-executed simulation working_dir built by eval/bootstrap_fixtures.py and tests only the analysis stage — default per-shape order parameters at L1, trend interpretation at L2, custom extra_order_params at L3, mixture extras at L4, and an adversarial inappropriate-order-parameter request at L5. Prereqs: python eval/bootstrap_fixtures.py && python eval/build_skill_variant.py --variant-id full",
   "output_dir": "eval/runs/colpack_analysis_eval",
   "working_dir_root": "eval/data",
   "repeats": 1,
@@ -33,7 +33,8 @@
     "axis": "task difficulty",
     "stage": "analysis",
     "track": "1 — LLM Evaluation",
-    "execution_required": true,
-    "execution_note": "Each task runs a small simulation (100–200 particles, sample_steps=5000–10000). Expect 1–3 minutes per task on a typical workstation."
+    "fixture_backed": true,
+    "fixtures_used": ["2d_nvt_disk", "2d_nvt_disk_capsule"],
+    "fixture_note": "Build fixtures once with `python eval/bootstrap_fixtures.py` (~2 min total) before running. Each task then exercises only the analyze step — no per-task simulation execution."
   }
 }

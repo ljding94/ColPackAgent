@@ -41,7 +41,7 @@ DEFAULT_FIXTURE_ROOT = REPO_ROOT / "eval" / "data" / "fixtures"
 FIXTURES: list[dict] = [
     {
         "fixture_id": "2d_nvt_disk",
-        "description": "2D NVT, 100 hard disks, volume_fraction sweep at [0.4, 0.6].",
+        "description": "2D NVT, 100 hard disks, volume_fraction sweep at [0.3, 0.5, 0.7, 0.8] — chosen to span the 2D hard-disk freezing transition (~0.7) so analysis tasks can interpret order-parameter trends.",
         "setup": {
             "dimension": 2,
             "total_particle_number": 100,
@@ -53,7 +53,7 @@ FIXTURES: list[dict] = [
             "particle_specs.0.diameter": 1.0,
         },
         "tunable_parameters": {
-            "volume_fraction": [0.4, 0.6],
+            "volume_fraction": [0.3, 0.5, 0.7, 0.8],
         },
     },
     {
