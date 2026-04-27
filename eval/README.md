@@ -2,29 +2,23 @@
 
 This folder is the experiment harness for comparing prompt variants, LLMs, and skill versions without changing `agent/app.py`.
 
-> **What this framework tests — and what it doesn't.** The eval harness measures **agent behavior**: how an LLM + skill combo navigates the ColPack workflow. It does **not** test the ColPack Python package itself; that's covered separately by `tests/test_colpack/`. Fixtures, tool implementations, and underlying simulation results are infrastructure assumed correct — they are not subjects of evaluation. For adversarial tasks (HPMC-incompatible mixtures, dimension mismatches, ensemble/parameter mismatches, inappropriate order parameters), score on whether the agent refused or clarified — *not* on whether the underlying tool happened to error or return numbers. If a ColPack bug causes a run to fail, that's noise in the agent score, to be discounted by inspecting the conversation transcript.
+> **What this framework tests — and what it doesn't.** The eval harness measures **agent behavior**: how an LLM + the production skill navigates the ColPack workflow. It does **not** test the ColPack Python package itself; that's covered separately by `tests/test_colpack/`. Fixtures, tool implementations, and underlying simulation results are infrastructure assumed correct — they are not subjects of evaluation. For adversarial tasks (HPMC-incompatible mixtures, dimension mismatches, ensemble/parameter mismatches, inappropriate order parameters), score on whether the agent refused or clarified — *not* on whether the underlying tool happened to error or return numbers. If a ColPack bug causes a run to fail, that's noise in the agent score, to be discounted by inspecting the conversation transcript.
+
+**Scope (2026-04-27).** This eval is intentionally lean: a few LLMs scored against the `full` production skill across three workflow stages (setup, planning, analysis). The more comprehensive benchmark — skill ablation, broader LLM coverage, automated scoring — moved to a separate project, **ColPackBench**, as a follow-up paper. The variant-builder script (`build_skill_variant.py`) and the underlying ablation infra are kept here as reusable plumbing.
 
 Skills used by eval are built into `eval/skills/<variant_id>/colpack/` from the production `agent/skills/colpack/` tree via `build_skill_variant.py`. This keeps experiment artifacts out of git (the directory is gitignored) and lets ablations omit specific reference files without touching the production skill.
 
 ## Building a Skill Variant
 
-Run the builder before any experiment that references the variant:
+For this paper's eval we only need the `full` variant. Build it once before running any experiment:
 
 ```bash
-# Full skill, no ablation
 python eval/build_skill_variant.py --variant-id full
-
-# Ablation: drop a single reference file
-python eval/build_skill_variant.py --variant-id no_setup_ref \
-    --exclude references/1_setup_problem.md
-
-# Ablation: drop multiple reference files
-python eval/build_skill_variant.py --variant-id minimal \
-    --exclude references/1_setup_problem.md \
-    --exclude references/2_plan_runs.md
 ```
 
-Each variant's `SKILL.md` then lives at `eval/skills/<variant_id>/colpack/SKILL.md`, which is what the experiment spec's `skills[*].skill_path` should point to.
+The variant lands at `eval/skills/full/colpack/SKILL.md`, which is what the experiment spec's `skills[*].skill_path` points to.
+
+`build_skill_variant.py` also supports `--exclude <ref-or-dir>` (drop a reference file or the whole `references/` directory) and `--strip-skill-body` (replace SKILL.md with frontmatter only). Those flags are used by the ColPackBench ablation study, not here.
 
 ## Current Scope
 
@@ -56,17 +50,6 @@ python -m eval.run_experiments run --spec eval/experiment_spec.example.json --dr
 
 under the experiment `output_dir`.
 
-## Two Evaluation Tracks
-
-The eval runs two parallel studies. Both use the same JSON spec format and runner; they differ in which axis of the run matrix they vary.
-
-| Track | Varies | Held fixed | Question being asked |
-| --- | --- | --- | --- |
-| **1 — LLM Evaluation** | `models` | `skills` = `full` | Which LLM reasons best at each isolated workflow stage? |
-| **2 — Skill Ablation** | `skills` | `models` = one chosen LLM | How does removing parts of the skill affect end-to-end behavior? |
-
-Both tracks share the difficulty + user-persona convention defined below, but apply it differently: Track 1 isolates each stage and uses adversarial prompts at the top of the ladder; Track 2 runs end-to-end and stays constructive across the ladder (the variable is the skill, not the prompt).
-
 ## Difficulty Ladder & User Personas
 
 Each task carries a numeric `difficulty_level` (1–5) and a `user_profile_id` naming the prompt style. The two axes are tightly correlated — easier problems are usually expressed in plain language, and adversarial problems usually arrive in noisier or contradictory ones — so we treat them as a single ladder, with the persona naming the prompt style at each level:
@@ -81,11 +64,11 @@ Each task carries a numeric `difficulty_level` (1–5) and a `user_profile_id` n
 
 `analysis_focused_user` is reserved for analysis-stage questions — it cuts across difficulty levels because analysis questions can be easy or hard regardless of prompt phrasing.
 
-For levels 4–5, tasks carry `metadata.adversarial: true` and `metadata.expected_failure_mode` so reviewers can score on the agent's refusal / clarification behavior rather than tool-call success. Track 2 (ablation) typically stays at levels 1–3 (constructive only); levels 4–5 are primarily a Track 1 concern.
+For levels 4–5, tasks carry `metadata.adversarial: true` and `metadata.expected_failure_mode` so reviewers can score on the agent's refusal / clarification behavior rather than tool-call success.
 
 The mapping is typical, not strict — a task author can pair any persona with any difficulty when it makes sense.
 
-## Track 1 — LLM Evaluation (Three Dimensions, Full Skill)
+## LLM Evaluation (Three Dimensions, Full Skill)
 
 Compare LLMs on **isolated workflow stages** using the production skill in full. Each workflow stage is treated as an independent evaluation axis to isolate that stage's reasoning without confounding from the others.
 
@@ -109,7 +92,7 @@ The bare-bones `experiment_spec.example.json` (one `setup_only` task) is kept as
 
 ### Suite dependencies (avoiding redundant simulation work)
 
-The three Track 1 dimensions are intentionally **chained via shared fixtures** so we don't re-run expensive simulation work for every analysis task. The dependency chain is:
+The three dimensions are intentionally **chained via shared fixtures** so we don't re-run expensive simulation work for every analysis task. The dependency chain is:
 
 ```text
 Setup suite       ──→ run all setup tasks (cheap; one tool call each)
@@ -126,7 +109,7 @@ Analysis suite    ──→ every task reads one of the 2 pre-executed working_d
                        and calls only analyze_simulation_runs_tool
 ```
 
-A full Track 1 pass therefore incurs:
+A full pass therefore incurs:
 
 - **N** setup tool calls (one per setup task, no execution).
 - **M** planning tool calls (each starts from a fixture setup, no re-setup).
@@ -166,7 +149,7 @@ Outputs land at `eval/data/fixtures/<fixture_id>/` (gitignored under `eval/data/
 
 > **Note on planning-suite isolation.** Planning tasks call `plan_simulation_runs_tool`, which appends to the fixture's `simulation_plan.json` rather than replacing it. For a single LLM pass this is fine (the agent's tool-call payload is what we score); for a multi-LLM matrix run, `--force` rebuild the setup-only fixtures between full passes if you want clean isolation. The full simulation fixtures are not affected by planning runs.
 
-**Current state.** Both the analysis suite and the planning suite are fully fixture-backed: each task is a single turn that references a fixture and exercises only its target stage. Setup tasks remain self-contained (they have no upstream dependency to optimize away). Track 2 (skill ablation) is not yet authored.
+**Current state.** Both the analysis suite and the planning suite are fully fixture-backed: each task is a single turn that references a fixture and exercises only its target stage. Setup tasks remain self-contained (they have no upstream dependency to optimize away).
 
 ### Running the LLM evaluation
 
@@ -180,54 +163,9 @@ python -m eval.run_experiments run --spec eval/specs/analysis_eval.json
 
 Vary `models` in each spec to add LLMs to the matrix. The two prerequisite commands (skill build + fixture bootstrap) run once per environment; thereafter each analysis run only exercises the analyze stage and is near-instant. The planning suite still redoes setup per task and will get faster once it's migrated to fixtures.
 
-## Track 2 — Skill Ablation Study (End-to-End, Fixed LLM)
+## Skill ablation lives in ColPackBench
 
-Compare **skill variants** on a fixed LLM using a single end-to-end task per level (setup → plan → execute → analyze in one conversation). The question is whether removing parts of the skill — a single reference, all references, or the SKILL.md body itself — materially degrades the agent's ability to complete the workflow.
-
-### Skill variants
-
-`build_skill_variant.py` produces six pre-defined variants for ablation:
-
-| Variant | What's removed | What it tests |
-| --- | --- | --- |
-| `full` | nothing | Baseline; full skill |
-| `no_analysis` | `references/4_analyze_simulation.md` | Can the agent still run analysis? |
-| `no_analysis_execution` | + `references/3_execute_simulation.md` | + Can it still execute? |
-| `no_analysis_execution_plan` | + `references/2_plan_runs.md` | + Can it still plan? |
-| `no_references` | entire `references/` directory | Can SKILL.md alone carry the workflow? |
-| `no_skill` | `references/`, `scripts/`; SKILL.md body stripped to frontmatter | Lower bound: agent has zero procedural guidance |
-
-Build commands for each variant are listed in the [Building a Skill Variant](#building-a-skill-variant) section above.
-
-### End-to-end task ladder
-
-Each level is a constructive (non-adversarial) end-to-end prompt of increasing problem complexity. The prompt phrasing is held fixed as `expert_operator` style at all levels — the level varies the underlying *problem*, not the *prompt*, so any degradation is attributable to the missing skill content rather than prompt difficulty:
-
-| Level | Underlying task |
-| --- | --- |
-| 1 | Single shape, single-axis sweep (e.g., 2D NVT disks, sweep `volume_fraction` at 3 values, then analyze). |
-| 2 | Bidisperse / same-shape mixture, single-axis sweep. |
-| 3 | Multi-component mixture (different shapes), single-axis sweep. |
-| 4 | Multi-component mixture, multi-axis sweep (one-at-a-time). |
-| 5 | Multi-component mixture, multi-axis sweep with non-default analysis (extra `extra_order_params`). |
-
-### Suite
-
-| Tasks file | Spec | Status |
-| --- | --- | --- |
-| `tasks/ablation_tasks.json` | `specs/ablation_eval.json` | Not yet authored |
-
-### Running the ablation study
-
-```bash
-# Build all variants once (see "Building a Skill Variant" for the per-variant args)
-python eval/build_skill_variant.py --variant-id full
-python eval/build_skill_variant.py --variant-id no_analysis --exclude references/4_analyze_simulation.md
-# ... (build the rest of the variants) ...
-
-# Run the suite — spec varies skills, holds model fixed
-python -m eval.run_experiments run --spec eval/specs/ablation_eval.json
-```
+`build_skill_variant.py` can produce more than just the `full` variant — it supports `--exclude` (drop reference files) and `--strip-skill-body` (frontmatter-only SKILL.md). That machinery is intentionally retained here, but the **skill ablation study itself** (end-to-end tasks varying the `skills` axis on a fixed LLM) is out of scope for the ColPackAgent paper. It moved to a separate project, **ColPackBench**, along with the broader benchmark scope (more LLMs, automated scoring, additional task dimensions). See your project notes for `ColPackBench` for design and status.
 
 ## Spec Structure
 
