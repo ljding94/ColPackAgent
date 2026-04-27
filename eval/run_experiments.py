@@ -4,10 +4,13 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 import re
 import shutil
 import sys
 import time
+import urllib.error
+import urllib.request
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -115,6 +118,64 @@ def _ensure_working_dir_root(spec: ExperimentSpec) -> Path:
 # 'fixtures' holds the bootstrap-built simulation/setup fixtures (expensive
 # to rebuild) referenced by planning and analysis specs via {{fixture:...}}.
 _PRESERVE_NAMES = frozenset({"fixtures"})
+
+
+def _probe_openrouter_served_by(model_id_full: str, api_key: str) -> tuple[str | None, str | None]:
+    """Send a 1-token chat-completion to OpenRouter and read back which
+    sub-backend served it (e.g. "Google" for google-vertex, "Amazon Bedrock",
+    "Anthropic"). Returns (served_by, error). The agent SDK does not surface
+    this field from the actual eval requests, so we probe once per model up
+    front to record routing for the run.
+    """
+    cleaned = model_id_full.strip()
+    if cleaned.startswith("openrouter/"):
+        cleaned = cleaned[len("openrouter/"):]
+
+    body = json.dumps({
+        "model": cleaned,
+        "messages": [{"role": "user", "content": "ok"}],
+        "max_tokens": 1,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "https://openrouter.ai/api/v1/chat/completions",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return data.get("provider"), None
+    except urllib.error.HTTPError as exc:
+        try:
+            err = json.loads(exc.read().decode("utf-8")).get("error", {}).get("message", str(exc))
+        except Exception:
+            err = f"HTTP {exc.code}"
+        return None, err
+    except Exception as exc:  # pragma: no cover — surface any transport issue
+        return None, f"{type(exc).__name__}: {exc}"
+
+
+def _probe_provider_routing(spec: ExperimentSpec) -> dict[str, dict[str, str | None]]:
+    """Probe each unique model in the spec, return {model_id: {served_by, error}}.
+
+    Skips silently (returns {}) if OPENROUTER_API_KEY is unset, so non-OpenRouter
+    setups don't break.
+    """
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        return {}
+
+    seen: dict[str, dict[str, str | None]] = {}
+    for model in spec.models:
+        if model.model_id in seen:
+            continue
+        served_by, error = _probe_openrouter_served_by(model.model_id, api_key)
+        seen[model.model_id] = {"served_by": served_by, "error": error}
+    return seen
 
 
 def _clean_working_dir_root(
@@ -497,7 +558,12 @@ def _aggregate_block(results: list[RunResult]) -> dict[str, Any]:
     }
 
 
-def _summarize_results(spec: ExperimentSpec, run_results: list[RunResult]) -> dict[str, Any]:
+def _summarize_results(
+    spec: ExperimentSpec,
+    run_results: list[RunResult],
+    *,
+    routing: dict[str, dict[str, str | None]] | None = None,
+) -> dict[str, Any]:
     # Group by model_id for the benchmarking breakdown.
     per_model: dict[str, list[RunResult]] = {}
     for r in run_results:
@@ -506,11 +572,19 @@ def _summarize_results(spec: ExperimentSpec, run_results: list[RunResult]) -> di
     # Pull spec-level model metadata (label, expected_backend, etc.) by id so
     # the per-model summary can surface it without grepping results.jsonl.
     spec_models = {m.model_id: m for m in spec.models}
+    routing = routing or {}
 
     def _per_model_block(model_id: str, runs: list[RunResult]) -> dict[str, Any]:
         block = _aggregate_block(runs)
         # provider_id is fixed per (model_id) since it's resolved from the model id.
         block["provider_id"] = runs[0].provider_id if runs else ""
+        # Pre-flight probe result: which OpenRouter sub-backend served this model.
+        if model_id in routing:
+            info = routing[model_id]
+            if info.get("served_by"):
+                block["served_by_provider"] = info["served_by"]
+            if info.get("error"):
+                block["routing_probe_error"] = info["error"]
         m = spec_models.get(model_id)
         if m is not None:
             if m.label:
@@ -550,6 +624,20 @@ async def _run_experiment(spec: ExperimentSpec, *, limit: int, dry_run: bool, bo
     if result_path.exists():
         result_path.unlink()
 
+    # Pre-flight probe: capture which OpenRouter sub-backend (e.g. "Google" for
+    # google-vertex, "Amazon Bedrock", "Anthropic") will serve each model in
+    # this run. The agent SDK does not surface this from the actual eval
+    # requests, so we record it once up front. Tiny cost (1-token request per
+    # unique model) and extremely useful for paper-grade routing audit.
+    routing = _probe_provider_routing(spec)
+    if routing:
+        print("Provider routing (served-by):")
+        for mid, info in routing.items():
+            if info["error"]:
+                print(f"  ⚠️  {mid}: ERROR — {info['error']}")
+            else:
+                print(f"  {mid} → {info['served_by']}")
+
     run_results: list[RunResult] = []
     for index, planned_run in enumerate(planned_runs, start=1):
         print(
@@ -567,7 +655,7 @@ async def _run_experiment(spec: ExperimentSpec, *, limit: int, dry_run: bool, bo
         _write_conversation_transcript(spec, run_result)
         run_results.append(run_result)
 
-    summary = _summarize_results(spec, run_results)
+    summary = _summarize_results(spec, run_results, routing=routing)
     summary_path = _summary_path(spec)
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(f"Results written to {result_path}")
