@@ -35,8 +35,11 @@ The first version is meant to set the stage:
 Use the module entry point from the repository root:
 
 ```bash
-python -m eval.run_experiments plan --spec eval/experiment_spec.example.json
-python -m eval.run_experiments run --spec eval/experiment_spec.example.json --dry-run
+# Print the planned matrix (no LLM calls)
+python -m eval.run_experiments plan --spec eval/specs/setup_eval.json
+
+# Smoke test: 1 real run, all output written
+python -m eval.run_experiments run --spec eval/specs/setup_eval.json --limit 1
 ```
 
 `plan` expands the matrix and can write a manifest.
@@ -88,7 +91,7 @@ Compare LLMs on **isolated workflow stages** using the production skill in full.
 | Planning | [tasks/planning_tasks.json](tasks/planning_tasks.json) | [specs/planning_eval.json](specs/planning_eval.json) | 1–4 (incl. 1 adversarial) | Authored, fixture-backed |
 | Analysis | [tasks/analysis_tasks.json](tasks/analysis_tasks.json) | [specs/analysis_eval.json](specs/analysis_eval.json) | 1–5 (incl. 1 adversarial) | Authored, fixture-backed |
 
-The bare-bones `experiment_spec.example.json` (one `setup_only` task) is kept as a smoke test of the runner.
+For a quick smoke test, run any of these specs with `--limit 1` to execute just the first task.
 
 ### Suite dependencies (avoiding redundant simulation work)
 
