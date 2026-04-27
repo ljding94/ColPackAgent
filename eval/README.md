@@ -66,9 +66,9 @@ The cleanest way to think about this is: **specs are recipes, tasks are the menu
 
 The split is what lets you reuse a task collection across many experiments (e.g., the same `setup_tasks.json` evaluated against four different model panels) without copy-pasting prompts.
 
-### How a spec becomes a list of runs
+### How the matrix expands
 
-The runner expands the matrix in this nesting order ([experiment_types.py:243](experiment_types.py#L243)):
+The runner iterates the spec's axes in this nesting order ([experiment_types.py:243](experiment_types.py#L243)):
 
 ```python
 for repeat in range(repeats):
@@ -78,26 +78,37 @@ for repeat in range(repeats):
                 # ← one planned_run per innermost iteration
 ```
 
-So with the current [`setup_eval.json`](specs/setup_eval.json) (6 tasks × 1 model × 1 skill × 1 repeat) the matrix has **6 planned runs**. If you append three more LLMs to `models`, it expands to 6 × 4 × 1 × 1 = **24 planned runs** — same prompts, four times the LLM coverage.
+For your current [`setup_eval.json`](specs/setup_eval.json) (6 tasks × 1 model × 1 skill × 1 repeat = **6 planned runs**), the list looks like:
 
-The loop nesting matters when you slice the matrix:
+```text
+   index   task                              model      skill   repeat
+   -----   --------------------------------  ---------  ------  ------
+    0      setup_2d_disk                     gemini     full    r01
+    1      setup_3d_sphere                   gemini     full    r01
+    2      setup_2d_bidisperse_disks         gemini     full    r01
+    3      setup_2d_disk_capsule             gemini     full    r01
+    4      setup_2d_incompatible_*           gemini     full    r01
+    5      setup_dim_mismatch_disk_cube      gemini     full    r01
+```
+
+If you append three more LLMs to `models`, the matrix expands to 6 × 4 × 1 × 1 = **24 planned runs** — same prompts, four times the LLM coverage. Because `model` is *inside* `task`, all models cycle through before `task` advances:
 
 ```text
 With 4 models x 6 tasks x 1 skill x 1 repeat:
 
-   index   task                  model      skill   repeat
-   -----   --------------------  ---------  ------  ------
-    0      setup_2d_disk         gemini     full    r01      <-- --limit 1 stops here
-    1      setup_2d_disk         claude     full    r01      <-- --limit 4 includes
-    2      setup_2d_disk         gpt-4o     full    r01          all four LLMs on task 0
-    3      setup_2d_disk         llama      full    r01      <--
-    4      setup_3d_sphere       gemini     full    r01
-    5      setup_3d_sphere       claude     full    r01
-    ...    ...                   ...        ...     ...
-   23      setup_dim_mismatch    llama      full    r01      <-- no --limit runs all 24
+   index   task                              model      skill   repeat
+   -----   --------------------------------  ---------  ------  ------
+    0      setup_2d_disk                     gemini     full    r01      <-- --limit 1 stops here
+    1      setup_2d_disk                     claude     full    r01      <-- --limit 4 includes
+    2      setup_2d_disk                     gpt-4o     full    r01          all four LLMs on task 0
+    3      setup_2d_disk                     llama      full    r01      <--
+    4      setup_3d_sphere                   gemini     full    r01
+    5      setup_3d_sphere                   claude     full    r01
+    ...    ...                               ...        ...     ...
+   23      setup_dim_mismatch_disk_cube      llama      full    r01      <-- no --limit runs all 24
 ```
 
-Because `model` is *inside* `task`, all models cycle through before `task` advances. That's why `--limit N_models` is a great smoke test when you add a new LLM: it gives you "task 0 across every model" in one shot.
+That's why `--limit N_models` is a great smoke test when you add a new LLM: it gives you "task 0 across every model" in one shot.
 
 ### What `--limit N` actually does
 
