@@ -1,3 +1,95 @@
+"""ColPack agent evaluation runner.
+
+Quickstart — typical commands, all run from the repo root
+(``cd /Users/ldq/Work/ColPackAgent`` if you're not there). Requires
+``OPENROUTER_API_KEY`` (or the matching key for whichever provider the
+spec's ``models`` list points at) to be exported in the shell.
+
+    # ──────────────────────────────────────────────────────────────────────
+    # 0. One-time setup (skip if already done locally)
+    # ──────────────────────────────────────────────────────────────────────
+
+    # Build the skill variant referenced by every spec (~few seconds).
+    python eval/build_skill_variant.py --variant-id full
+
+    # Build the simulation + setup-only fixtures referenced by planning
+    # and analysis specs (~2 minutes total; only the 2 full-sim fixtures
+    # actually run simulations, the 3 setup-only fixtures are millisecond).
+    python eval/bootstrap_fixtures.py
+
+    # ──────────────────────────────────────────────────────────────────────
+    # 1. Inspect the matrix without calling any LLM
+    # ──────────────────────────────────────────────────────────────────────
+
+    python -m eval.run_experiments plan --spec eval/specs/setup_eval.json
+    # Prints: experiment_id, task/model/skill/repeat counts,
+    #         and the full list of run_ids that will be generated.
+
+    # ──────────────────────────────────────────────────────────────────────
+    # 2. Dry-run — write planned_runs.json manifest, no execution
+    # ──────────────────────────────────────────────────────────────────────
+
+    python -m eval.run_experiments run --spec eval/specs/setup_eval.json --dry-run
+
+    # ──────────────────────────────────────────────────────────────────────
+    # 3. Smoke test — execute exactly one real run (a few cents, ~1 min)
+    # ──────────────────────────────────────────────────────────────────────
+
+    python -m eval.run_experiments run --spec eval/specs/setup_eval.json --limit 1
+    # Outputs land in eval/runs/colpack_setup_eval/ :
+    #     planned_runs.json   the expanded matrix
+    #     results.jsonl       one record per run
+    #     summary.json        aggregates: n_success, success_rate, tokens, cost
+    #     conversations/      human-readable .md transcript per run
+
+    # ──────────────────────────────────────────────────────────────────────
+    # 4. Full suite — run every (task × model × skill × repeat) cell
+    # ──────────────────────────────────────────────────────────────────────
+
+    python -m eval.run_experiments run --spec eval/specs/setup_eval.json
+    python -m eval.run_experiments run --spec eval/specs/planning_eval.json
+    python -m eval.run_experiments run --spec eval/specs/analysis_eval.json
+
+    # ──────────────────────────────────────────────────────────────────────
+    # 5. Pre-run cleanup of stale agent-generated working_dirs
+    # ──────────────────────────────────────────────────────────────────────
+
+    # Removes everything under spec.working_dir_root EXCEPT 'fixtures/'
+    # before executing. Useful between multi-LLM passes so each run starts
+    # from a clean eval/data/.
+    python -m eval.run_experiments run --spec eval/specs/setup_eval.json --clean-data
+
+    # Or run cleanup standalone — preview first, then confirm:
+    python -m eval.run_experiments clean --spec eval/specs/setup_eval.json
+    python -m eval.run_experiments clean --spec eval/specs/setup_eval.json --yes
+
+    # ──────────────────────────────────────────────────────────────────────
+    # 6. Compare more LLMs
+    # ──────────────────────────────────────────────────────────────────────
+
+    # Add entries to a spec's "models" array — no code changes needed.
+    # Example (in eval/specs/setup_eval.json):
+    #   "models": [
+    #     { "model_id": "openrouter/google/gemini-3-flash-preview", "label": "gemini" },
+    #     { "model_id": "openrouter/anthropic/claude-sonnet-4-6",   "label": "claude" },
+    #     { "model_id": "openrouter/openai/gpt-4o",                 "label": "gpt4o"  }
+    #   ]
+    # Then re-run step 4. The runner expands the matrix to N_tasks × N_models
+    # runs and writes a separate transcript per (task, model) pair.
+
+    # ──────────────────────────────────────────────────────────────────────
+    # NOTE on scoring
+    # ──────────────────────────────────────────────────────────────────────
+    #
+    # ``success_rate`` in summary.json is currently a LIVENESS check only —
+    # a run is marked success if no turn reported a query/system error. It
+    # does NOT verify tool-call correctness, adversarial refusal, or
+    # interpretation quality. For L4–L5 adversarial tasks and the L2
+    # analysis interpretation task, read the conversation transcripts in
+    # eval/runs/<id>/conversations/ rather than trusting success_rate.
+    # See eval/README.md "Scoring" section for the planned hybrid upgrade.
+"""
+
 from __future__ import annotations
 
 import argparse
