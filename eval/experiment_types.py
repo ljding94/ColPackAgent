@@ -68,19 +68,11 @@ def _resolve_path(path_text: str | None, *, default_path: Path | None = None) ->
 
 
 @dataclass(frozen=True)
-class UserProfileSpec:
-    profile_id: str
-    description: str = ""
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
 class TaskSpec:
     task_id: str
     description: str
     difficulty_level: int
     user_messages: tuple[str, ...]
-    user_profile_id: str | None = None
     expected_outcomes: tuple[str, ...] = ()
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -110,7 +102,6 @@ class ExperimentSpec:
     mcp_command: str
     bootstrap_skill: bool
     repeats: int
-    user_profiles: tuple[UserProfileSpec, ...]
     tasks: tuple[TaskSpec, ...]
     models: tuple[ModelSpec, ...]
     skills: tuple[SkillVariantSpec, ...]
@@ -125,7 +116,6 @@ class PlannedRun:
     task: TaskSpec
     model: ModelSpec
     skill: SkillVariantSpec
-    user_profile: UserProfileSpec | None
 
 
 @dataclass(frozen=True)
@@ -168,7 +158,6 @@ class RunResult:
     model_id: str
     skill_id: str
     repeat_index: int
-    user_profile_id: str | None
     success: bool
     started_at: str
     completed_at: str
@@ -198,19 +187,6 @@ class RunResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-def _load_user_profiles(raw_profiles: list[dict[str, Any]] | None) -> tuple[UserProfileSpec, ...]:
-    if not raw_profiles:
-        return ()
-    return tuple(
-        UserProfileSpec(
-            profile_id=str(profile["profile_id"]),
-            description=str(profile.get("description", "")),
-            metadata=dict(profile.get("metadata", {})),
-        )
-        for profile in raw_profiles
-    )
-
-
 def _load_tasks(raw_tasks: list[dict[str, Any]]) -> tuple[TaskSpec, ...]:
     tasks = []
     fixture_map: dict[str, str] | None = None  # Lazy-loaded on first placeholder use.
@@ -238,7 +214,6 @@ def _load_tasks(raw_tasks: list[dict[str, Any]]) -> tuple[TaskSpec, ...]:
                 description=str(raw_task.get("description", "")),
                 difficulty_level=int(raw_task.get("difficulty_level", 1)),
                 user_messages=tuple(raw_messages),
-                user_profile_id=raw_task.get("user_profile_id"),
                 expected_outcomes=tuple(str(item) for item in raw_task.get("expected_outcomes", [])),
                 metadata=dict(raw_task.get("metadata", {})),
             )
@@ -329,7 +304,6 @@ def load_experiment_spec(spec_path: Path) -> ExperimentSpec:
         mcp_command=str(raw_spec.get("mcp_command", default_mcp_command(_repo_root() / "agent"))),
         bootstrap_skill=bool(raw_spec.get("bootstrap_skill", True)),
         repeats=max(1, int(raw_spec.get("repeats", 1))),
-        user_profiles=_load_user_profiles(raw_spec.get("user_profiles")),
         tasks=_load_tasks(raw_tasks),
         models=_load_models(raw_spec.get("models")),
         skills=_load_skills(raw_spec.get("skills")),
@@ -342,14 +316,12 @@ def load_experiment_spec(spec_path: Path) -> ExperimentSpec:
 
 
 def expand_planned_runs(spec: ExperimentSpec) -> tuple[PlannedRun, ...]:
-    user_profile_map = {profile.profile_id: profile for profile in spec.user_profiles}
     planned_runs: list[PlannedRun] = []
 
     for repeat_index in range(spec.repeats):
         for task in spec.tasks:
             for model in spec.models:
                 for skill in spec.skills:
-                    user_profile = user_profile_map.get(task.user_profile_id) if task.user_profile_id else None
                     run_id = f"{spec.experiment_id}__{task.task_id}__{skill.skill_id}__{model.model_id.replace('/', '_')}__r{repeat_index + 1:02d}"
                     planned_runs.append(
                         PlannedRun(
@@ -358,7 +330,6 @@ def expand_planned_runs(spec: ExperimentSpec) -> tuple[PlannedRun, ...]:
                             task=task,
                             model=model,
                             skill=skill,
-                            user_profile=user_profile,
                         )
                     )
 

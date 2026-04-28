@@ -3,7 +3,6 @@
     "task_id": "setup_2d_disk",
     "description": "Difficulty 1 — single shape, 2D NVT. Tests that the agent extracts dimension, ensemble, particle count, and shape from a clean prompt.",
     "difficulty_level": 1,
-    "user_profile_id": "novice_workflow_user",
     "user_messages": [
       "Set up a 2D NVT Monte Carlo simulation of 500 hard disks.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
@@ -24,7 +23,6 @@
     "task_id": "setup_3d_sphere",
     "description": "Difficulty 1 — single shape, 3D NPT. Mirror of setup_2d_disk in 3D + NPT to verify the dimension/ensemble axes.",
     "difficulty_level": 1,
-    "user_profile_id": "novice_workflow_user",
     "user_messages": [
       "Set up a 3D NPT Monte Carlo simulation of 1000 hard spheres.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
@@ -45,7 +43,6 @@
     "task_id": "setup_2d_bidisperse_disks",
     "description": "Difficulty 2 — same shape, two components with different geometric parameters. Tests that the agent represents bidispersity as two entries in particle_shape_list and defers per-component diameters to planning.",
     "difficulty_level": 2,
-    "user_profile_id": "novice_workflow_user",
     "user_messages": [
       "Set up a 2D NVT simulation of a bidisperse mixture of disks: 500 large disks and 500 small disks (1000 total). Diameters will be set later.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
@@ -68,7 +65,6 @@
     "task_id": "setup_2d_disk_capsule",
     "description": "Difficulty 3 — two different shapes, HPMC-compatible (disk promotes to whichever integrator the rest needs). 2D NPT mixture.",
     "difficulty_level": 3,
-    "user_profile_id": "novice_workflow_user",
     "user_messages": [
       "Set up a 2D NPT Monte Carlo simulation with 800 particles: a mixture of disks and capsules.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
@@ -91,7 +87,6 @@
     "task_id": "setup_2d_incompatible_ellipse_capsule",
     "description": "Difficulty 4 — adversarial. 2D mix of ellipse + capsule is INCOMPATIBLE per HOOMD-blue HPMC (ellipsoid integrator vs ConvexSpheropolygon integrator cannot coexist). The agent should detect this and either refuse, ask the user to drop one shape, or propose substituting disks for ellipses.",
     "difficulty_level": 4,
-    "user_profile_id": "novice_workflow_user",
     "user_messages": [
       "Set up a 2D NVT simulation of 600 particles: half ellipses and half capsules.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],
@@ -115,7 +110,6 @@
     "task_id": "setup_dim_mismatch_disk_cube",
     "description": "Difficulty 5 — adversarial. The user mixes a 2D shape (disk) with a 3D shape (cube) without specifying dimension. The agent should detect the inconsistency and clarify the dimension instead of guessing.",
     "difficulty_level": 5,
-    "user_profile_id": "noisy_or_ambiguous_user",
     "user_messages": [
       "Set up a Monte Carlo simulation with 500 particles: a mixture of disks and cubes.\n\nDo the setup without asking me for confirmation, and stop after the setup step — do not proceed to planning, execution, or analysis."
     ],

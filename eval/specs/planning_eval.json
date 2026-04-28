@@ -6,20 +6,6 @@
   "repeats": 1,
   "bootstrap_skill": true,
   "agent_mode": "interactive",
-  "user_profiles": [
-    {
-      "profile_id": "novice_workflow_user",
-      "description": "Describes the workflow in natural language and expects the agent to structure the process."
-    },
-    {
-      "profile_id": "expert_operator",
-      "description": "Uses domain-specific language and expects concise workflow handling with minimal handholding."
-    },
-    {
-      "profile_id": "noisy_or_ambiguous_user",
-      "description": "Uses incomplete, slightly inconsistent, or poorly phrased requests to test robustness."
-    }
-  ],
   "tasks_file": "eval/tasks/planning_tasks.json",
   "models": [
     {

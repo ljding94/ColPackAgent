@@ -3,7 +3,6 @@
     "task_id": "plan_vf_sweep_nvt",
     "description": "Difficulty 1 — basic volume-fraction sweep on a 2D NVT binary mixture. Tests the canonical NVT sweep path. Starts from a setup-only fixture so the agent only does the planning step.",
     "difficulty_level": 1,
-    "user_profile_id": "novice_workflow_user",
     "user_messages": [
       "There is an existing simulation problem already set up at the working directory `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, mixture of disks and capsules). Plan a sweep over volume_fraction at 0.3, 0.5, and 0.7.\n\nDo the planning without asking me for confirmation, and stop after the planning step — do not proceed to execution or analysis."
     ],
@@ -28,7 +27,6 @@
     "task_id": "plan_p_sweep_npt",
     "description": "Difficulty 1 — basic pressure sweep on a 2D NPT binary mixture. Tests the canonical NPT sweep path.",
     "difficulty_level": 1,
-    "user_profile_id": "novice_workflow_user",
     "user_messages": [
       "There is an existing simulation problem already set up at the working directory `{{fixture:2d_npt_disk_capsule_setup}}` (2D NPT, 500 particles, mixture of disks and capsules). Plan a pressure sweep at P = 1.0, 5.0, and 10.0.\n\nDo the planning without asking me for confirmation, and stop after the planning step — do not proceed to execution or analysis."
     ],
@@ -53,7 +51,6 @@
     "task_id": "plan_diameter_sweep_bidisperse",
     "description": "Difficulty 2 — sweep a per-component shape parameter (first disk type's diameter) on a 2D NVT bidisperse mixture. Tests dot-path support for particle_specs.<i>.diameter.",
     "difficulty_level": 2,
-    "user_profile_id": "expert_operator",
     "user_messages": [
       "There is an existing simulation problem set up at `{{fixture:2d_nvt_disk_disk_setup}}` (2D NVT, 1000 disks as a binary mixture of two disk types). Use volume_fraction = 0.5 as the baseline. Plan a sweep over the first disk type's diameter at 0.5, 1.0, 1.5, with the second disk type fixed at diameter 1.0.\n\nDo the planning without asking me for confirmation, and stop after the planning step — do not proceed to execution or analysis."
     ],
@@ -79,7 +76,6 @@
     "task_id": "plan_relative_vf_sweep",
     "description": "Difficulty 3 — sweep per-component relative volume fraction in a 2D NVT mixture. Tests that the agent maps the user's mixing-ratio request to particle_specs.<i>.relative_volume_fraction.",
     "difficulty_level": 3,
-    "user_profile_id": "expert_operator",
     "user_messages": [
       "There is an existing simulation problem at `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, mixture of disks (component 0) and capsules (component 1)). Use volume_fraction = 0.4 as the baseline. Plan a sweep where the capsule volume fraction relative to disks is 0.5, 1.0, and 2.0. The disk component stays as the reference (relative_volume_fraction = 1).\n\nDo the planning without asking me for confirmation, and stop after the planning step — do not proceed to execution or analysis."
     ],
@@ -103,7 +99,6 @@
     "task_id": "plan_two_axis_sweep",
     "description": "Difficulty 3 — two independent sweep axes specified together. Tests that the agent submits BOTH as tunable_parameters and understands the planner's one-parameter-at-a-time semantics (NOT a Cartesian product).",
     "difficulty_level": 3,
-    "user_profile_id": "expert_operator",
     "user_messages": [
       "There is an existing simulation problem at `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, disks and capsules). Use volume_fraction = 0.5 baseline. Plan two separate sweeps: volume_fraction at 0.3, 0.5, 0.7, and capsule length at 2.0, 3.0, 4.0. Each varied independently from the baseline.\n\nDo the planning without asking me for confirmation, and stop after the planning step — do not proceed to execution or analysis."
     ],
@@ -127,7 +122,6 @@
     "task_id": "plan_invalid_p_on_nvt",
     "description": "Difficulty 4 — adversarial. The setup is NVT but the user asks for a pressure sweep. P is an NPT-only system field; on NVT the planner should reject the path or the agent should refuse / propose switching to NPT.",
     "difficulty_level": 4,
-    "user_profile_id": "noisy_or_ambiguous_user",
     "user_messages": [
       "There is an existing simulation problem at `{{fixture:2d_nvt_disk_capsule_setup}}` (2D NVT, 500 particles, disks and capsules). Plan a pressure sweep at P = 1.0, 5.0, and 10.0.\n\nDo the planning without asking me for confirmation, and stop after the planning step — do not proceed to execution or analysis."
     ],

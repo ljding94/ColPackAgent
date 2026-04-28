@@ -6,16 +6,6 @@
   "repeats": 1,
   "bootstrap_skill": true,
   "agent_mode": "interactive",
-  "user_profiles": [
-    {
-      "profile_id": "analysis_focused_user",
-      "description": "Cares more about interpreting outputs, order parameters, and summary conclusions than setup details."
-    },
-    {
-      "profile_id": "noisy_or_ambiguous_user",
-      "description": "Uses incomplete, slightly inconsistent, or poorly phrased requests to test robustness."
-    }
-  ],
   "tasks_file": "eval/tasks/analysis_tasks.json",
   "models": [
     {

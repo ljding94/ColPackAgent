@@ -49,7 +49,7 @@ The cleanest way to think about this is: **specs are recipes, tasks are the menu
 
 | Folder | Holds | Changes when… |
 | --- | --- | --- |
-| [`eval/tasks/`](tasks/) | The actual prompts: `user_messages`, `expected_outcomes`, `difficulty_level`, `user_profile_id`, `metadata`. **Pure test cases — no notion of which LLM or skill evaluates them.** | You want to add a new prompt or tweak wording. |
+| [`eval/tasks/`](tasks/) | The actual prompts: `user_messages`, `expected_outcomes`, `difficulty_level`, `metadata`. **Pure test cases — no notion of which LLM or skill evaluates them.** | You want to add a new prompt or tweak wording. |
 | [`eval/specs/`](specs/) | The experiment recipe: `experiment_id`, `output_dir`, `tasks_file` (pointer to a tasks JSON), `models` array, `skills` array, `agent_mode`, `repeats`. **No prompts inside.** | You want to add an LLM, change repeats, or run the same prompts under a different output dir. |
 
 The split is what lets you reuse a task collection across many experiments (e.g., the same `setup_tasks.json` evaluated against four different model panels) without copy-pasting prompts.
@@ -168,23 +168,19 @@ spec.json ── tasks_file ──→ tasks.json
                                                   conversations/<run_id>.md
 ```
 
-## Difficulty Ladder & User Personas
+## Difficulty Ladder
 
-Each task carries a numeric `difficulty_level` (1–5) and a `user_profile_id` naming the prompt style. The two axes are tightly correlated — easier problems are usually expressed in plain language, and adversarial problems usually arrive in noisier or contradictory ones — so we treat them as a single ladder, with the persona naming the prompt style at each level:
+Each task carries a numeric `difficulty_level` (1–5). Higher levels introduce harder reasoning (multi-component mixtures, multi-axis sweeps) and at the top of the ladder become **adversarial** — physically/mechanically impossible requests, or prompts with contradictory premises:
 
-| Level | Persona (`user_profile_id`) | Prompt style | What the level tests |
-| --- | --- | --- | --- |
-| 1 | `novice_workflow_user` | Plain language, complete request | Single shape, single sweep axis; clean parsing |
-| 2 | `partially_specified_user` | Some parameters omitted; agent should ask the right follow-ups | Same-shape mixtures (bidisperse), basic dot-path use |
-| 3 | `expert_operator` | Domain-specific terms, concise | Multi-component mixtures, multi-axis sweeps |
-| 4 | `noisy_or_ambiguous_user` | Slightly inconsistent or under-specified | **Adversarial**: physically/mechanically impossible (e.g., HPMC-incompatible 2D mix, P on NVT) |
-| 5 | `noisy_or_ambiguous_user` | Contradictory premises | **Adversarial**: dimension mismatch or other internal contradictions |
-
-`analysis_focused_user` is reserved for analysis-stage questions — it cuts across difficulty levels because analysis questions can be easy or hard regardless of prompt phrasing.
+| Level | What the level tests |
+| --- | --- |
+| 1 | Plain, complete request: single shape, single sweep axis, clean parsing |
+| 2 | Same-shape mixtures (bidisperse), basic dot-path use, simple interpretation |
+| 3 | Domain-specific terms, multi-component mixtures, multi-axis sweeps |
+| 4 | **Adversarial**: physically/mechanically impossible (e.g., HPMC-incompatible 2D mix, P on NVT) |
+| 5 | **Adversarial**: dimension mismatch or other internal contradictions |
 
 For levels 4–5, tasks carry `metadata.adversarial: true` and `metadata.expected_failure_mode` so reviewers can score on the agent's refusal / clarification behavior rather than tool-call success.
-
-The mapping is typical, not strict — a task author can pair any persona with any difficulty when it makes sense.
 
 ## LLM Evaluation (Three Dimensions, Full Skill)
 
@@ -383,7 +379,6 @@ Key fields in the JSON spec:
 - `working_dir_root`
 - `repeats`
 - `bootstrap_skill`
-- `user_profiles`
 - `tasks` (inline) **or** `tasks_file` (path to a JSON array of tasks)
 - `models`
 - `skills`

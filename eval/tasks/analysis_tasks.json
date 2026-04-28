@@ -3,7 +3,6 @@
     "task_id": "analyze_2d_disks_default",
     "description": "Difficulty 1 — single shape, default analysis. The agent reads a pre-executed simulation working_dir and analyzes with the per-shape defaults (Hexatic ψ6 for disks). Tests that the agent calls analyze_simulation_runs_tool with no extra_order_params and surfaces the right defaults.",
     "difficulty_level": 1,
-    "user_profile_id": "analysis_focused_user",
     "user_messages": [
       "An existing simulation has already been run end-to-end at the working directory `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep at 0.3, 0.5, 0.7, 0.8). Run the analysis with default parameters.\n\nDo the analysis without asking me for confirmation."
     ],
@@ -28,7 +27,6 @@
     "task_id": "analyze_2d_disks_interpret",
     "description": "Difficulty 2 — interpret order-parameter trends across the volume-fraction sweep. The fixture spans the 2D hard-disk freezing transition (~0.7), so the agent should read Hexatic ψ6 across runs and identify the φ at which clear hexagonal order emerges.",
     "difficulty_level": 2,
-    "user_profile_id": "analysis_focused_user",
     "user_messages": [
       "An existing simulation has already been run end-to-end at the working directory `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep at 0.3, 0.5, 0.7, 0.8). Run the analysis with default parameters and tell me at which volume fraction the disks start to show clear hexagonal order. Use the Hexatic ψ6 trend across the sweep to back up your answer.\n\nDo the analysis without asking me for confirmation."
     ],
@@ -54,7 +52,6 @@
     "task_id": "analyze_2d_disks_extra_hexatic",
     "description": "Difficulty 3 — request non-default order parameters via extra_order_params. Tests that the agent constructs the freud-class dict correctly with the right type names and parameters.",
     "difficulty_level": 3,
-    "user_profile_id": "analysis_focused_user",
     "user_messages": [
       "An existing simulation has been run at `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep). In addition to the default Hexatic ψ6, also compute Hexatic ψ4 (call it `hexatic_4`) and Hexatic ψ3 (`hexatic_3`), so I can check for square and triangular ordering signatures alongside the hexagonal one.\n\nDo the analysis without asking me for confirmation."
     ],
@@ -79,7 +76,6 @@
     "task_id": "analyze_2d_mixture_per_shape",
     "description": "Difficulty 4 — multi-component mixture analysis. The agent must analyze a disk+capsule mixture, accept that defaults already cover both shapes (Hexatic ψ6 for disks, Nematic for capsules), and add a system-wide ContinuousCoordination extra.",
     "difficulty_level": 4,
-    "user_profile_id": "analysis_focused_user",
     "user_messages": [
       "An existing simulation has been run at `{{fixture:2d_nvt_disk_capsule}}` (2D NVT, 100 particles, 50 disks + 50 capsules, volume_fraction sweep at 0.4 and 0.6). Analyze the runs. The defaults already cover Hexatic ψ6 for disks and Nematic for capsules — keep those. Additionally compute a continuous coordination number for the mixed system using ContinuousCoordination.\n\nDo the analysis without asking me for confirmation."
     ],
@@ -106,7 +102,6 @@
     "task_id": "analyze_2d_disks_cubatic_adversarial",
     "description": "Difficulty 5 — adversarial. The user requests a Cubatic order parameter on a 2D disk system. Cubatic measures cubic symmetry from per-particle orientation vectors, so it is meaningless for (a) 2D systems and (b) isotropic shapes like disks. The agent should refuse, ask for clarification, or warn the user that the requested parameter does not apply to this geometry rather than blindly forwarding the request to analyze_simulation_runs_tool.",
     "difficulty_level": 5,
-    "user_profile_id": "noisy_or_ambiguous_user",
     "user_messages": [
       "An existing simulation has been run at `{{fixture:2d_nvt_disk}}` (2D NVT, 100 hard disks, volume_fraction sweep). Analyze the runs and include a Cubatic order parameter in the analysis.\n\nDo the analysis without asking me for confirmation."
     ],

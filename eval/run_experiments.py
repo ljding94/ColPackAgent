@@ -621,7 +621,6 @@ async def _execute_run_case(
         provider_id=provider_id,
         skill_id=planned_run.skill.skill_id,
         repeat_index=planned_run.repeat_index,
-        user_profile_id=planned_run.user_profile.profile_id if planned_run.user_profile is not None else None,
         success=success,
         started_at=started_at,
         completed_at=completed_at,
