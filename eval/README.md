@@ -337,6 +337,21 @@ Per-turn detail is also kept in `turn_results[*].off_rail_tool_calls`.
 
 So a one-line read: *"Opus 0/1 off-rail; Gemini 1/1 off-rail, drove all the way through `execute_simulation_workflow_tool`."*
 
+### Run-outcome quadrants
+
+Combining `success` (liveness), `expected_tool_called` (the stage's primary tool ever fired), and `off_rail` (drift past stage) disambiguates four distinct outcomes that a one-bit `success` flag would collapse:
+
+| `success` | `expected_tool_called` | `off_rail` | Interpretation |
+| --- | --- | --- | --- |
+| ✓ | ✓ | ✗ | **Clean pass** — did exactly the requested stage |
+| ✓ | ✓ | ✓ | Did the work but **drifted past the stage** |
+| ✓ | ✗ | ✗ | **Confirmation-stuck / failure to act** — agent ran without errors but never called the stage's primary tool |
+| ✓ | ✗ | ✓ | Drifted to wrong tools **without ever doing the right one** |
+
+`expected_tool_called` is derived per stage: setup → `setup_simulation_problem_tool`, planning → `plan_simulation_runs_tool`, analysis → `analyze_simulation_runs_tool`. The flag, the per-run `tools_called` list, and the aggregated `n_no_expected_tool_call` / `no_expected_tool_call_rate` (both grand-total and `per_model`) are all written to `results.jsonl` and `summary.json`.
+
+This matters because, even with the explicit single-turn phrasing ("Do the setup without asking me for confirmation, and stop after the setup step"), some LLMs still hedge — replying with a plan in prose and waiting for a "go." Those runs are not crashes (so liveness `success` is true) and are not drift (no off-rail tools), but they also produced no work. `expected_tool_called = false` makes that failure mode visible instead of inflating the success rate.
+
 ### Caveat — detection is post-dispatch
 
 The runner sees a tool call after the SDK has already emitted the message containing it. The off-rail tool *will* execute once through the SDK / MCP path before the run terminates — we cannot intercept the dispatch from outside the SDK. The cost-saving is "no further turns after off-rail," not "zero off-rail tool execution." For analysis purposes this is actually a feature (you see the full off-rail behavior in the transcript), but be aware that one off-rail simulation run can still be expensive.
