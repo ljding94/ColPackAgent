@@ -66,6 +66,13 @@
 !/agent/.gemini/system.md
 /agent/.gemini/skills/
 
+# Claude Code project settings live in .claude/
+# Commit: settings.json (shared permission allowlist).
+# Exclude: settings.local.json (per-user/per-machine permissions).
+!/.claude/
+/.claude/*
+!/.claude/settings.json
+
 # Python cache
 __pycache__/
 

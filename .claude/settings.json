@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m eval.run_experiments *)",
+      "Bash(python eval/bootstrap_fixtures.py *)",
+      "Bash(python -m pytest *)",
+      "Bash(python3 -m py_compile *)",
+      "Bash(python3 tests/test_proposer_and_loop.py)",
+      "mcp__colpack__get_colpack_capabilities_tool"
+    ]
+  }
+}
