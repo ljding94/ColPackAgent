@@ -1,0 +1,43 @@
+{
+  "experiment_id": "colpack_demo_assisted_study",
+  "description": "ColPackAgent-assisted scientific study: open-goal phase-transition study of 2D hard disks and hard squares in NPT. The agent chooses the composition (pure disks, pure squares, or a mixture), designs the pressure sweep, picks order parameters, and synthesizes a scientific conclusion.",
+  "output_dir": "demo/runs/assisted_study",
+  "working_dir_root": "demo/data",
+  "agent_path": "agent/agents/colpack_agent.md",
+  "repeats": 1,
+  "bootstrap_skill": true,
+  "agent_mode": "autonomous",
+  "tasks": [
+    {
+      "task_id": "assisted_2d_npt_phase_transition",
+      "description": "Open scientific question: study the phase transition of 2D hard disks and hard squares in the NPT ensemble. Agent picks composition (pure disks, pure squares, or a mixture), designs the sweep, selects order parameters, and synthesizes a scientific conclusion.",
+      "difficulty_level": 4,
+      "user_messages": [
+        "Study the phase transition of 2D hard disks and hard squares in the NPT ensemble. You have full freedom to explore however you see fit — pure disks, pure squares, mixtures, multiple sub-studies, whatever helps you characterize the disordered-to-ordered behavior. Run setup, plan, execute, and analyze autonomously, and report your conclusions."
+      ],
+      "expected_outcomes": [
+        "The agent scopes the study itself (picks composition(s), pressure range, system size, sample steps).",
+        "The agent picks order parameters appropriate to the chosen shapes (e.g. ψ_6 for disks, P_4 / cubatic for squares) and computes them across the sweep(s).",
+        "The agent runs setup, plan, execute, and analyze autonomously, optionally iterating with additional runs if the first sweep doesn't resolve the transition.",
+        "The agent produces a final summary identifying the transition(s) it found and reporting φ(P) and the order parameter(s) versus P."
+      ],
+      "metadata": {
+        "stage": "assisted_study",
+        "timeout_seconds": 3600
+      }
+    }
+  ],
+  "models": [
+    {
+      "model_id": "openrouter/anthropic/claude-opus-4.7",
+      "label": "claude-opus-4.7"
+    }
+  ],
+  "skills": [
+    {
+      "skill_id": "production_colpack",
+      "skill_path": "agent/skills/colpack/SKILL.md",
+      "description": "Production ColPack skill from the project root agent folder"
+    }
+  ]
+}

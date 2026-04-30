@@ -14,7 +14,7 @@
       "user_messages": [
         "Can you set up a simulation for cube particles?",
         "sure, let's try 300 particles in NPT ensemble",
-        "let's use particle side 1, let's sample 5e5 steps and sweep 5 pressure from 2 to 10",
+        "let's use particle side 1, sample 5e5 steps and sweep 5 pressure from 2 to 10",
         "go ahead",
         "ok, also please run analysis when it's finished"
       ],
