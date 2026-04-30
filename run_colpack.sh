@@ -98,6 +98,20 @@ run_with_codex() {
     codex
 }
 
+# Force-create a symlink, replacing whatever is at the destination.
+#
+# We can't use plain `ln -sf TARGET LINK` here: if LINK is already a symlink
+# to a directory (e.g. from a previous setup run), `ln -sf` *follows* the
+# existing symlink and creates the new symlink *inside* its target, producing
+# a self-referential nest like agent/skills/colpack/colpack/colpack/...
+# Removing the destination first guarantees a fresh link.
+force_symlink() {
+    local target="$1"
+    local link="$2"
+    rm -rf "$link"
+    ln -s "$target" "$link"
+}
+
 # One-time setup: register the colpack skill with Claude Code and Gemini CLI.
 # Run this once after cloning or when the skill path changes.
 setup_skills() {
@@ -106,22 +120,22 @@ setup_skills() {
     # Claude Code: symlink agent/skills/colpack into ~/.claude/skills/
     CLAUDE_SKILLS_DIR="$HOME/.claude/skills"
     mkdir -p "$CLAUDE_SKILLS_DIR"
-    ln -sf "$SCRIPT_DIR/agent/skills/colpack" "$CLAUDE_SKILLS_DIR/colpack"
+    force_symlink "$SCRIPT_DIR/agent/skills/colpack" "$CLAUDE_SKILLS_DIR/colpack"
     echo "  ✓ Claude Code: ~/.claude/skills/colpack -> agent/skills/colpack"
 
     # Gemini: recreate system.md symlink (relative, points to ../agents/colpack_agent.md)
-    ln -sf ../agents/colpack_agent.md "$SCRIPT_DIR/agent/.gemini/system.md"
+    force_symlink ../agents/colpack_agent.md "$SCRIPT_DIR/agent/.gemini/system.md"
     echo "  ✓ Gemini: agent/.gemini/system.md -> ../agents/colpack_agent.md"
 
     # Gemini: link skill so it appears in /skills list (absolute symlink into agent/.gemini/skills/)
     mkdir -p "$SCRIPT_DIR/agent/.gemini/skills"
-    ln -sf "$SCRIPT_DIR/agent/skills/colpack" "$SCRIPT_DIR/agent/.gemini/skills/colpack"
+    force_symlink "$SCRIPT_DIR/agent/skills/colpack" "$SCRIPT_DIR/agent/.gemini/skills/colpack"
     echo "  ✓ Gemini: agent/.gemini/skills/colpack -> agent/skills/colpack"
 
     # Codex: symlink agent/skills/colpack into ~/.codex/skills/
     CODEX_SKILLS_DIR="$HOME/.codex/skills"
     mkdir -p "$CODEX_SKILLS_DIR"
-    ln -sf "$SCRIPT_DIR/agent/skills/colpack" "$CODEX_SKILLS_DIR/colpack"
+    force_symlink "$SCRIPT_DIR/agent/skills/colpack" "$CODEX_SKILLS_DIR/colpack"
     echo "  ✓ Codex: ~/.codex/skills/colpack -> agent/skills/colpack"
 
     echo "Done."
