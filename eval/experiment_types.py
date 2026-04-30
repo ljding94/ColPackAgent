@@ -285,6 +285,20 @@ def load_experiment_spec(spec_path: Path) -> ExperimentSpec:
     else:
         raw_tasks = raw_tasks_inline or []
 
+    raw_models_inline = raw_spec.get("models")
+    raw_models_file = raw_spec.get("models_file")
+    if raw_models_inline and raw_models_file:
+        raise ValueError("Experiment spec cannot define both 'models' and 'models_file'.")
+    if raw_models_file:
+        models_path = _resolve_path(raw_models_file)
+        if models_path is None or not models_path.exists():
+            raise ValueError(f"models_file not found: {raw_models_file}")
+        raw_models = json.loads(models_path.read_text(encoding="utf-8"))
+        if not isinstance(raw_models, list):
+            raise ValueError(f"models_file {models_path} must contain a JSON array of model entries.")
+    else:
+        raw_models = raw_models_inline
+
     raw_agent_mode = raw_spec.get("agent_mode")
     if raw_agent_mode is not None:
         if not isinstance(raw_agent_mode, str):
@@ -305,7 +319,7 @@ def load_experiment_spec(spec_path: Path) -> ExperimentSpec:
         bootstrap_skill=bool(raw_spec.get("bootstrap_skill", True)),
         repeats=max(1, int(raw_spec.get("repeats", 1))),
         tasks=_load_tasks(raw_tasks),
-        models=_load_models(raw_spec.get("models")),
+        models=_load_models(raw_models),
         skills=_load_skills(raw_spec.get("skills")),
         agent_mode=agent_mode,
         metadata=dict(raw_spec.get("metadata", {})),
@@ -316,11 +330,18 @@ def load_experiment_spec(spec_path: Path) -> ExperimentSpec:
 
 
 def expand_planned_runs(spec: ExperimentSpec) -> tuple[PlannedRun, ...]:
+    """Expand the spec into a flat list of planned runs.
+
+    Loop order: model (outermost) -> repeat -> task -> skill (innermost).
+    Putting model outermost runs all of model A's tasks before any of model B's,
+    which makes per-model output streaming easy and lets users interrupt or
+    resume on natural model boundaries.
+    """
     planned_runs: list[PlannedRun] = []
 
-    for repeat_index in range(spec.repeats):
-        for task in spec.tasks:
-            for model in spec.models:
+    for model in spec.models:
+        for repeat_index in range(spec.repeats):
+            for task in spec.tasks:
                 for skill in spec.skills:
                     run_id = f"{spec.experiment_id}__{task.task_id}__{skill.skill_id}__{model.model_id.replace('/', '_')}__r{repeat_index + 1:02d}"
                     planned_runs.append(

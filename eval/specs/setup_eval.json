@@ -1,38 +1,13 @@
 {
   "experiment_id": "colpack_setup_eval",
   "description": "Setup-stage evaluation suite. Tasks ladder from a single-shape 2D problem up to adversarial mixtures (HPMC-incompatible shapes, dimension mismatch). No prerequisites — specs reference the production skill at agent/skills/colpack/SKILL.md directly.",
-  "output_dir": "eval/runs/colpack_setup_eval",
+  "output_dir": "eval/runs",
   "working_dir_root": "eval/data",
   "repeats": 1,
   "bootstrap_skill": true,
   "agent_mode": "interactive",
   "tasks_file": "eval/tasks/setup_tasks.json",
-  "models": [
-    {
-        "model_id": "openrouter/anthropic/claude-haiku-4.5",
-        "label": "claude-haiku-4.5"
-    },
-    {
-        "model_id": "openrouter/openai/gpt-oss-120b",
-        "label": "gpt-oss-120b"
-    },
-    {
-        "model_id": "openrouter/deepseek/deepseek-v3.2",
-        "label": "deepseek-v3.2"
-    },
-    {
-        "model_id": "openrouter/google/gemini-3-flash-preview",
-        "label": "gemini-3-flash-preview"
-    },
-    {
-      "model_id": "openrouter/anthropic/claude-opus-4.7",
-      "label": "claude-opus-4.7"
-    },
-    {
-      "model_id": "openrouter/google/gemini-3.1-pro-preview",
-      "label": "gemini-3.1-pro-preview"
-    }
-  ],
+  "models_file": "eval/specs/models.json",
   "skills": [
     {
       "skill_id": "full",

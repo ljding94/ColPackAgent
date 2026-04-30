@@ -1,0 +1,34 @@
+[
+  {
+    "model_id": "openrouter/anthropic/claude-haiku-4.5",
+    "label": "claude-haiku-4.5"
+  },
+  {
+    "model_id": "openrouter/anthropic/claude-opus-4.7",
+    "label": "claude-opus-4.7"
+  },
+  {
+    "model_id": "openrouter/google/gemini-2.5-flash",
+    "label": "gemini-2.5-flash"
+  },
+  {
+    "model_id": "openrouter/google/gemini-3.1-pro-preview",
+    "label": "gemini-3.1-pro-preview"
+  },
+  {
+    "model_id": "openrouter/openai/gpt-oss-120b",
+    "label": "gpt-oss-120b"
+  },
+  {
+    "model_id": "openrouter/openai/gpt-oss-20b",
+    "label": "gpt-oss-20b"
+  },
+  {
+    "model_id": "openrouter/deepseek/deepseek-v3.2",
+    "label": "deepseek-v3.2"
+  },
+  {
+    "model_id": "openrouter/qwen/qwen3-next-80b-a3b-instruct",
+    "label": "qwen3-next-80b-instruct"
+  }
+]

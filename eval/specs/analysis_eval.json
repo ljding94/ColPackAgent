@@ -1,18 +1,13 @@
 {
   "experiment_id": "colpack_analysis_eval",
   "description": "Analysis-stage evaluation suite (fixture-backed). Each task points at a pre-executed simulation working_dir built by eval/bootstrap_fixtures.py and tests only the analysis stage — default per-shape order parameters at L1, trend interpretation at L2, custom extra_order_params at L3, mixture extras at L4, and an adversarial inappropriate-order-parameter request at L5. Prereq: python eval/bootstrap_fixtures.py",
-  "output_dir": "eval/runs/colpack_analysis_eval",
+  "output_dir": "eval/runs",
   "working_dir_root": "eval/data",
   "repeats": 1,
   "bootstrap_skill": true,
   "agent_mode": "interactive",
   "tasks_file": "eval/tasks/analysis_tasks.json",
-  "models": [
-    {
-      "model_id": "openrouter/google/gemini-3-flash-preview",
-      "label": "gemini-3-flash-preview"
-    }
-  ],
+  "models_file": "eval/specs/models.json",
   "skills": [
     {
       "skill_id": "full",

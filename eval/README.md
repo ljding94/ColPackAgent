@@ -23,12 +23,17 @@ The first version is meant to set the stage:
 Use the module entry point from the repository root:
 
 ```bash
-# Print the planned matrix (no LLM calls)
+# Print the planned matrix for one spec (no LLM calls)
 python -m eval.run_experiments plan --spec eval/specs/setup_eval.json
 
 # Smoke test: 1 real run, all output written
 python -m eval.run_experiments run --spec eval/specs/setup_eval.json --limit 1
+
+# All three stages (setup → planning → analysis) for one model in one go
+python -m eval.run_experiments run --all-specs --models claude-haiku-4.5
 ```
+
+`--spec` and `--all-specs` are mutually exclusive — provide exactly one. `--all-specs` globs `eval/specs/*_eval.json` and iterates in stage order (setup → planning → analysis → others). The same `--models` / `--limit` / `--task-timeout` apply to each spec.
 
 `plan` expands the matrix and can write a manifest.
 
@@ -56,51 +61,60 @@ The split is what lets you reuse a task collection across many experiments (e.g.
 
 ### How the matrix expands
 
-The runner iterates the spec's axes in this nesting order ([experiment_types.py:243](experiment_types.py#L243)):
+The runner iterates the spec's axes in this nesting order ([experiment_types.py](experiment_types.py)):
 
 ```python
-for repeat in range(repeats):
-    for task in tasks:
-        for model in models:
+for model in models:
+    for repeat in range(repeats):
+        for task in tasks:
             for skill in skills:
                 # ← one planned_run per innermost iteration
 ```
 
-For your current [`setup_eval.json`](specs/setup_eval.json) (6 tasks × 1 model × 1 skill × 1 repeat = **6 planned runs**), the list looks like:
+**Model is outermost** so all of model A's runs happen contiguously before any of model B's. That makes per-model output streaming natural (each model's `results.jsonl` fills before the next one starts) and lets you Ctrl-C cleanly between models.
+
+For [`setup_eval.json`](specs/setup_eval.json) (6 tasks × 6 models × 1 skill × 1 repeat = **36 planned runs**), the list looks like:
 
 ```text
-   index   task                              model      skill   repeat
-   -----   --------------------------------  ---------  ------  ------
-    0      setup_2d_disk                     gemini     full    r01
-    1      setup_3d_sphere                   gemini     full    r01
-    2      setup_2d_bidisperse_disks         gemini     full    r01
-    3      setup_2d_disk_capsule             gemini     full    r01
-    4      setup_2d_incompatible_*           gemini     full    r01
-    5      setup_dim_mismatch_disk_cube      gemini     full    r01
+With 6 models x 6 tasks x 1 skill x 1 repeat:
+
+   index   model                        task                              skill   repeat
+   -----   ---------------------------  --------------------------------  ------  ------
+    0      claude-haiku-4.5             setup_2d_disk                     full    r01      <-- --limit 6 stops here
+    1      claude-haiku-4.5             setup_3d_sphere                   full    r01          (all 6 tasks on
+    2      claude-haiku-4.5             setup_2d_bidisperse_disks         full    r01           the first model)
+    3      claude-haiku-4.5             setup_2d_disk_capsule             full    r01
+    4      claude-haiku-4.5             setup_2d_incompatible_*           full    r01
+    5      claude-haiku-4.5             setup_dim_mismatch_disk_cube      full    r01      <--
+    6      gpt-oss-120b                 setup_2d_disk                     full    r01
+    7      gpt-oss-120b                 setup_3d_sphere                   full    r01
+    ...    ...                          ...                               ...     ...
+   35      gemini-3.1-pro-preview       setup_dim_mismatch_disk_cube      full    r01      <-- no --limit runs all 36
 ```
 
-If you append three more LLMs to `models`, the matrix expands to 6 × 4 × 1 × 1 = **24 planned runs** — same prompts, four times the LLM coverage. Because `model` is *inside* `task`, all models cycle through before `task` advances:
+That's why `--limit N_tasks` is a great smoke test when you add a new task or skill: it gives you "all tasks on model 0" in one shot. To smoke-test a single new LLM instead, use `--models <label>` (next section).
 
-```text
-With 4 models x 6 tasks x 1 skill x 1 repeat:
+### Selecting models with `--models`
 
-   index   task                              model      skill   repeat
-   -----   --------------------------------  ---------  ------  ------
-    0      setup_2d_disk                     gemini     full    r01      <-- --limit 1 stops here
-    1      setup_2d_disk                     claude     full    r01      <-- --limit 4 includes
-    2      setup_2d_disk                     gpt-4o     full    r01          all four LLMs on task 0
-    3      setup_2d_disk                     llama      full    r01      <--
-    4      setup_3d_sphere                   gemini     full    r01
-    5      setup_3d_sphere                   claude     full    r01
-    ...    ...                               ...        ...     ...
-   23      setup_dim_mismatch_disk_cube      llama      full    r01      <-- no --limit runs all 24
+Both `plan` and `run` accept `--models`, a comma-separated list of **exact** labels or `model_id`s. Use it to run a subset of the spec's panel without editing the JSON:
+
+```bash
+# Run all setup tasks on just Haiku
+python -m eval.run_experiments run --spec eval/specs/setup_eval.json --models claude-haiku-4.5
+
+# Two specific models
+python -m eval.run_experiments run --spec eval/specs/setup_eval.json \
+  --models claude-haiku-4.5,claude-opus-4.7
+
+# Plan-only preview
+python -m eval.run_experiments plan --spec eval/specs/setup_eval.json --models gemini-3-flash-preview
 ```
 
-That's why `--limit N_models` is a great smoke test when you add a new LLM: it gives you "task 0 across every model" in one shot.
+Match is exact (full label or full `model_id`), not substring — ambiguous tokens like `claude` won't silently pull in models you didn't intend. Any token that doesn't match a model in the spec causes the runner to error out with the available labels.
 
 ### What `--limit N` actually does
 
-It's a slice on the already-expanded matrix ([run_experiments.py:574](run_experiments.py#L574)):
+It's a slice on the already-expanded matrix:
 
 ```python
 planned_runs = expand_planned_runs(spec)
@@ -108,22 +122,52 @@ if limit > 0:
     planned_runs = planned_runs[:limit]
 ```
 
-It only changes the **count** of LLM calls, not how prompts are constructed or which prompts get included. The order is fully determined by the loop nesting above.
+It only changes the **count** of LLM calls, not how prompts are constructed or which prompts get included. With model outermost, `--limit N_tasks` keeps the first N runs of model 0; `--limit (N_tasks * 2)` adds model 1; and so on.
 
 ### Adding more LLMs
 
-Just append entries to the spec's `models` array — no code changes:
+The model panel is shared across all three specs via a single [`eval/specs/models.json`](specs/models.json). To add or remove an LLM, edit that file once — no spec changes, no code changes:
 
 ```json
-"models": [
-  { "model_id": "openrouter/google/gemini-3-flash-preview",   "label": "gemini" },
-  { "model_id": "openrouter/anthropic/claude-sonnet-4-6",     "label": "claude-sonnet" },
-  { "model_id": "openrouter/openai/gpt-4o",                   "label": "gpt-4o" },
-  { "model_id": "openrouter/meta-llama/llama-3.3-70b-instruct", "label": "llama-3.3-70b" }
+[
+  { "model_id": "openrouter/google/gemini-3-flash-preview",     "label": "gemini-3-flash-preview" },
+  { "model_id": "openrouter/anthropic/claude-haiku-4.5",        "label": "claude-haiku-4.5" },
+  { "model_id": "openrouter/openai/gpt-oss-120b",               "label": "gpt-oss-120b" }
 ]
 ```
 
-Each entry needs `model_id` (the SDK passes this through to the provider router); `label` is optional and shows up in run-ids and transcript filenames. For apples-to-apples comparison, paste the same `models` block into all three specs.
+Each entry needs `model_id` (the SDK passes this through to the provider router); `label` is optional but recommended — it shows up in run-ids, transcript filenames, the per-model output folder name, and is what `--models` matches against.
+
+The three specs reference the file by `models_file: "eval/specs/models.json"`. If you ever need a one-off panel for a single spec (e.g. a planning-only experiment using a different LLM list), use `models: [...]` inline instead of `models_file` — but not both at once.
+
+### Current panel — tier, lab, cost
+
+The 10-model panel is curated to span **frontier → mid → weak** tiers across **7 labs**, all served via OpenRouter → Google Vertex (see "Provider routing" below). Cost is the OpenRouter list price per million tokens.
+
+| label | lab | tier | $/Mtok in / out | notes |
+| --- | --- | --- | --- | --- |
+| `claude-opus-4.7` | Anthropic | **frontier** | 5 / 25 | Anthropic flagship; expensive; long-running agentic strength |
+| `gemini-3.1-pro-preview` | Google | **frontier** | 2 / 12 | Google flagship; "thinking" reasoning model |
+| `deepseek-v3.2` | DeepSeek | **frontier** | 0.56 / 1.68 | Strong reasoning at a fraction of Opus cost; good frontier value |
+| `kimi-k2-thinking` | Moonshot | strong (reasoning) | 0.60 / 2.50 | Always-thinking MoE; agentic-tuned — interesting on multi-step tasks |
+| `gpt-oss-120b` | OpenAI | mid–strong | 0.09 / 0.36 | OpenAI's open-weights MoE; only OpenAI option on Vertex; very cheap |
+| `claude-haiku-4.5` | Anthropic | mid (fast) | 1 / 5 | Cost-efficient Claude; near-Sonnet quality at much lower cost |
+| `gemini-3-flash-preview` | Google | mid (fast) | 0.50 / 3 | Cost-efficient Gemini 3; thinking-capable Flash |
+| `qwen3-next-80b-instruct` | Qwen | mid | 0.15 / 1.20 | Non-thinking Qwen; instruction-tuned baseline |
+| `llama-4-scout` | Meta | mid (open-weights) | 0.25 / 0.70 | Meta's MoE; multimodal; widely-cited open baseline |
+| `gemini-2.0-flash` | Google | **older / weak** | 0.10 / 0.40 | Feb 2025 — included as a regression baseline ("how does the agent skill amplify weak vs. strong models?") |
+
+**Coverage at a glance:**
+
+- **3 frontier** from 3 different vendors (Anthropic, Google, DeepSeek) → no single-lab bias on top-end results.
+- **6 mid-tier** spanning OpenAI, Anthropic, Google, Moonshot, Qwen, Meta → answers "how do non-frontier models from different houses compare on the same skill?"
+- **1 explicit weak baseline** (Gemini 2.0 Flash, ~14 months older) → gives the floor.
+- **1 explicit reasoning model** (Kimi K2 Thinking) — useful contrast against non-thinking peers in the same cost class.
+- **Open-weights ratio:** 3/10 (gpt-oss-120b, qwen3-next, llama-4-scout) — meaningful representation without dominating.
+
+**Cost envelope.** A full pass on all three suites (17 tasks × 10 models = ~170 runs) lands roughly in the **$5–15** range under current pricing, with `claude-opus-4.7` accounting for the bulk. Use `--models <label>` to subset for cheaper iteration; `--models claude-opus-4.7` alone is the most informative single-model run if you only have budget for one.
+
+**Maintenance.** When adding a model: (1) confirm the slug is on <https://openrouter.ai/provider/google-vertex> (the Vertex pin will fail-closed otherwise — see Gemma 4 incident, 2026-04-28); (2) update this table when you change [`eval/specs/models.json`](specs/models.json) so the docs don't drift.
 
 ### Provider routing and the audit trail
 
@@ -155,7 +199,8 @@ spec.json ── tasks_file ──→ tasks.json
    │              │
    └── + models, skills, repeats ──→ expand_planned_runs() ──→ [run_0, run_1, …, run_N-1]
                                                                        │
-                                                                  --limit K slices
+                                                              --models filters models
+                                                              --limit K slices
                                                                        │
                                                                        ▼
                                                               [run_0, …, run_K-1]
@@ -164,9 +209,30 @@ spec.json ── tasks_file ──→ tasks.json
                                                   runner executes K LLM-driven runs
                                                                        │
                                                                        ▼
-                                                  writes results.jsonl, summary.json,
-                                                  conversations/<run_id>.md
+                                            for each (model, stage) cell, writes:
+                                              <output_dir>/<model_label>/<stage>/results.jsonl
+                                              <output_dir>/<model_label>/<stage>/summary.json
+                                              <output_dir>/<model_label>/<stage>/conversations/<run_id>.md
 ```
+
+### Output layout
+
+`output_dir` is the experiment's base path (e.g. `eval/runs`). The runner partitions outputs by **model first, then stage** so each leaf folder is a self-contained "this LLM on this stage" cell:
+
+```text
+eval/runs/
+├── claude-haiku-4.5/
+│   ├── setup/
+│   │   ├── results.jsonl
+│   │   ├── summary.json
+│   │   └── conversations/<run_id>.md
+│   ├── planning/
+│   └── analysis/
+└── gemini-3-flash-preview/
+    └── …
+```
+
+Cross-model comparison = read sibling `summary.json` files. Each `<model>/<stage>/summary.json` contains the aggregated stats for that one cell (`n_runs`, `success_rate`, `n_off_rail`, `n_no_expected_tool_call`, costs, served-by provider, etc.) plus the model's label and id at the top of the file. If you want a JSON snapshot of the planned matrix before running, use `python -m eval.run_experiments plan --spec <spec> --write-manifest` — opt-in only.
 
 ## Difficulty Ladder
 
@@ -269,12 +335,20 @@ Outputs land at `eval/data/fixtures/<fixture_id>/` (gitignored under `eval/data/
 
 ```bash
 python eval/bootstrap_fixtures.py                           # one-time: 2 simulation + 3 setup-only fixtures (~2 min)
+
+# Full panel × all three stages (the typical paper run)
+python -m eval.run_experiments run --all-specs
+
+# All stages for one specific model (cheap iteration / model bring-up)
+python -m eval.run_experiments run --all-specs --models claude-haiku-4.5
+
+# Or one stage at a time, full panel
 python -m eval.run_experiments run --spec eval/specs/setup_eval.json
 python -m eval.run_experiments run --spec eval/specs/planning_eval.json
 python -m eval.run_experiments run --spec eval/specs/analysis_eval.json
 ```
 
-Vary `models` in each spec to add LLMs to the matrix. The fixture bootstrap runs once per environment; thereafter each planning / analysis task exercises only its target stage. Specs reference the production skill at `agent/skills/colpack/SKILL.md` directly — no per-eval skill build step.
+The model panel is shared across all three specs via [`eval/specs/models.json`](specs/models.json) — edit there to add or drop a model from every stage at once. The fixture bootstrap runs once per environment; thereafter each planning / analysis task exercises only its target stage. Specs reference the production skill at `agent/skills/colpack/SKILL.md` directly — no per-eval skill build step.
 
 ## Stage scope and off-rail detection
 
@@ -335,24 +409,54 @@ So a one-line read: *"Opus 0/1 off-rail; Gemini 1/1 off-rail, drove all the way 
 
 ### Run-outcome quadrants
 
-Combining `success` (liveness), `expected_tool_called` (the stage's primary tool ever fired), and `off_rail` (drift past stage) disambiguates four distinct outcomes that a one-bit `success` flag would collapse:
+`success` is **strict by default** — a run is marked successful only on positive evidence the agent did its job, not just on absence of crashes. For non-adversarial tasks the criterion is:
+
+```text
+success = no_errors  AND  expected_tool_called  AND  not off_rail
+```
+
+Combined with `expected_tool_called` (the stage's primary tool ever fired) and `off_rail` (drift past stage), the four logical outcomes are:
 
 | `success` | `expected_tool_called` | `off_rail` | Interpretation |
 | --- | --- | --- | --- |
 | ✓ | ✓ | ✗ | **Clean pass** — did exactly the requested stage |
-| ✓ | ✓ | ✓ | Did the work but **drifted past the stage** |
-| ✓ | ✗ | ✗ | **Confirmation-stuck / failure to act** — agent ran without errors but never called the stage's primary tool |
-| ✓ | ✗ | ✓ | Drifted to wrong tools **without ever doing the right one** |
+| ✗ | ✓ | ✓ | Did the work but **drifted past the stage** |
+| ✗ | ✗ | ✗ | **Confirmation-stuck / failure to act** — agent ran without errors but never called the stage's primary tool |
+| ✗ | ✗ | ✓ | Drifted to wrong tools **without ever doing the right one** |
+
+Only the top row counts as `success`. The other three rows surface as distinct failure modes via the secondary flags.
 
 `expected_tool_called` is derived per stage: setup → `setup_simulation_problem_tool`, planning → `plan_simulation_runs_tool`, analysis → `analyze_simulation_runs_tool`. The flag, the per-run `tools_called` list, and the aggregated `n_no_expected_tool_call` / `no_expected_tool_call_rate` (both grand-total and `per_model`) are all written to `results.jsonl` and `summary.json`.
 
-This matters because, even with the explicit single-turn phrasing ("Do the setup without asking me for confirmation, and stop after the setup step"), some LLMs still hedge — replying with a plan in prose and waiting for a "go." Those runs are not crashes (so liveness `success` is true) and are not drift (no off-rail tools), but they also produced no work. `expected_tool_called = false` makes that failure mode visible instead of inflating the success rate.
+**Adversarial tasks (L4–L5)** use a different success criterion. For those the *correct* behavior is to refuse / clarify, so requiring `expected_tool_called` would invert the verdict. The runner falls back to `no_errors AND made_progress` (made_progress = output tokens > 0 OR any tool call OR any off-rail dispatch) — that catches silent SDK failures while leaving the actual "was the refusal correct?" question for transcript review (see Scoring section below).
+
+**Why strict by default.** With the previous liveness-only criterion, a silent upstream failure (invalid model_id, auth rejection) returned an empty SDK stream with no error raised. Every task came back `success=true` with zero output tokens — actively misleading. The strict criterion requires the agent to demonstrably do *something* before claiming success. As an additional defense, `_run_experiment` checks the pre-flight routing probe and skips models with confirmed errors before any tasks fire.
 
 ### Caveat — detection is post-dispatch
 
 The runner sees a tool call after the SDK has already emitted the message containing it. The off-rail tool *will* execute once through the SDK / MCP path before the run terminates — we cannot intercept the dispatch from outside the SDK. The cost-saving is "no further turns after off-rail," not "zero off-rail tool execution." For analysis purposes this is actually a feature (you see the full off-rail behavior in the transcript), but be aware that one off-rail simulation run can still be expensive.
 
 Patching the SDK's tool-dispatch path to deny disallowed calls before they reach MCP would close that gap, but it's a real SDK fork — not worth it for the ColPackAgent paper. Saved as an enhancement candidate if ColPackBench needs it.
+
+## Per-task wall-time timeout
+
+Each task runs with a wall-time budget so a hung model — or one that goes off-rail and triggers a slow simulation execution — can't burn unbounded compute. On exceeding the budget, the runner appends a synthetic `system_error` to the turn, marks the run failed, and moves on to the next planned run.
+
+**Default per stage** (chosen because all three stages call a single fast tool that should return in seconds):
+
+| Stage | Default timeout |
+| --- | --- |
+| `setup` / `planning` / `analysis` | 180s (3 min) |
+| Unknown / no stage | 600s (10 min, fallback) |
+
+**Override precedence** (highest wins):
+
+1. CLI: `--task-timeout 60` on the `run` subcommand — applies to every task this invocation.
+2. Per-task: `metadata.timeout_seconds` in the task JSON — for one task that's known to need more (or less) than the stage default.
+3. Per-spec: `metadata.default_timeout_seconds` in the spec JSON — applies to every task in that spec unless overridden by task metadata.
+4. Stage default (table above).
+
+The resolved budget is recorded as `metadata.task_timeout_seconds` on each `RunResult`, so transcripts are self-describing. A timeout shows up as `success: false` with a system_error like `task timeout exceeded (180s) on turn 1`.
 
 ## Scoring
 
@@ -380,10 +484,10 @@ Key fields in the JSON spec:
 - `repeats`
 - `bootstrap_skill`
 - `tasks` (inline) **or** `tasks_file` (path to a JSON array of tasks)
-- `models`
+- `models` (inline) **or** `models_file` (path to a JSON array of model entries — the three production specs all point at [`eval/specs/models.json`](specs/models.json) so the panel is controlled in one place)
 - `skills`
 
-`tasks_file` lets multiple specs share the same task collection (e.g. swap out the model list while keeping the same task ladder). Specifying both `tasks` and `tasks_file` is an error.
+`tasks_file` and `models_file` let multiple specs share the same task collection / model panel. Specifying both inline and file forms for the same field is an error.
 
 The runner supports:
 
@@ -391,7 +495,7 @@ The runner supports:
 - skill ablation by varying `skills`
 - task difficulty benchmarking by varying `tasks`
 
-By default, eval-generated ColPack workflow directories are rooted under `eval/data/` via environment variable `COLPACK_WORKING_DIR_ROOT`. That keeps simulation artifacts separate from the standalone agent's default `data/` tree.
+By default, eval-generated ColPack workflow directories are rooted under `eval/data/` via environment variable `COLPACK_WORKING_DIR_ROOT`. That keeps simulation artifacts separate from the standalone agent's default `data/` tree. **The runner namespaces by model**, setting `COLPACK_WORKING_DIR_ROOT=eval/data/<model_label>/` per run, so simulation artifacts created by one LLM (e.g. `eval/data/claude-haiku-4.5/2d_nvt_disk/`) never collide with another's. Fixtures live at the shared `eval/data/fixtures/` and are accessed by absolute path from the index, so they remain visible to every model regardless of the per-model namespace. `clean` and `--clean-data` sweep all per-model folders while preserving `fixtures/`.
 
 ## Notes
 
