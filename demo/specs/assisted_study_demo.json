@@ -1,6 +1,6 @@
 {
   "experiment_id": "colpack_demo_assisted_study",
-  "description": "ColPackAgent-assisted scientific study: open-goal phase-transition study of 2D hard disks and hard squares in NPT. The agent chooses the composition (pure disks, pure squares, or a mixture), designs the pressure sweep, picks order parameters, and synthesizes a scientific conclusion.",
+  "description": "ColPackAgent-assisted scientific study driven by a research program (demo/specs/assisted_study_program.md). The program encodes the methodology (system size, sample_steps floor, OP choice rules, reporting format) while leaving the scientific choices (composition, pressure range, hypotheses) to the agent — Karpathy-style autoresearch.",
   "output_dir": "demo/runs/assisted_study",
   "working_dir_root": "demo/data",
   "agent_path": "agent/agents/colpack_agent.md",
@@ -13,13 +13,14 @@
       "description": "Open scientific question: study the phase transition of 2D hard disks and hard squares in the NPT ensemble. Agent picks composition (pure disks, pure squares, or a mixture), designs the sweep, selects order parameters, and synthesizes a scientific conclusion.",
       "difficulty_level": 4,
       "user_messages": [
-        "Study the phase transition of 2D hard disks and hard squares in the NPT ensemble. You have full freedom to explore however you see fit — pure disks, pure squares, mixtures, multiple sub-studies, whatever helps you characterize the disordered-to-ordered behavior. Run setup, plan, execute, and analyze autonomously, and report your conclusions."
+        "Read and execute the research program at `demo/specs/assisted_study_program.md`. Follow its methodology constraints exactly; the scientific choices it leaves open are yours to make. Run autonomously and produce the final summary the program describes."
       ],
       "expected_outcomes": [
-        "The agent scopes the study itself (picks composition(s), pressure range, system size, sample steps).",
-        "The agent picks order parameters appropriate to the chosen shapes (e.g. ψ_6 for disks, P_4 / cubatic for squares) and computes them across the sweep(s).",
-        "The agent runs setup, plan, execute, and analyze autonomously, optionally iterating with additional runs if the first sweep doesn't resolve the transition.",
-        "The agent produces a final summary identifying the transition(s) it found and reporting φ(P) and the order parameter(s) versus P."
+        "The agent reads the research program file before starting any simulation work.",
+        "The agent honors the methodology constraints — N ≥ 500 particles, sample_steps ≥ 5e5 explicitly overridden (not the ColPack default), at least 6 pressure points.",
+        "The agent picks composition (disks / squares / mixture), pressure range, and an appropriate orientational order parameter (ψ_6 for disks, P_4 for squares).",
+        "The agent runs setup, plan, execute, and analyze autonomously, iterating with a second sweep if the first does not resolve the transition.",
+        "The agent produces a final summary in the format requested by the program: composition + rationale, sweep parameters, φ(P), OP(P), identified P*, caveats."
       ],
       "metadata": {
         "stage": "assisted_study",
