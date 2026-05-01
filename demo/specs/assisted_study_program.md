@@ -35,17 +35,17 @@ discussion of what the curves reveal about the ordering mechanism.
 - **Pressure range and grid density.** Choose values that bracket the
   transition. If your first sweep does not resolve a clear order-parameter
   jump, refine the range and run a second sweep — this is encouraged.
-- **`sample_steps` per run, within the §3.2 bounds.** Pick a value at or
-  above the §3.2 hard floor (5×10⁶) that fits your wall-time budget and
-  the difficulty of the state points. You are encouraged to use longer
-  runs (up to the §3.2 recommended ceiling) for state points near P\* —
-  these have the longest autocorrelation times and contribute most to the
-  P\* uncertainty. Coarse-pass points far from the transition can use
-  shorter `sample_steps` than refinement-pass points near P\*.
-  **Adapting `sample_steps` is part of your job**: the §3.2 equilibration
-  check tells you per-run whether the chosen length was sufficient, and
-  if it was not, re-running with 3–10× more `sample_steps` is the
-  correct response, not adding caveats.
+- **`sample_steps` per run, within the §3.2 cap.** Start short — a few
+  times the ColPack default is a reasonable pilot value — and let the
+  §3.2 equilibration check decide whether to escalate. There is **no
+  recommended production length**; the right value is wherever the
+  eq-check stops failing for that state point, which depends on N,
+  composition, and how close the point is to P\*. State points near
+  P\* almost always need longer runs than coarse-pass points far from
+  the transition. **Adapting `sample_steps` is part of your job**: when
+  the eq-check fails, re-run with 3–10× more `sample_steps` rather than
+  adding caveats. If you hit the §3.2 cap and still fail, follow the
+  exit clause (reduce N).
 - **Hypotheses and interpretation.** Decide what counts as the transition
   (e.g., the η-jump midpoint, the OP-inflection point, divergent
   fluctuations) and defend the choice in your final summary.
@@ -64,22 +64,26 @@ quick-look pilot. Override defaults explicitly via the planning tool.
 - Do not exceed N = 2000: simulation cost scales superlinearly and an
   oversized run will not finish within the task wall-time budget.
 
-### 3.2 Sampling — minimum length and equilibration check
+### 3.2 Sampling — adaptive length via equilibration check
 
-- **`sample_steps` ≥ 5×10⁶** MC sweeps per simulation. This is a **hard
-  minimum** — not a guideline. With `sample_steps` < 5×10⁶ at the system
-  sizes in §3.1, the system has not had time to relax from the random
-  initial configuration into its equilibrium phase, let alone sample
-  configuration space; quantitative results from shorter runs are
-  unreliable and have produced P* estimates off from the literature by
-  ~10–20% in past studies. **Treat anything below this minimum as a
-  plumbing test, not science.**
-- **Recommended production length: 1×10⁷–5×10⁷ MC sweeps.** Pick the upper
-  end if you have wall-time budget; the marginal cost is small relative to
-  the value of well-equilibrated samples.
-- The ColPack default (5×10⁴) is for plumbing tests and is **2–3 orders of
-  magnitude too short**. Always set `sample_steps` explicitly via
-  `baseline_parameters` when calling `plan_simulation_runs_tool`.
+The right value of `sample_steps` is **whatever passes the equilibration
+check** for that particular state point. There is no fixed floor and
+no recommended production length — start short, let the eq-check
+decide whether to escalate, and stop when it passes.
+
+- **Start short.** A reasonable pilot value is a few times the ColPack
+  default — e.g. `sample_steps ≈ 1×10⁵`. Always set `sample_steps`
+  explicitly via `baseline_parameters` when calling
+  `plan_simulation_runs_tool`; do not silently leave it at the
+  ColPack default (5×10⁴) for production points.
+- **Hard cap: `sample_steps` ≤ 1×10⁷ MC sweeps.** Beyond this,
+  escalating further hits diminishing returns and stops fitting in
+  the wall-time budget; the exit clause below kicks in instead.
+- **Allowed (and expected) to vary per state point.** Coarse-pass
+  points far from P\* usually pass the eq-check at much shorter
+  lengths than refinement-pass points near P\*, where autocorrelation
+  times peak. Adapt accordingly — do not run every point at the same
+  length for symmetry.
 - **Mandatory equilibration check** — *after* the analyze step completes
   and *before* drawing any P*-conclusion, you must verify each run is
   actually equilibrated, not just nominally analysed:
@@ -110,8 +114,8 @@ quick-look pilot. Override defaults explicitly via the planning tool.
   re-analyse. Do not paper over under-equilibration with caveats — fix
   it.
 
-  **Exit clause** — if a run is already at the §3.2 sample_steps ceiling
-  (5×10⁷) and *still* fails the eq-check, do **not** loop indefinitely.
+  **Exit clause** — if a run is already at the §3.2 sample_steps cap
+  (1×10⁷) and *still* fails the eq-check, do **not** loop indefinitely.
   Try, in order: (a) reduce `N` within the §3.1 bounds — denser systems
   mix faster per sweep, so dropping from N = 1500 to N = 800 typically
   halves τ_int while keeping finite-size effects acceptable; (b) if even
@@ -204,12 +208,14 @@ Always also compute, at every pressure:
   the system orders), and
 - the **histogram P(η) of equilibrium volume fraction** over the
   equilibrated tail. At and near P\* this should show broadening (and
-  ideally bimodality at coexistence). If your simulations are long enough
-  to flip phases (`sample_steps` ≥ 5×10⁷ at modest N), report the
-  pressure where P(η) is most balanced as a third independent P\* estimator
-  (Lee–Kosterlitz). **If P(η) is unimodal at every pressure**, this is a
-  signal that runs were not long enough to flip the phase even once at
-  coexistence — note this explicitly in caveats but do not over-interpret.
+  ideally bimodality at coexistence). Bimodal P(η) typically requires
+  runs long enough for the system to flip phases at least once, which
+  is often beyond the §3.2 cap at moderate N — do not aim for it as a
+  primary deliverable. If you do see bimodality at one or more
+  pressures, report the pressure where P(η) is most balanced as a
+  third independent P\* estimator (Lee–Kosterlitz). **If P(η) is
+  unimodal at every pressure**, that is the expected outcome inside
+  the cap; note it in the caveats but do not over-interpret.
 
 #### 3.4d Definition of the "transition window"
 
@@ -309,16 +315,19 @@ literature value by ~1.7 k_BT/σ² — about 18 %. Diagnosis:
   drift-biased — every η value was a few percent too low because the
   system had not yet relaxed up from the random initial configuration.
 
-The rule that follows:
+The rule that follows is **not** "always start at some large fixed
+`sample_steps`." It is twofold:
 
-- The **§3.2 equilibration check is the ground truth**, not a fixed
-  `sample_steps` number. The 5×10⁶ floor in §3.2 is preliminary
-  guidance from a single hard-disk pilot — for hard squares, larger N,
-  or a binary mixture, the actual minimum may be higher. **If runs
-  routinely fail the eq-check at the §3.2 floor, raise the floor for
-  this composition and document the new value.** Conversely, if a
-  composition systematically passes the eq-check at well below the
-  recommended ceiling, the ceiling for that case can be relaxed.
+- **The §3.2 equilibration check is the ground truth.** A run is long
+  enough iff the eq-check passes for that specific state point. There
+  is no fixed step count that is "always enough" — difficulty varies
+  with N, composition, and proximity to P\*.
+- **When the eq-check fails, you must actually escalate.** The original
+  incident was not caused by `sample_steps = 5×10⁵` being intrinsically
+  too short — at coarse points it would have been fine. It was caused
+  by *not running the eq-check feedback loop* and reporting biased
+  numbers anyway. Re-run with 3–10× more `sample_steps` (up to the
+  §3.2 cap), then the exit clause if the cap is reached.
 - A tight bootstrap uncertainty does NOT validate accuracy — it only
   validates internal consistency. Compare to literature whenever
   available; for cases without a literature anchor, the OP-vs-η
