@@ -38,23 +38,35 @@ Execute:
 
 ## Assisted Study Demo
 
-Open scientific goal — the agent designs the parameter sweep itself, executes it,
-and interprets the results. The shipped scenario asks the agent to study the phase
-transition of 2D hard disks and hard squares in the NPT ensemble; the agent picks
-the composition (pure disks, pure squares, or a mixture), the pressure grid, and
-the order parameters (e.g. ψ_6 for disks, cubatic P_4 for squares), then
-characterizes the disordered-to-ordered transition end to end.
+Open scientific goal driven by a Karpathy-style **research program**
+(`demo/specs/assisted_study_program.md`) that fixes the methodology — system
+size, sample-step floor, sweep resolution, order-parameter rules, reporting
+format — while leaving the scientific choices (composition, pressure range,
+hypotheses) to the agent. The shipped scenario is the phase transition of 2D
+hard disks and hard squares in the NPT ensemble.
 
-Dry run:
+Unlike the interactive and autonomous demos above, this one **bypasses the
+eval/opencode-SDK runner** and goes through the native Claude Code CLI via
+`run_colpack.sh claude`, so the agent runs with the production MCP + skill
+stack exactly as an end-user would, just with the initial prompt prefilled
+to point at the research program.
 
-```bash
-./demo/run_assisted_study_demo.sh --dry-run
-```
+Prerequisites:
 
-Execute (allow ~30–60 min wall time; the agent runs an end-to-end pressure sweep):
+- `./run_colpack.sh setup` has been run at least once (registers the colpack
+  skill into `~/.claude/skills/`).
+- `claude` CLI is on PATH and you're authenticated.
+
+Execute (interactive Claude Code session; allow ~30–60 min):
 
 ```bash
 ./demo/run_assisted_study_demo.sh
+```
+
+Pass extra flags through to `claude` after the wrapper if you need them, e.g.:
+
+```bash
+./demo/run_assisted_study_demo.sh --permission-mode acceptEdits
 ```
 
 ## Notes

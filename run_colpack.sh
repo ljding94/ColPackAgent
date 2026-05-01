@@ -51,7 +51,7 @@ HOOMD_ENV_BIN="$(dirname "$PYTHON_BIN")"
 # Function to run as standalone agent (uses agent/app.py SDK runner)
 run_standalone() {
     echo "Running standalone agent..."
-    "$PYTHON_BIN" "$SCRIPT_DIR/agent/app.py" "${@:2}"
+    "$PYTHON_BIN" "$SCRIPT_DIR/agent/app.py" "$@"
 }
 
 # Function to run with opencode (loads agent/opencode.json as project config)
@@ -60,19 +60,22 @@ run_with_opencode() {
     PATH="$HOOMD_ENV_BIN:$PATH" \
     OPENCODE_CONFIG="$SCRIPT_DIR/agent/opencode.json" \
     OPENCODE_CONFIG_DIR="$SCRIPT_DIR/agent" \
-    opencode
+    opencode "$@"
 }
 
 # Function to run with Claude Code
 # - MCP:    agent/claude_mcp.json via --mcp-config
 # - Agent:  agent/agents/colpack_agent.md injected as appended system prompt
 # - Skill:  agent/skills/colpack/SKILL.md symlinked into ~/.claude/skills/ by 'setup'
+# Extra args ("$@") are forwarded to claude — e.g. an initial prompt string,
+# or flags like -p / --permission-mode. Used by demo/run_assisted_study_demo.sh.
 run_with_claude() {
     echo "Running with Claude Code..."
     PATH="$HOOMD_ENV_BIN:$PATH" \
     claude --mcp-config "$SCRIPT_DIR/agent/claude_mcp.json" \
            --add-dir "$SCRIPT_DIR" \
-           --append-system-prompt-file "$SCRIPT_DIR/agent/agents/colpack_agent.md"
+           --append-system-prompt-file "$SCRIPT_DIR/agent/agents/colpack_agent.md" \
+           "$@"
 }
 
 # Function to run with Gemini CLI
@@ -84,7 +87,7 @@ run_with_gemini() {
     echo "Running with Gemini CLI..."
     cd "$SCRIPT_DIR/agent" && \
     PATH="$HOOMD_ENV_BIN:$PATH" \
-    /opt/homebrew/bin/gemini --include-directories "$SCRIPT_DIR"
+    /opt/homebrew/bin/gemini --include-directories "$SCRIPT_DIR" "$@"
 }
 
 # Function to run with Codex
@@ -95,7 +98,7 @@ run_with_codex() {
     echo "Running with Codex..."
     cd "$SCRIPT_DIR/agent" && \
     PATH="$HOOMD_ENV_BIN:$PATH" \
-    codex
+    codex "$@"
 }
 
 # Force-create a symlink, replacing whatever is at the destination.
@@ -155,27 +158,29 @@ if [[ $# -eq 0 ]]; then
     exit 1
 fi
 
-case "$1" in
+command="$1"
+shift
+case "$command" in
     standalone)
-        run_standalone
+        run_standalone "$@"
         ;;
     opencode)
-        run_with_opencode
+        run_with_opencode "$@"
         ;;
     claude)
-        run_with_claude
+        run_with_claude "$@"
         ;;
     gemini)
-        run_with_gemini
+        run_with_gemini "$@"
         ;;
     codex)
-        run_with_codex
+        run_with_codex "$@"
         ;;
     setup)
         setup_skills
         ;;
     *)
-        echo "Invalid option: $1"
+        echo "Invalid option: $command"
         exit 1
         ;;
 esac
