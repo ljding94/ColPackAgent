@@ -1,334 +1,108 @@
-# ColPackAgent Research Program: 2D Hard-Particle Phase Transition (NPT)
+# ColPackAgent Research Program: 2D Hard-Disk Freezing Transition (NPT)
 
-You are running an autonomous Monte Carlo study using the colpack skill. This
-document is your research protocol — a contract describing what is fixed
-(methodology) and what is yours to decide (scientific judgment).
+Locate the freezing transition pressure **P\*** for 2D hard disks in the
+NPT ensemble. Use the colpack skill autonomously: setup → plan → execute
+→ analyze, no user-confirmation pauses.
 
-Treat the **Methodology Constraints** section as required. Treat the **Your
-Freedom** section as open — exercise scientific judgment.
-
----
-
-## 1. Research Question
-
-Characterize the **disordered-to-ordered phase transition of 2D hard particles
-(hard disks, hard squares, or a binary mixture) in the NPT ensemble**.
-
-For each composition the central observables are:
-
-- the equation of state η(P) — how volume fraction responds to pressure,
-- a shape-appropriate orientational order parameter as a function of P,
-- the radial distribution function g(r) supporting the OP interpretation,
-- the per-pressure distribution P(η) of volume fractions in the equilibrated
-  trajectory (used for the NPT-native coexistence-pressure estimator).
-
-The deliverable is the location of the transition pressure P* — extracted
-from BOTH the orientational OP and the η equation of state — and a brief
-discussion of what the curves reveal about the ordering mechanism.
+Literature anchor (Bernard & Krauth, 2011) for sanity-checking your
+final P\*: in reduced units P\* ≈ 9.185 with coexistence
+η_L ≈ 0.700 and η_H ≈ 0.716 (midpoint η ≈ 0.708).
 
 ---
 
-## 2. Your Freedom (decide for yourself)
+## 1. Constraints (HARD)
 
-- **Composition.** Pick one: pure hard disks, pure hard squares, or a binary
-  disk + square mixture. Justify your choice in one sentence at the start.
-- **Pressure range and grid density.** Choose values that bracket the
-  transition. If your first sweep does not resolve a clear order-parameter
-  jump, refine the range and run a second sweep — this is encouraged.
-- **`sample_steps` per run, within the §3.2 cap.** Start short — a few
-  times the ColPack default is a reasonable pilot value — and let the
-  §3.2 equilibration check decide whether to escalate. There is **no
-  recommended production length**; the right value is wherever the
-  eq-check stops failing for that state point, which depends on N,
-  composition, and how close the point is to P\*. State points near
-  P\* almost always need longer runs than coarse-pass points far from
-  the transition. **Adapting `sample_steps` is part of your job**: when
-  the eq-check fails, re-run with 3–10× more `sample_steps` rather than
-  adding caveats. If you hit the §3.2 cap and still fail, follow the
-  exit clause (reduce N).
-- **Hypotheses and interpretation.** Decide what counts as the transition
-  (e.g., the η-jump midpoint, the OP-inflection point, divergent
-  fluctuations) and defend the choice in your final summary.
+### Particle count
+
+`200 ≤ N ≤ 1000` per simulation. Pick a value once and reuse it for the
+whole study.
+
+### `sample_steps` policy — adaptive, per-pass
+
+Start short, escalate only on documented equilibration failure. **Never
+start at the absolute cap.**
+
+| Pass | Starting `sample_steps` | Purpose |
+| --- | --- | --- |
+| Pass 1 (coarse) | ≤ 5×10⁵ (typical 1–3×10⁵) | Bracket P\*, not resolve it |
+| Pass 2 (refined) | ≤ 2×10⁶ | Autocorrelation peaks near P\* |
+| Absolute cap | 5×10⁶ | Reached only via escalation, never as start |
+
+When a specific run fails the equilibration check, re-run **that run
+only** with 3–10× more `sample_steps`. Do not pre-emptively raise
+`sample_steps` for every point because one failed.
+
+### Equilibration check (single criterion)
+
+For each run, fit a linear drift `η(t) ≈ a·t + b` on the last 50 % of
+the trajectory. The run passes iff
+
+> `|a · T_50% / ⟨η⟩| < 0.01`  — drift over the latter half is below 1 %
+> of the mean.
+
+Use the analyze-tool's η(t) plot for visual confirmation.
+
+If a run fails and is below the absolute cap, re-run with more
+`sample_steps`. If a run is at the absolute cap and still fails, report
+what you have and explain in caveats — do not loop indefinitely.
 
 ---
 
-## 3. Methodology Constraints (do NOT vary)
+## 2. Sweep protocol — at least two passes
 
-These are the parts that ensure the data is publication-grade rather than a
-quick-look pilot. Override defaults explicitly via the planning tool.
+**Pass 1 (coarse).** At least 6 pressure points across a window expected
+to contain P\* (anchor on the literature value). Goal: bracket the
+pressure where ψ_6 jumps and ⟨η⟩ rises sharply.
 
-### 3.1 System size
+**Pass 2 (refined).** At least 4–6 pressure points concentrated within
+±10–20 % of the Pass-1 P\* estimate. Goal: tighten P\* and characterize
+the transition's sharpness.
 
-- **500 ≤ N ≤ 2000 particles** per simulation. Prefer N in the
-  500–1500 range for production runs (cleaner statistics).
-- Do not exceed N = 2000: simulation cost scales superlinearly and an
-  oversized run will not finish within the task wall-time budget.
+A third pass is encouraged if Pass 2 still doesn't resolve the
+transition cleanly. You decide the exact pressure values within these
+constraints.
 
-### 3.2 Sampling — adaptive length via equilibration check
+---
 
-The right value of `sample_steps` is **whatever passes the equilibration
-check** for that particular state point. There is no fixed floor and
-no recommended production length — start short, let the eq-check
-decide whether to escalate, and stop when it passes.
+## 3. Observables and P\* estimators
 
-- **Start short.** A reasonable pilot value is a few times the ColPack
-  default — e.g. `sample_steps ≈ 1×10⁵`. Always set `sample_steps`
-  explicitly via `baseline_parameters` when calling
-  `plan_simulation_runs_tool`; do not silently leave it at the
-  ColPack default (5×10⁴) for production points.
-- **Hard cap: `sample_steps` ≤ 1×10⁷ MC sweeps.** Beyond this,
-  escalating further hits diminishing returns and stops fitting in
-  the wall-time budget; the exit clause below kicks in instead.
-- **Allowed (and expected) to vary per state point.** Coarse-pass
-  points far from P\* usually pass the eq-check at much shorter
-  lengths than refinement-pass points near P\*, where autocorrelation
-  times peak. Adapt accordingly — do not run every point at the same
-  length for symmetry.
-- **Mandatory equilibration check** — *after* the analyze step completes
-  and *before* drawing any P*-conclusion, you must verify each run is
-  actually equilibrated, not just nominally analysed:
+Compute at every pressure on the equilibrated tail:
 
-  1. **η(t) plateau check (quantitative).** For each run, on the last
-     50 % of frames, fit a linear trend `η(t) ≈ a·t + b` and require
-     `|a · T_50% / ⟨η⟩| < 0.01` (drift over the latter half of the
-     trajectory is below 1 % of the mean). As a redundant cross-check,
-     split the last 50 % into halves and require the two means to agree
-     within 1 std-of-mean of either half. If either test fails, the run
-     is under-equilibrated and not usable for P\*-extraction. Also
-     produce the η(t) plot — a human-readable visual check of the
-     numerical result.
-  2. **Equilibrated-tail length.** The analyze tool reports
-     `eq_start_index` per run. Check that `(n_frames − eq_start_index) /
-     n_frames ≥ 0.4` — i.e. the tool was able to mark at least the last
-     40 % of frames as equilibrated. If it can only mark the last
-     ~10 %, the run was too short.
-  3. **Autocorrelation budget.** Estimate the integrated autocorrelation
-     time τ_int of |ψ_6| (and of η) on the equilibrated tail. Require
-     `N_eff = (n_eq_frames) / (2·τ_int) ≥ 50` per run for the runs in
-     the **transition window** (defined in §3.4d). If `N_eff < 20`, the
-     variance estimates are too noisy to support a quantitative P\*
-     with tight uncertainty.
+- **ψ_6** — bond-orientational hexatic order parameter.
+- **⟨η⟩** — mean equilibrium volume fraction.
+- **g(r)** — radial distribution function.
 
-  **If any check fails: re-run those state points with 3×–10× more
-  `sample_steps`** (still respecting the §3.2 upper bound), then
-  re-analyse. Do not paper over under-equilibration with caveats — fix
-  it.
+Report **two complementary P\* estimators** computed on the same data:
 
-  **Exit clause** — if a run is already at the §3.2 sample_steps cap
-  (1×10⁷) and *still* fails the eq-check, do **not** loop indefinitely.
-  Try, in order: (a) reduce `N` within the §3.1 bounds — denser systems
-  mix faster per sweep, so dropping from N = 1500 to N = 800 typically
-  halves τ_int while keeping finite-size effects acceptable; (b) if even
-  the smallest allowed N still fails, report the residual uncertainty
-  honestly, mark P\* for that state point as bracketed rather than
-  pinned, and explain in the caveats. The goal is calibrated reporting,
-  not infinite re-runs.
+- **P\*_OP** — inflection point of ⟨ψ_6⟩(P), e.g. via sigmoid fit or
+  maximum-slope.
+- **P\*_η** — pressure at which ⟨η⟩(P) crosses the literature midpoint
+  η ≈ 0.708 (linear interpolation between bracketing data points).
 
-### 3.3 Sweep resolution
-
-Run the sweep iteratively in **two or more passes**: a coarse bracketing
-pass to locate the transition, then a refined pass to resolve it.
-
-**Pass 1 — coarse bracketing.** At least 6 pressure points (ideally 8–10),
-spread broadly across the range you suspect contains the transition. The
-goal is to locate where the order parameter jumps.
-
-**Pass 1 outcome A — no transition visible.** If the OP is monotonic and
-shallow across the entire range, the window is wrong. Pick a different
-pressure range and re-run. You may iterate this step more than once until
-a transition is bracketed.
-
-**Pass 1 outcome B — transition visible.** Note the approximate
-transition pressure P\*.
-
-**Pass 2 — refinement near P\*.** Once a coarse pass identifies an
-approximate P\*, run an additional sweep with **at least 4–6 points**
-concentrated in a narrow window around P\* (roughly ±10–20% of P\*). The
-purpose is to resolve P\* to better precision than the coarse grid allows
-and to characterize the sharpness of the transition. Further refinement
-passes are encouraged if the transition is still not well resolved.
-
-Document **every** pass in the final summary — its range, number of
-points, and what you concluded — so the iteration history is visible.
-
-### 3.4 Order parameters and P* estimators (use BOTH)
-
-You must extract the transition pressure using **two complementary
-estimators** computed on the same dataset, then report both. They probe
-different aspects of the transition and disagreements between them are
-themselves informative (typically ~half the finite-N transition width).
-
-For **hard disks** the two estimators are §3.4a (orientational OP
-inflection) and §3.4b (η-midpoint, anchored to literature). For
-**hard squares or binary mixtures** there is no universally tabulated
-η-jump pair, so the two estimators degrade to **OP-inflection** vs.
-**η-inflection** (both inflection-based, but on different observables —
-orientational vs. translational/density). This is a weaker cross-check
-than the disk case, but the two will still disagree by approximately
-the finite-N transition width and the spread is still meaningful.
-
-#### 3.4a Orientational order parameter — choose by shape
-
-- **Hard disks**  → bond-orientational hexatic order parameter `psi_6`.
-- **Hard squares** → cubatic / 4-fold orientational order parameter `P_4`.
-- **Binary mixture** → report the appropriate OP for *each* species
-  separately if the analysis tool supports per-species output.
-
-The OP-based P\* is the **inflection point of ⟨OP⟩(P)** (sigmoid fit, or
-equivalently the location of maximum slope). Report the bootstrap CI from
-resampling the per-point ⟨OP⟩ values.
-
-#### 3.4b Density-based P\* — η-midpoint (NPT-native, literature-standard)
-
-In NPT the natural order parameter is η itself. The transition shows up
-as a steep rise in ⟨η⟩(P), bracketed for hard disks (Bernard & Krauth
-2011) by the literature values:
-
-- η_L (liquid-spinodal side) ≈ **0.700**
-- η_H (hexatic side) ≈ **0.716**
-- η midpoint ≈ **0.708**
-
-Define **P\*_η = pressure at which ⟨η⟩(P) crosses η_midpoint** (linear
-interpolation between the bracketing data points). Bootstrap by resampling
-each ⟨η⟩_i from N(mean, std-of-mean) where the std-of-mean uses
-N_eff from §3.2.
-
-For **hard squares or binary mixtures** the η-midpoint reduces to the
-**η-inflection point** of ⟨η⟩(P) (sigmoid fit, or maximum slope from a
-smoothing spline). Report the inflection P\* and the η values at the
-upper and lower plateaus so the "η-jump" range is documented even
-without a literature anchor. This is the §3.4-second-estimator for
-non-disk compositions.
-
-#### 3.4c Radial distribution and P(η) histograms
-
-Always also compute, at every pressure:
-
-- the **radial distribution function g(r)** (peaks sharpen and split as
-  the system orders), and
-- the **histogram P(η) of equilibrium volume fraction** over the
-  equilibrated tail. At and near P\* this should show broadening (and
-  ideally bimodality at coexistence). Bimodal P(η) typically requires
-  runs long enough for the system to flip phases at least once, which
-  is often beyond the §3.2 cap at moderate N — do not aim for it as a
-  primary deliverable. If you do see bimodality at one or more
-  pressures, report the pressure where P(η) is most balanced as a
-  third independent P\* estimator (Lee–Kosterlitz). **If P(η) is
-  unimodal at every pressure**, that is the expected outcome inside
-  the cap; note it in the caveats but do not over-interpret.
-
-#### 3.4d Definition of the "transition window"
-
-Several rules in this document refer to the **transition window** —
-defined operationally, post-Pass-1, as:
-
-> the contiguous range of pressure values across which ⟨OP⟩(P) traverses
-> the central 10–90 % of its rise — i.e. from
-> ⟨OP⟩_low + 0.10·(⟨OP⟩_high − ⟨OP⟩_low) up to
-> ⟨OP⟩_low + 0.90·(⟨OP⟩_high − ⟨OP⟩_low),
-> where ⟨OP⟩_low and ⟨OP⟩_high are the plateau values on either side
-> (equivalently, where ⟨η⟩(P) makes its steepest rise).
-
-In practice this is a 2–4-point sub-range of your sweep; it is the
-range where finite-N broadening lives and where the strictest
-equilibration and statistics requirements apply. Identify it
-immediately after Pass 1 completes, *before* doing the §3.2 eq-check
-audit and *before* planning Pass 2 — Pass 2 should densely cover this
-window.
-
-### 3.5 Workflow
-
-- Run the four ColPack stages in order, autonomously, with no
-  user-confirmation pauses: setup → plan → execute → analyze.
-- Use the autonomous workflow conventions: do not ask for approval between
-  stages.
-- After analyze, run the §3.2 equilibration check **before** the §3.4 P\*
-  extraction. Re-execute under-equilibrated runs with more sample_steps
-  before reporting.
+Quote bootstrap uncertainty for each. The spread between P\*_OP and
+P\*_η is your finite-N transition width.
 
 ---
 
 ## 4. Reporting
 
-At the end, produce a **single final summary** containing:
+Produce one final summary containing:
 
-1. **Composition** chosen and one-sentence rationale.
-2. **Sweep parameters** actually used: N, `sample_steps`, pressure grid,
-   number of points. If you iterated (either across pressure passes or
-   re-ran for longer sample_steps), list every pass and explain why.
-3. **Equilibration-check results** per run: η(t) plateau confirmation,
-   `(n_frames − eq_start)/n_frames` fraction, τ_int and N_eff for ψ_6
-   (or chosen OP) and η in the transition window. Flag any run that
-   *barely* passed.
-4. **Equation of state** — η vs. P (table or in-line numbers; describe
-   the curve in words too).
-5. **Orientational OP response** — your chosen OP vs P with sigmoid (or
-   numerical) inflection point.
-6. **Two P\* estimates with uncertainty**:
-   - **P\*_η** from the η-midpoint method (NPT-native, primary).
-   - **P\*_OP** from the orientational-OP inflection.
-   - Discuss how they compare; the spread between them characterises the
-     finite-N transition width.
-7. **Plots (required)** — save PNG and PDF in the working dir; reference
-   file paths in the summary. At minimum:
-   - **η(P) headline plot** with literature η_L and η_H bands marked,
-     P\*_η line and 68% CI band overlaid. Both passes overlaid if you
-     refined.
-   - **OP(P) plot** with the same P\*_η band marked for visual
-     comparison, and the OP-inflection P\*_OP also marked.
-   - **g(r) at three representative pressures** spanning the transition
-     (one disordered, one near P\*, one ordered).
-   - **P(η) per-pressure histograms** in the transition window. Even if
-     unimodal, this is required so under-equilibration is visible.
-   - **η(t) traces in the transition window** — direct visual evidence
-     that runs are equilibrated.
-8. **Caveats and limitations** — finite-size effects, equilibration
-   uncertainty, autocorrelation budget, anything you would tighten in a
-   follow-up study. If your P\* differs from the literature by more than
-   the broader of (1) the finite-N expected shift and (2) your reported
-   uncertainty, **investigate before reporting** — the most common cause
-   is under-equilibration (re-run with more `sample_steps`).
-
-The summary plus the plots are the primary scientific output. The
-simulation working dirs and JSON files are supporting evidence.
-
----
-
-## Appendix: Lessons from a prior under-equilibrated run
-
-The first execution of this program used `sample_steps = 5×10⁵` (the
-minimum recommended at the time) and produced P\* estimates off from the
-literature value by ~1.7 k_BT/σ² — about 18 %. Diagnosis:
-
-- η(t) traces showed *monotonic drift* across nearly the whole trajectory
-  for every pressure; no plateau was reached.
-- The analyze tool's equilibration detector flagged only the last ~10 %
-  of frames as equilibrated, leaving ~500 frames per run.
-- Integrated autocorrelation times of ψ_6 reached ~300 frames in the
-  transition window, giving N_eff ≈ 1–2 per state point.
-- P(η) histograms were strongly unimodal at every pressure (the system
-  never flipped phases), making the Lee–Kosterlitz coexistence
-  estimator unusable.
-- The η-midpoint estimator with literature η_L and η_H values still gave
-  a tight P\* ± 0.01, but it was offset from the literature P\* by ~1.7
-  k_BT/σ² because the underlying ⟨η⟩(P) curve was systematically
-  drift-biased — every η value was a few percent too low because the
-  system had not yet relaxed up from the random initial configuration.
-
-The rule that follows is **not** "always start at some large fixed
-`sample_steps`." It is twofold:
-
-- **The §3.2 equilibration check is the ground truth.** A run is long
-  enough iff the eq-check passes for that specific state point. There
-  is no fixed step count that is "always enough" — difficulty varies
-  with N, composition, and proximity to P\*.
-- **When the eq-check fails, you must actually escalate.** The original
-  incident was not caused by `sample_steps = 5×10⁵` being intrinsically
-  too short — at coarse points it would have been fine. It was caused
-  by *not running the eq-check feedback loop* and reporting biased
-  numbers anyway. Re-run with 3–10× more `sample_steps` (up to the
-  §3.2 cap), then the exit clause if the cap is reached.
-- A tight bootstrap uncertainty does NOT validate accuracy — it only
-  validates internal consistency. Compare to literature whenever
-  available; for cases without a literature anchor, the OP-vs-η
-  estimator agreement (§3.4) is the next best check.
+1. **Sweep parameters** for every pass: N, the `sample_steps` actually
+   used per point (which may vary), pressure grids.
+2. **Equilibration-check results** per run — drift fraction; flag any
+   run that barely passed or was re-executed.
+3. **η(P)** and **ψ_6(P)** values (table or in-line is fine).
+4. **Both P\* estimates** with bootstrap CIs; discuss their agreement.
+5. **Plots (required)**, saved as PNG inside the simulation
+   `working_dir` and referenced by path:
+   - η(P) with literature η_L / η_H bands and P\*_η marked.
+   - ψ_6(P) with P\*_OP marked.
+   - g(r) at three pressures spanning the transition (disordered, near
+     P\*, ordered).
+   - η(t) traces in the transition window (visual eq-check).
+6. **Caveats** — finite-size effects, equilibration uncertainty,
+   anything to investigate further. If your P\* differs from the
+   literature value by more than your reported uncertainty, investigate
+   before reporting; the most common cause is under-equilibration
+   (re-run with more `sample_steps`).
