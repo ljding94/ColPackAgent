@@ -3,7 +3,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
 def _default_run_path(mode="autonomous"):
@@ -183,6 +183,99 @@ def plot_interactive_demo():
     plt.close(fig)
 
 
-if __name__ == "__main__":
-    plot_autonomous_demo()
-    plot_interactive_demo()
+def plot_autoresearch_demo():
+    """
+    Demonstration of the autoresearch sweep: eta(P) and psi_6(P) for the 2D NPT
+    hard-disk freezing transition, colored by which iteration of the agent
+    sweep generated each point.
+    """
+    repo_root = Path(__file__).resolve().parents[1]
+    research_dir = repo_root / "demo" / "data" / "auroresearch_2d_npt_disk" / "research_outputs"
+
+    with (research_dir / "pass1_results.json").open("r", encoding="utf-8") as handle:
+        per_run = json.load(handle)
+    with (research_dir / "pstar_estimates.json").open("r", encoding="utf-8") as handle:
+        pstar = json.load(handle)
+
+    iter_of_steps = {1_000_000: 1, 2_000_000: 2, 5_000_000: 3}
+    iter_styles = {
+        1: dict(color="tab:blue", marker="o", label=r"iter 1"),
+        2: dict(color="tab:orange", marker="s", label=r"iter 2"),
+        3: dict(color="tab:green", marker="D", label=r"iter 3"),
+    }
+
+    def tail_drift(series):
+        arr = np.asarray(series, dtype=float)
+        tail = arr[len(arr) // 2:]
+        n = len(tail)
+        if n < 2:
+            return 0.0
+        t = np.arange(n, dtype=float)
+        slope, _ = np.polyfit(t, tail, 1)
+        return float(abs(slope) * (n - 1))
+
+    grouped = {it: [] for it in iter_styles}
+    for entry in per_run:
+        it = iter_of_steps.get(entry["sample_steps"])
+        if it is None:
+            continue
+        entry["eta_drift"] = tail_drift(entry["eta_t"])
+        entry["psi6_drift"] = tail_drift(entry["psi6_t"])
+        grouped[it].append(entry)
+    for rows in grouped.values():
+        rows.sort(key=lambda r: r["P"])
+
+    fig, axes = plt.subplots(1, 2, figsize=(3.3, 3.3 * 0.45))
+    axes = np.asarray(axes).reshape(-1)
+
+    lit = pstar["literature"]
+    axes[0].axhspan(lit["eta_low"], lit["eta_high"], color="0.88", lw=0, zorder=0)
+    axes[0].axvline(pstar["P_star_eta_point"], color="0.4", linestyle="--", linewidth=0.6, zorder=0)
+    axes[1].axvline(pstar["P_star_OP_point"], color="0.4", linestyle="--", linewidth=0.6, zorder=0)
+
+    sp = pstar["sigmoid_params_point"]
+    P_grid = np.linspace(min(pstar["P_grid"]), max(pstar["P_grid"]), 200)
+    sigmoid = sp["a"] + sp["b"] / (1.0 + np.exp(-sp["c"] * (P_grid - sp["P0"])))
+    axes[1].plot(P_grid, sigmoid, color="0.3", linewidth=0.8, zorder=1)
+
+    for it, style in iter_styles.items():
+        rows = grouped[it]
+        if not rows:
+            continue
+        Ps = np.array([r["P"] for r in rows])
+        eta = np.array([r["eta_mean"] for r in rows])
+        psi6 = np.array([r["psi6_mean"] for r in rows])
+        eta_err = np.array([r["eta_drift"] for r in rows])
+        psi6_err = np.array([r["psi6_drift"] for r in rows])
+        passed = np.array([r["passes_eq_check"] for r in rows])
+
+        for ax, y, yerr in ((axes[0], eta, eta_err), (axes[1], psi6, psi6_err)):
+            for mask, mfc in ((passed, style["color"]), (~passed, "white")):
+                if not np.any(mask):
+                    continue
+                ax.errorbar(
+                    Ps[mask], y[mask], yerr=yerr[mask],
+                    fmt=style["marker"], color=style["color"], mfc=mfc, mec=style["color"],
+                    markersize=3, linewidth=0, elinewidth=0.6, capsize=1.2, zorder=3,
+                )
+        axes[0].plot([], [], style["marker"], color=style["color"], mfc=style["color"],
+                     markersize=3, linestyle="none", label=style["label"])
+
+    axes[0].set_ylabel(r"$\eta$", fontsize=9, labelpad=0)
+    axes[1].set_ylabel(r"$\psi_6$", fontsize=9, labelpad=0)
+    for ax in axes:
+        ax.set_xlabel(r"$P$", fontsize=9, labelpad=0)
+        ax.tick_params(axis="both", which="both", direction="in", top=True, right=True, labelsize=7)
+        ax.xaxis.set_major_locator(MultipleLocator(1))
+
+    axes[0].legend(
+        frameon=False, fontsize=7, loc="lower right", ncol=1,
+        handletextpad=0.3, labelspacing=0.2, borderaxespad=0.3, handlelength=0.8,
+    )
+
+    fig.tight_layout(pad=0.1)
+    fig.savefig("./figures/demo_autoresearch.png", dpi=600)
+    fig.savefig("./figures/demo_autoresearch.pdf", format="pdf")
+    plt.show()
+    plt.close(fig)
+
