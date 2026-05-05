@@ -190,38 +190,30 @@ def plot_autoresearch_demo():
     sweep generated each point.
     """
     repo_root = Path(__file__).resolve().parents[1]
-    research_dir = repo_root / "demo" / "data" / "auroresearch_2d_npt_disk" / "research_outputs"
+    research_dir = repo_root / "demo" / "data" / "autoresearch_0504" / "2d_npt_disk" / "research_outputs"
 
-    with (research_dir / "pass1_results.json").open("r", encoding="utf-8") as handle:
-        per_run = json.load(handle)
     with (research_dir / "pstar_estimates.json").open("r", encoding="utf-8") as handle:
         pstar = json.load(handle)
+    with (research_dir / "sweep_history.json").open("r", encoding="utf-8") as handle:
+        history = json.load(handle)
 
-    iter_of_steps = {1_000_000: 1, 2_000_000: 2, 5_000_000: 3}
     iter_styles = {
-        1: dict(color="tab:blue", marker="o", label=r"iter 1"),
-        2: dict(color="tab:orange", marker="s", label=r"iter 2"),
-        3: dict(color="tab:green", marker="D", label=r"iter 3"),
+        2: dict(color="tab:blue", marker="o", label=r"iter 2"),
+        3: dict(color="tab:orange", marker="s", label=r"iter 3"),
     }
-
-    def tail_drift(series):
-        arr = np.asarray(series, dtype=float)
-        tail = arr[len(arr) // 2:]
-        n = len(tail)
-        if n < 2:
-            return 0.0
-        t = np.arange(n, dtype=float)
-        slope, _ = np.polyfit(t, tail, 1)
-        return float(abs(slope) * (n - 1))
+    iter_of_P = {}
+    for entry in history["iterations"]:
+        if entry.get("superseded_by") is not None:
+            continue
+        for P in entry["pressures"]:
+            iter_of_P[float(P)] = entry["id"]
 
     grouped = {it: [] for it in iter_styles}
-    for entry in per_run:
-        it = iter_of_steps.get(entry["sample_steps"])
-        if it is None:
+    for row in pstar["per_point"]:
+        it = iter_of_P.get(float(row["P"]))
+        if it not in grouped:
             continue
-        entry["eta_drift"] = tail_drift(entry["eta_t"])
-        entry["psi6_drift"] = tail_drift(entry["psi6_t"])
-        grouped[it].append(entry)
+        grouped[it].append(row)
     for rows in grouped.values():
         rows.sort(key=lambda r: r["P"])
 
@@ -230,12 +222,13 @@ def plot_autoresearch_demo():
 
     lit = pstar["literature"]
     axes[0].axhspan(lit["eta_low"], lit["eta_high"], color="0.88", lw=0, zorder=0)
-    axes[0].axvline(pstar["P_star_eta_point"], color="0.4", linestyle="--", linewidth=0.6, zorder=0)
-    axes[1].axvline(pstar["P_star_OP_point"], color="0.4", linestyle="--", linewidth=0.6, zorder=0)
+    axes[0].axvline(pstar["point_estimates"]["pstar_eta"], color="0.4", linestyle="--", linewidth=0.6, zorder=0)
+    axes[1].axvline(pstar["point_estimates"]["pstar_op"], color="0.4", linestyle="--", linewidth=0.6, zorder=0)
 
-    sp = pstar["sigmoid_params_point"]
-    P_grid = np.linspace(min(pstar["P_grid"]), max(pstar["P_grid"]), 200)
-    sigmoid = sp["a"] + sp["b"] / (1.0 + np.exp(-sp["c"] * (P_grid - sp["P0"])))
+    sp = pstar["point_estimates"]["sigmoid_params"]
+    all_P = [r["P"] for r in pstar["per_point"]]
+    P_grid = np.linspace(min(all_P), max(all_P), 400)
+    sigmoid = sp["A"] + sp["B"] / (1.0 + np.exp(-sp["k"] * (P_grid - sp["x0"])))
     axes[1].plot(P_grid, sigmoid, color="0.3", linewidth=0.8, zorder=1)
 
     for it, style in iter_styles.items():
@@ -243,11 +236,11 @@ def plot_autoresearch_demo():
         if not rows:
             continue
         Ps = np.array([r["P"] for r in rows])
-        eta = np.array([r["eta_mean"] for r in rows])
-        psi6 = np.array([r["psi6_mean"] for r in rows])
-        eta_err = np.array([r["eta_drift"] for r in rows])
-        psi6_err = np.array([r["psi6_drift"] for r in rows])
-        passed = np.array([r["passes_eq_check"] for r in rows])
+        eta = np.array([r["eta_eq_mean"] for r in rows])
+        psi6 = np.array([r["psi6_eq_mean"] for r in rows])
+        eta_err = np.array([r["eta_boot_sigma"] for r in rows])
+        psi6_err = np.array([r["psi6_boot_sigma"] for r in rows])
+        passed = np.array([r["run_equilibrated"] for r in rows])
 
         for ax, y, yerr in ((axes[0], eta, eta_err), (axes[1], psi6, psi6_err)):
             for mask, mfc in ((passed, style["color"]), (~passed, "white")):
@@ -266,7 +259,8 @@ def plot_autoresearch_demo():
     for ax in axes:
         ax.set_xlabel(r"$P$", fontsize=9, labelpad=0)
         ax.tick_params(axis="both", which="both", direction="in", top=True, right=True, labelsize=7)
-        ax.xaxis.set_major_locator(MultipleLocator(1))
+        ax.xaxis.set_major_locator(MultipleLocator(2))
+        ax.xaxis.set_minor_locator(MultipleLocator(1))
 
     axes[0].legend(
         frameon=False, fontsize=7, loc="lower right", ncol=1,

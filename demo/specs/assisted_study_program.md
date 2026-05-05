@@ -54,6 +54,16 @@ plans, runs, analyzes, and decides what to do next based on what the
 data shows. Iterate until the goals below are met, or until further
 escalation would exceed the absolute cap.
 
+**Each iteration is a fresh setup; never overwrite prior runs.** When
+starting a new iteration, call the colpack setup tool again instead of
+re-planning into the previous iteration's `working_dir`. The colpack
+MCP auto-suffixes the directory (`..._v2`, `..._v3`, …) when a path
+already exists, so each iteration's full data — `simulation_plan.json`,
+`run_*` directories, `analysis_results.json` — is preserved. Reuse only
+when re-running a single failing run at higher `sample_steps` (§1
+escalation policy); cross-iteration replanning must go to a new dir.
+The final report aggregates across all iterations' working dirs.
+
 **Goals (must all be satisfied before reporting):**
 
 1. **Bracket** — at least one pressure clearly in the fluid regime
