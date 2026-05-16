@@ -12,7 +12,7 @@
       "description": "Autonomous NVT run for capsule disk mix.",
       "difficulty_level": 3,
       "user_messages": [
-        "Please run end-to-end simulations: set up a 2D NVT simulation for mixture of capsule and disk particles with total 500 particles. The capsule should be length 5 and diameter 0.3. Use relative volume fraction 1 for the sphere. Let's test four volume fraction [0.1, 0.3, 0.5, 0.7] with modest sample steps 100000."
+        "Please run end-to-end simulations: set up a 2D NVT simulation for mixture of capsule and disk particles with total 500 particles. The capsule should be length 5 and diameter 0.3. Use relative volume fraction 1 for the disk. Let's test four volume fraction [0.1, 0.3, 0.5, 0.7] with modest sample steps 100000."
       ],
       "expected_outcomes": [
         "The agent should complete setup, planning, execution, and analysis in one run."
