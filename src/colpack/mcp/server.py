@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from colpack.workflow import plan_simulaiton_runs, setup_simulation_problem
 from colpack.workflow_logging import append_workflow_log, resolve_workflow_log_path
-from colpack.config_reading import load_config
+from colpack.config_reading import load_config, get_mixture_compatibility_rules
 from colpack.mcp.server_helper import (
     _count_status_from_csv,
     _normalize_working_dir,
@@ -25,7 +25,7 @@ mcp = FastMCP("ColPackTools")
 class SetupSimulationProblemInput(BaseModel):
     dimension: int = Field(..., description="Simulation dimension, must be 2 or 3.")
     total_particle_number: int = Field(..., gt=0, description="Total number of particles in the simulation.")
-    particle_shape_list: list[str] = Field(..., min_length=1, description="List of colloid shapes, supported shapes are: for dimensions=2: ['disk', 'ellipse', 'capsule', 'triangle', 'square', 'rectangle'] ;for dimensions=2 ['sphere', 'ellipsoid', capsule', 'tethrahedron', 'cube', 'octahedron'].")
+    particle_shape_list: list[str] = Field(..., min_length=1, description="List of colloid shapes. Supported shapes: dimension=2: ['disk', 'ellipse', 'capsule', 'triangle', 'square', 'rectangle']; dimension=3: ['sphere', 'ellipsoid', 'capsule', 'tetrahedron', 'cube', 'octahedron'].")
     ensemble: str = Field(..., description="Thermodynamic ensemble, either NVT or NPT.")
 
 
@@ -295,6 +295,11 @@ def get_colpack_capabilities_tool() -> dict[str, Any]:
         "description": "ColPack: hard-particle Monte Carlo packing simulations via HOOMD-blue.",
         "dimensions": [int(d) for d in dim_cfg],
         "supported_shapes": supported_shapes,
+        "mixture_compatibility": {
+            "rule": "All species in a mixture must be representable by one HOOMD-blue HPMC integrator family.",
+            "incompatible_rules": get_mixture_compatibility_rules(),
+            "setup_behavior": "setup_simulation_problem_tool rejects incompatible shape mixtures before writing simulation_problem.json.",
+        },
         "ensembles": ensembles,
         "workflow_steps": [
             {

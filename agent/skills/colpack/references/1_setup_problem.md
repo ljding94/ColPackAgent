@@ -25,6 +25,15 @@ The tool resolves `working_dir` itself. Do not pass it, do not ask for it.
 - **2D**: `disk`, `ellipse`, `triangle`, `square`, `rectangle`, `capsule`
 - **3D**: `sphere`, `ellipsoid`, `cube`, `octahedron`, `tetrahedron`, `capsule`
 
+## Mixture Compatibility
+
+Check the capability tool's `mixture_compatibility.incompatible_rules` before calling setup.
+
+- **2D**: `ellipse` cannot be mixed with `triangle`, `square`, `rectangle`, or `capsule`.
+- **3D**: `ellipsoid` cannot be mixed with `cube`, `octahedron`, `tetrahedron`, or `capsule`.
+
+If a prompt requests an incompatible mixture, do not call `setup_simulation_problem_tool`. Explain that HOOMD-blue HPMC has no single compatible integrator for that shape combination and ask the user to choose a replacement shape or separate simulations.
+
 ## What to Ask (and What NOT to Ask)
 
 Setup collects **only** the four fields above. In interactive mode, ask for every missing field in a single consolidated message with common-choice suggestions.

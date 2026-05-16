@@ -12,6 +12,7 @@ description: "End-to-end ColPack colloidal packing simulation workflow. Use for 
 6. Keep tool payloads strict and minimal: only include required keys and valid values.
 7. If execution returns `n_failed > 0`, read `workflow_status.csv` before responding.
 8. Use ColPack MCP tools directly for simulation requests. Do not start with `glob`, `read`, or `bash` unless diagnosing a failure or answering a codebase question.
+9. Before setup, check the capability tool's `mixture_compatibility.incompatible_rules`. If the requested shape list crosses an incompatible pair of groups, do not call setup; explain the HPMC integrator conflict and ask the user to choose a compatible replacement.
 
 # Mode Contract
 Two execution modes exist. Pick the mode from the explicit wrapper flag when present, otherwise from prompt specificity (see "Prompt Specificity Heuristic" below).
@@ -47,6 +48,15 @@ Before acting, classify the user prompt:
 `ensemble` and `total_particle_number` are never inferable — always ask if absent.
 
 The same principle extends to later stages: do not silently pick sweep ranges, volume fractions, pressures, or sampling steps. Ask or show a proposed plan for approval first.
+
+## Mixture Compatibility Precheck
+
+Some individually supported shapes cannot appear in the same mixture because HOOMD-blue HPMC requires one compatible integrator family for all species.
+
+- In 2D, `ellipse` cannot be mixed with `triangle`, `square`, `rectangle`, or `capsule`.
+- In 3D, `ellipsoid` cannot be mixed with `cube`, `octahedron`, `tetrahedron`, or `capsule`.
+
+For these prompts, refuse or clarify before setup. For example, ask whether the user wants to replace the ellipse with a disk, replace the capsule/polyhedron with a compatible ellipsoid/sphere system, or run separate simulations.
 
 # Workflow Steps
 

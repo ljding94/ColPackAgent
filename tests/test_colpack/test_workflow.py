@@ -89,6 +89,31 @@ def test_setup_simulation_problem_resolves_default_working_dir_when_omitted() ->
         assert (expected_dir / "simulation_problem.json").exists()
 
 
+def test_setup_simulation_problem_rejects_incompatible_hpmc_mixtures() -> None:
+    from colpack.workflow import setup_simulation_problem
+
+    cases = [
+        (2, ["ellipse", "capsule"], "2D"),
+        (3, ["ellipsoid", "cube"], "3D"),
+    ]
+
+    for dimension, particle_shape_list, dimension_text in cases:
+        try:
+            setup_simulation_problem(
+                dimension=dimension,
+                total_particle_number=32,
+                particle_shape_list=particle_shape_list,
+                ensemble="NVT",
+            )
+        except ValueError as exc:
+            message = str(exc)
+        else:
+            raise AssertionError(f"Expected {dimension_text} incompatible mixture to be rejected.")
+
+        assert "Incompatible HPMC shape mixture" in message
+        assert "no single HPMC integrator covers both" in message
+
+
 def test_resolve_working_dir_from_setup_honors_env_root_override() -> None:
     from colpack.workflow_helper import WORKING_DIR_ROOT_ENV_VAR, resolve_working_dir_from_setup
 

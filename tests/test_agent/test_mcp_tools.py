@@ -217,6 +217,13 @@ def test_get_colpack_capabilities_tool():
     assert "sphere" in data["supported_shapes"]["3d"]
     assert "NVT" in data["ensembles"]
     assert "NPT" in data["ensembles"]
+    compatibility = data.get("mixture_compatibility")
+    assert compatibility is not None, "Missing mixture_compatibility in capabilities"
+    incompatible = compatibility.get("incompatible_rules", {})
+    assert "2d" in incompatible
+    assert "3d" in incompatible
+    assert ["ellipse"] in incompatible["2d"][0]["incompatible_shape_groups"]
+    assert ["ellipsoid"] in incompatible["3d"][0]["incompatible_shape_groups"]
     assert len(data["workflow_steps"]) == 4
     step_tools = [s["tool"] for s in data["workflow_steps"]]
     assert "execute_simulation_workflow_tool" in step_tools

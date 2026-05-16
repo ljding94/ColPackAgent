@@ -5,7 +5,13 @@ import csv
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone
-from colpack.config_reading import get_allowed_shapes, canonicalize_shape, get_shape_defaults, get_workflow_config
+from colpack.config_reading import (
+    get_allowed_shapes,
+    canonicalize_shape,
+    get_shape_defaults,
+    get_workflow_config,
+    validate_shape_mixture_compatibility,
+)
 from colpack.workflow_helper import (
     _set_by_path,
     _get_by_path,
@@ -177,6 +183,11 @@ def setup_simulation_problem(
             continue
 
         raise ValueError("Each entry in particle_shape_list must be a string")
+
+    validate_shape_mixture_compatibility(
+        dimension,
+        [spec["shape"] for spec in normalized_particle_specs],
+    )
 
     resolved_working_dir = resolve_working_dir_from_setup(
         dimension=dimension,

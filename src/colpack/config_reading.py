@@ -1,6 +1,45 @@
+import copy
 import json
 from functools import lru_cache
 from pathlib import Path
+
+
+_MIXTURE_COMPATIBILITY_RULES = {
+    2: [
+        {
+            "incompatible_shape_groups": [
+                ["ellipse"],
+                ["triangle", "square", "rectangle", "capsule"],
+            ],
+            "reason": (
+                "2D ellipses use the HOOMD-blue Ellipsoid HPMC integrator, "
+                "while triangles, squares, rectangles, and capsules use "
+                "ConvexSpheropolygon; no single HPMC integrator covers both."
+            ),
+            "agent_action": (
+                "Ask the user to remove one incompatible group or substitute a "
+                "compatible shape, such as using disk instead of ellipse."
+            ),
+        }
+    ],
+    3: [
+        {
+            "incompatible_shape_groups": [
+                ["ellipsoid"],
+                ["cube", "octahedron", "tetrahedron", "capsule"],
+            ],
+            "reason": (
+                "3D ellipsoids use the HOOMD-blue Ellipsoid HPMC integrator, "
+                "while cubes, octahedra, tetrahedra, and capsules use "
+                "ConvexSpheropolyhedron; no single HPMC integrator covers both."
+            ),
+            "agent_action": (
+                "Ask the user to remove one incompatible group or substitute a "
+                "compatible shape, such as using sphere instead of ellipsoid."
+            ),
+        }
+    ],
+}
 
 
 @lru_cache(maxsize=1)
@@ -43,6 +82,29 @@ def canonicalize_shape(dimension: int, shape: str) -> str:
     normalized_shape = shape.strip().lower()
     aliases = _get_dimension_block(dimension).get("aliases", {})
     return aliases.get(normalized_shape, normalized_shape)
+
+
+def get_mixture_compatibility_rules() -> dict[str, list[dict]]:
+    rules: dict[str, list[dict]] = {}
+    for dimension, entries in _MIXTURE_COMPATIBILITY_RULES.items():
+        rules[f"{dimension}d"] = copy.deepcopy(entries)
+    return rules
+
+
+def validate_shape_mixture_compatibility(dimension: int, shapes: list[str]) -> None:
+    canonical_shapes = {canonicalize_shape(dimension, shape) for shape in shapes}
+    for rule in _MIXTURE_COMPATIBILITY_RULES.get(int(dimension), []):
+        groups = [set(group) for group in rule["incompatible_shape_groups"]]
+        if all(canonical_shapes & group for group in groups):
+            readable_groups = [
+                "{" + ", ".join(sorted(canonical_shapes & group)) + "}"
+                for group in groups
+            ]
+            raise ValueError(
+                "Incompatible HPMC shape mixture for "
+                f"{dimension}D: {' cannot mix with '.join(readable_groups)}. "
+                f"{rule['reason']}"
+            )
 
 
 def get_shape_defaults(dimension: int, shape: str) -> dict:
