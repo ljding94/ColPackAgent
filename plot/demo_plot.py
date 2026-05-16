@@ -190,27 +190,21 @@ def plot_autoresearch_demo():
     sweep generated each point.
     """
     repo_root = Path(__file__).resolve().parents[1]
-    research_dir = repo_root / "demo" / "data" / "autoresearch_0504" / "2d_npt_disk" / "research_outputs"
+    research_dir = repo_root / "demo" / "data" / "autoresearch_0505" / "research_outputs"
 
     with (research_dir / "pstar_estimates.json").open("r", encoding="utf-8") as handle:
         pstar = json.load(handle)
-    with (research_dir / "sweep_history.json").open("r", encoding="utf-8") as handle:
-        history = json.load(handle)
 
     iter_styles = {
-        2: dict(color="tab:blue", marker="o", label=r"iter 2"),
-        3: dict(color="tab:orange", marker="s", label=r"iter 3"),
+        1: dict(color="tab:blue", marker="o", label=r"iter 1"),
+        2: dict(color="tab:orange", marker="s", label=r"iter 2"),
+        3: dict(color="tab:green", marker="D", label=r"iter 3"),
+        4: dict(color="tab:purple", marker="^", label=r"iter 4"),
     }
-    iter_of_P = {}
-    for entry in history["iterations"]:
-        if entry.get("superseded_by") is not None:
-            continue
-        for P in entry["pressures"]:
-            iter_of_P[float(P)] = entry["id"]
 
     grouped = {it: [] for it in iter_styles}
     for row in pstar["per_point"]:
-        it = iter_of_P.get(float(row["P"]))
+        it = int(row["iteration"])
         if it not in grouped:
             continue
         grouped[it].append(row)
@@ -221,9 +215,23 @@ def plot_autoresearch_demo():
     axes = np.asarray(axes).reshape(-1)
 
     lit = pstar["literature"]
+    pstar_eta = pstar["point_estimates"]["pstar_eta"]
+    pstar_op = pstar["point_estimates"]["pstar_op"]
     axes[0].axhspan(lit["eta_low"], lit["eta_high"], color="0.88", lw=0, zorder=0)
-    axes[0].axvline(pstar["point_estimates"]["pstar_eta"], color="0.4", linestyle="--", linewidth=0.6, zorder=0)
-    axes[1].axvline(pstar["point_estimates"]["pstar_op"], color="0.4", linestyle="--", linewidth=0.6, zorder=0)
+    axes[0].axvline(pstar_eta, color="0.4", linestyle="--", linewidth=0.6, zorder=0)
+    axes[1].axvline(pstar_op, color="0.4", linestyle="--", linewidth=0.6, zorder=0)
+    axes[0].annotate(
+        rf"$P^*_\phi = {pstar_eta:.2f}$",
+        xy=(pstar_eta, 0.98), xycoords=("data", "axes fraction"),
+        xytext=(-2, -2), textcoords="offset points",
+        fontsize=7, ha="right", va="top", color="0.2",
+    )
+    axes[1].annotate(
+        rf"$P^*_{{\psi_6}} = {pstar_op:.2f}$",
+        xy=(pstar_op, 0.98), xycoords=("data", "axes fraction"),
+        xytext=(-2, -2), textcoords="offset points",
+        fontsize=7, ha="right", va="top", color="0.2",
+    )
 
     sp = pstar["point_estimates"]["sigmoid_params"]
     all_P = [r["P"] for r in pstar["per_point"]]
@@ -254,13 +262,12 @@ def plot_autoresearch_demo():
         axes[0].plot([], [], style["marker"], color=style["color"], mfc=style["color"],
                      markersize=3, linestyle="none", label=style["label"])
 
-    axes[0].set_ylabel(r"$\eta$", fontsize=9, labelpad=0)
+    axes[0].set_ylabel(r"$\phi$", fontsize=9, labelpad=0)
     axes[1].set_ylabel(r"$\psi_6$", fontsize=9, labelpad=0)
     for ax in axes:
         ax.set_xlabel(r"$P$", fontsize=9, labelpad=0)
         ax.tick_params(axis="both", which="both", direction="in", top=True, right=True, labelsize=7)
-        ax.xaxis.set_major_locator(MultipleLocator(2))
-        ax.xaxis.set_minor_locator(MultipleLocator(1))
+        ax.xaxis.set_major_locator(MultipleLocator(1))
 
     axes[0].legend(
         frameon=False, fontsize=7, loc="lower right", ncol=1,
