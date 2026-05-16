@@ -20,10 +20,6 @@
     "label": "gpt-oss-120b"
   },
   {
-    "model_id": "openrouter/openai/gpt-oss-20b",
-    "label": "gpt-oss-20b"
-  },
-  {
     "model_id": "openrouter/deepseek/deepseek-v3.2",
     "label": "deepseek-v3.2"
   },
