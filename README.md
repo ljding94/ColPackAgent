@@ -1,6 +1,7 @@
 # ColPackAgent
 
 [![PyPI version](https://img.shields.io/pypi/v/colpack.svg)](https://pypi.org/project/colpack/)
+[![arXiv](https://img.shields.io/badge/arXiv-2605.15625-b31b1b.svg)](https://arxiv.org/abs/2605.15625)
 
 ColPackAgent is an AI agent for Hard Particle Monte Carlo simulations. It is
 built on the [`colpack`](https://pypi.org/project/colpack/) simulation package,
