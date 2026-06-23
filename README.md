@@ -8,6 +8,14 @@ built on the [`colpack`](https://pypi.org/project/colpack/) simulation package,
 which is also available standalone via `pip install colpack` for users who
 want the simulation engine and MCP tool surface without the full agent stack.
 
+## Development and Validation
+
+AI coding assistants were used for portions of the implementation and documentation. The generated code was reviewed by the authors before inclusion. Validation tests are included for the core `colpack` simulation package, MCP tool layer, wrapper configuration, and evaluation runner under `tests/`; run them with:
+
+```bash
+pytest tests
+```
+
 ## 🚀 How to Use ColPackAgent
 
 All launch modes are managed by `run_colpack.sh`. Run it without arguments to see available options:
