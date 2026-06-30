@@ -1,0 +1,29 @@
+{
+    "case_name": "tunable_mix_capsul_sizes",
+    "dimension": 2,
+    "ensemble": "NVT",
+    "particle_shape_list": [
+        "capsule",
+        "capsule"
+    ],
+    "total_particle_number": 40,
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_capsul_sizes",
+    "baseline_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_capsul_sizes/simulation_baseline.json",
+    "planning_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_capsul_sizes/simulation_plan.json",
+    "tunable_parameters": {
+        "particle_specs.1.diameter": [
+            1.0
+        ]
+    },
+    "n_runs": 1,
+    "executed": true,
+    "execution": {
+        "status_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_capsul_sizes/workflow_status.csv",
+        "progress_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_capsul_sizes/workflow_progress.json",
+        "log_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_capsul_sizes/workflow_events.log",
+        "n_runs": 1,
+        "n_success": 1,
+        "n_failed": 0,
+        "already_running": false
+    }
+}

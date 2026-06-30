@@ -1,0 +1,92 @@
+[
+    {
+        "dimension": 3,
+        "total_particle_number": 300,
+        "ensemble": "NPT",
+        "working_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube",
+        "sample_steps": 500000,
+        "P": 2,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "cube",
+                "relative_volume_fraction": 1,
+                "side": 1
+            }
+        ],
+        "run_number": 0,
+        "run_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_0"
+    },
+    {
+        "dimension": 3,
+        "total_particle_number": 300,
+        "ensemble": "NPT",
+        "working_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube",
+        "sample_steps": 500000,
+        "P": 4,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "cube",
+                "relative_volume_fraction": 1,
+                "side": 1
+            }
+        ],
+        "run_number": 1,
+        "run_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_1"
+    },
+    {
+        "dimension": 3,
+        "total_particle_number": 300,
+        "ensemble": "NPT",
+        "working_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube",
+        "sample_steps": 500000,
+        "P": 6,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "cube",
+                "relative_volume_fraction": 1,
+                "side": 1
+            }
+        ],
+        "run_number": 2,
+        "run_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_2"
+    },
+    {
+        "dimension": 3,
+        "total_particle_number": 300,
+        "ensemble": "NPT",
+        "working_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube",
+        "sample_steps": 500000,
+        "P": 8,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "cube",
+                "relative_volume_fraction": 1,
+                "side": 1
+            }
+        ],
+        "run_number": 3,
+        "run_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_3"
+    },
+    {
+        "dimension": 3,
+        "total_particle_number": 300,
+        "ensemble": "NPT",
+        "working_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube",
+        "sample_steps": 500000,
+        "P": 10,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "cube",
+                "relative_volume_fraction": 1,
+                "side": 1
+            }
+        ],
+        "run_number": 4,
+        "run_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_4"
+    }
+]

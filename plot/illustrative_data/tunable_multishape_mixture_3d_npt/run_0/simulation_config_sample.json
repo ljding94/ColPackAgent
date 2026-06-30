@@ -1,0 +1,207 @@
+{
+    "dimension": 3,
+    "total_particle_number": 100,
+    "ensemble": "NPT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_3d_npt",
+    "sampling_steps": 10000,
+    "P": 10.0,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "sphere",
+            "relative_volume_fraction": 1.0,
+            "diameter": 1.0,
+            "particle_volume": 0.5235987755982988,
+            "number": 20,
+            "realized_relative_volume_fraction": 1.0
+        },
+        {
+            "type": 1,
+            "shape": "capsule",
+            "relative_volume_fraction": 1.0,
+            "length": 2.0,
+            "diameter": 0.6,
+            "particle_volume": 0.6785840131753953,
+            "number": 16,
+            "realized_relative_volume_fraction": 1.0368000000000002
+        },
+        {
+            "type": 2,
+            "shape": "tetrahedron",
+            "relative_volume_fraction": 1.0,
+            "side": 1.2,
+            "particle_volume": 0.20364675298172563,
+            "number": 53,
+            "realized_relative_volume_fraction": 1.0306821187366548
+        },
+        {
+            "type": 3,
+            "shape": "cube",
+            "relative_volume_fraction": 1.0,
+            "side": 1.0,
+            "particle_volume": 1.0,
+            "number": 11,
+            "realized_relative_volume_fraction": 1.0504226244065094
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_3d_npt/run_0",
+    "sample_steps": 10000,
+    "tune_warmup_steps": 2000,
+    "move_tune_period": 50,
+    "total_particle_volume": 43.12259763080376,
+    "initial_box_length": 16.27677292358785,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "sphere_0",
+            "pNum": 20,
+            "pIntegrator": "ConvexSpheropolyhedron",
+            "pShape": {
+                "vertices": [
+                    [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.5
+            },
+            "pDirector": null
+        },
+        {
+            "pType": "capsule_0",
+            "pNum": 16,
+            "pIntegrator": "ConvexSpheropolyhedron",
+            "pShape": {
+                "vertices": [
+                    [
+                        -1.0,
+                        0.0,
+                        0.0
+                    ],
+                    [
+                        1.0,
+                        0.0,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.3
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        },
+        {
+            "pType": "tetrahedron_0",
+            "pNum": 53,
+            "pIntegrator": "ConvexSpheropolyhedron",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.6,
+                        -0.3464101615137754,
+                        -0.2449489742783178
+                    ],
+                    [
+                        0.6,
+                        -0.3464101615137754,
+                        -0.2449489742783178
+                    ],
+                    [
+                        0.0,
+                        0.6928203230275509,
+                        -0.2449489742783178
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        0.7348469228349535
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        },
+        {
+            "pType": "cube_0",
+            "pNum": 11,
+            "pIntegrator": "ConvexSpheropolyhedron",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.5,
+                        -0.5,
+                        -0.5
+                    ],
+                    [
+                        0.5,
+                        -0.5,
+                        -0.5
+                    ],
+                    [
+                        0.5,
+                        0.5,
+                        -0.5
+                    ],
+                    [
+                        -0.5,
+                        0.5,
+                        -0.5
+                    ],
+                    [
+                        -0.5,
+                        -0.5,
+                        0.5
+                    ],
+                    [
+                        0.5,
+                        -0.5,
+                        0.5
+                    ],
+                    [
+                        0.5,
+                        0.5,
+                        0.5
+                    ],
+                    [
+                        -0.5,
+                        0.5,
+                        0.5
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_3d_npt/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_3d_npt/run_0/compress.gsd",
+    "final_box_volume": 136.92130299927064,
+    "final_volume_fraction": 0.3149444000765423,
+    "npt_precompress_volume_fraction": 0.3,
+    "target_pressure": 10.0,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_3d_npt/run_0/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_3d_npt/run_0/sample_final.gsd",
+    "sample_translation_moves": [
+        426643,
+        1973539
+    ],
+    "sample_rotation_moves": [
+        288139,
+        1311679
+    ],
+    "sample_overlaps": 0,
+    "sample_trajectory_trigger_period": 200,
+    "sample_move_tune_period": 50,
+    "min_move_tune_updates": 10,
+    "sample_npt_boxmc_trigger_period": 10,
+    "min_npt_boxmc_updates": 10,
+    "sample_box_moves": [
+        72,
+        928
+    ]
+}

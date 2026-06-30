@@ -1,0 +1,62 @@
+{
+    "dimension": 2,
+    "total_particle_number": 512,
+    "ensemble": "NPT",
+    "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2",
+    "sample_steps": 1000000,
+    "P": 14,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "disk",
+            "relative_volume_fraction": 1.0,
+            "diameter": 1,
+            "particle_volume": 0.7853981633974483,
+            "number": 512,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 4,
+    "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_4",
+    "total_particle_volume": 402.1238596594935,
+    "initial_box_length": 200.53026197048004,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "disk_0",
+            "pNum": 512,
+            "pIntegrator": "Sphere",
+            "pShape": {
+                "diameter": 1.0
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_4/initial.gsd",
+    "compress_gsd_path": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_4/compress.gsd",
+    "final_box_volume": 994.9761693249184,
+    "final_volume_fraction": 0.4041542622395978,
+    "npt_precompress_volume_fraction": 0.4,
+    "target_pressure": 14.0,
+    "sample_trajectory_path": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_4/sample_trajectory.gsd",
+    "sample_gsd_path": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_4/sample_final.gsd",
+    "sample_translation_moves": [
+        20344193,
+        2027655807
+    ],
+    "sample_rotation_moves": [
+        0,
+        0
+    ],
+    "sample_overlaps": 0,
+    "sample_trajectory_trigger_period": 100,
+    "sample_move_tune_period": 100,
+    "min_move_tune_updates": 10,
+    "sample_npt_boxmc_trigger_period": 10,
+    "min_npt_boxmc_updates": 10,
+    "sample_box_moves": [
+        10882,
+        89118
+    ]
+}

@@ -1,0 +1,29 @@
+{
+    "case_name": "tunable_volume_fraction_triangle",
+    "dimension": 2,
+    "ensemble": "NVT",
+    "particle_shape_list": [
+        "triangle"
+    ],
+    "total_particle_number": 40,
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle",
+    "baseline_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/simulation_baseline.json",
+    "planning_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/simulation_plan.json",
+    "tunable_parameters": {
+        "volume_fraction": [
+            0.2,
+            0.6
+        ]
+    },
+    "n_runs": 2,
+    "executed": true,
+    "execution": {
+        "status_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/workflow_status.csv",
+        "progress_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/workflow_progress.json",
+        "log_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/workflow_events.log",
+        "n_runs": 2,
+        "n_success": 2,
+        "n_failed": 0,
+        "already_running": false
+    }
+}

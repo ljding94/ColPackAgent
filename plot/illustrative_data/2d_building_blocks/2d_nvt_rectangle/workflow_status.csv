@@ -1,0 +1,2 @@
+run_number,dimension,total_particle_number,ensemble,initialize,compress,sample,analyze,status,execution_state,started_at,finished_at,output_dir,error
+0,2,30,NVT,O,O,O,O,success,finished,2026-04-08T18:20:15.222650+00:00,2026-04-08T18:20:18.494390+00:00,/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_rectangle/run_0,

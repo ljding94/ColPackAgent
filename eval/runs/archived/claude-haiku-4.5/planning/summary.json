@@ -1,0 +1,23 @@
+{
+  "experiment_id": "colpack_planning_eval",
+  "stage": "planning",
+  "model_id": "openrouter/anthropic/claude-haiku-4.5",
+  "model_label": "claude-haiku-4.5",
+  "generated_at": "2026-04-28T17:35:08.195056+00:00",
+  "n_runs": 6,
+  "n_success": 4,
+  "success_rate": 0.6666666666666666,
+  "n_off_rail": 0,
+  "off_rail_rate": 0.0,
+  "n_no_expected_tool_call": 3,
+  "no_expected_tool_call_rate": 0.5,
+  "total_cost_usd": 0.15496649999999998,
+  "total_wall_time_seconds": 147.2458714979948,
+  "total_input_tokens": 9,
+  "total_cache_read_input_tokens": 72576,
+  "total_effective_input_tokens": 72585,
+  "total_output_tokens": 855,
+  "provider_id": "openrouter",
+  "served_by_provider": "Google",
+  "label": "claude-haiku-4.5"
+}

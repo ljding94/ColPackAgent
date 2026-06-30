@@ -1,0 +1,34 @@
+[2026-04-26T02:59:59.498777+00:00] [mcp] setup_simulation_problem_tool invoked
+[2026-04-26T03:00:24.596354+00:00] [mcp] plan_simulation_runs_tool invoked
+[2026-04-26T03:00:35.641903+00:00] [mcp] execute_simulation_workflow_tool invoked with continue_on_error=True
+[2026-04-26T03:00:35.643001+00:00] [mcp] started async workflow job wf_cdeac6e58730 with continue_on_error=True
+[2026-04-26T03:00:36.293288+00:00] [workflow] execute_simulation_workflow started with continue_on_error=True
+[2026-04-26T03:00:36.294359+00:00] [workflow] Loaded 5 planned run(s).
+[2026-04-26T03:00:36.521814+00:00] [workflow] Starting run 1/5 (run_0).
+[2026-04-26T03:00:36.522218+00:00] [workflow] Starting run 2/5 (run_1).
+[2026-04-26T03:00:36.522674+00:00] [workflow] Starting run 3/5 (run_2).
+[2026-04-26T03:00:36.523081+00:00] [workflow] Starting run 4/5 (run_3).
+[2026-04-26T03:00:36.523467+00:00] [workflow] Starting run 5/5 (run_4).
+[2026-04-26T03:14:43.050331+00:00] [workflow] Finished run 5/5 (run_4).
+[2026-04-26T03:14:58.744161+00:00] [workflow] Finished run 4/5 (run_3).
+[2026-04-26T03:15:23.498429+00:00] [workflow] Finished run 1/5 (run_0).
+[2026-04-26T03:15:33.515868+00:00] [workflow] Finished run 3/5 (run_2).
+[2026-04-26T03:15:48.211879+00:00] [workflow] Finished run 2/5 (run_1).
+[2026-04-26T03:15:48.466468+00:00] [workflow] Workflow finished: 5 planned run(s) processed.
+[2026-04-26T03:15:48.466698+00:00] [mcp] workflow job completed
+[2026-04-26T03:19:00.176448+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-26T03:19:00.177990+00:00] [mcp] started async analyze job az_248253f2c981 with continue_on_error=True
+[2026-04-26T03:19:00.693387+00:00] [workflow] analyze_simulation_runs started with continue_on_error=True
+[2026-04-26T03:19:01.205354+00:00] [workflow] analyze_simulation_runs: loaded 5 planned run(s).
+[2026-04-26T03:19:01.205829+00:00] [workflow] Running analyze for run 1/5 (run_0).
+[2026-04-26T03:19:05.791316+00:00] [workflow] Completed analyze for run 1/5 (run_0).
+[2026-04-26T03:19:05.791806+00:00] [workflow] Running analyze for run 2/5 (run_1).
+[2026-04-26T03:19:10.088452+00:00] [workflow] Completed analyze for run 2/5 (run_1).
+[2026-04-26T03:19:10.088956+00:00] [workflow] Running analyze for run 3/5 (run_2).
+[2026-04-26T03:19:14.253317+00:00] [workflow] Completed analyze for run 3/5 (run_2).
+[2026-04-26T03:19:14.253757+00:00] [workflow] Running analyze for run 4/5 (run_3).
+[2026-04-26T03:19:18.431387+00:00] [workflow] Completed analyze for run 4/5 (run_3).
+[2026-04-26T03:19:18.432019+00:00] [workflow] Running analyze for run 5/5 (run_4).
+[2026-04-26T03:19:22.581564+00:00] [workflow] Completed analyze for run 5/5 (run_4).
+[2026-04-26T03:19:22.582057+00:00] [workflow] analyze_simulation_runs finished: 5 planned run(s) processed.
+[2026-04-26T03:19:22.582263+00:00] [mcp] analyze job completed

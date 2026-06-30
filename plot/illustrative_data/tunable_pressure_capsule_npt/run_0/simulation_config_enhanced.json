@@ -1,0 +1,26 @@
+{
+    "dimension": 2,
+    "total_particle_number": 40,
+    "ensemble": "NPT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_pressure_capsule_npt",
+    "sampling_steps": 1000000,
+    "P": 0.1,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "capsule",
+            "relative_volume_fraction": 1.0,
+            "length": 2.5,
+            "diameter": 1.0,
+            "particle_volume": 3.2853981633974483,
+            "number": 40,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_pressure_capsule_npt/run_0",
+    "sample_steps": 1000000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 131.41592653589794
+}

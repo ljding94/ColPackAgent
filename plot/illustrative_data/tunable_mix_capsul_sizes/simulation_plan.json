@@ -1,0 +1,28 @@
+[
+    {
+        "dimension": 2,
+        "total_particle_number": 40,
+        "ensemble": "NVT",
+        "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_capsul_sizes",
+        "sampling_steps": 20000,
+        "volume_fraction": 0.5,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "capsule",
+                "relative_volume_fraction": 1.0,
+                "length": 1.0,
+                "diameter": 1.0
+            },
+            {
+                "type": 1,
+                "shape": "capsule",
+                "relative_volume_fraction": 1.0,
+                "length": 2.0,
+                "diameter": 1.0
+            }
+        ],
+        "run_number": 0,
+        "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_capsul_sizes/run_0"
+    }
+]

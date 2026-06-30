@@ -1,0 +1,83 @@
+{
+    "dimension": 2,
+    "total_particle_number": 40,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_rectangle_aspect_ratio",
+    "sampling_steps": 20000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "rectangle",
+            "relative_volume_fraction": 1.0,
+            "length": 1.5,
+            "width": 1.0,
+            "particle_volume": 1.5,
+            "number": 40,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_rectangle_aspect_ratio/run_0",
+    "sample_steps": 20000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 60.0,
+    "initial_box_length": 77.45966692414834,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "rectangle_0",
+            "pNum": 40,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.75,
+                        -0.5
+                    ],
+                    [
+                        0.75,
+                        -0.5
+                    ],
+                    [
+                        0.75,
+                        0.5
+                    ],
+                    [
+                        -0.75,
+                        0.5
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_rectangle_aspect_ratio/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_rectangle_aspect_ratio/run_0/compress.gsd",
+    "target_volume_fraction": 0.5,
+    "target_box_volume": 120.0,
+    "final_volume_fraction": 0.5,
+    "final_box_volume": 120.0,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_rectangle_aspect_ratio/run_0/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_rectangle_aspect_ratio/run_0/sample_final.gsd",
+    "sample_translation_moves": [
+        799859,
+        800866
+    ],
+    "sample_rotation_moves": [
+        1139193,
+        460082
+    ],
+    "sample_overlaps": 0,
+    "sample_trajectory_trigger_period": 400,
+    "sample_move_tune_period": 50,
+    "min_move_tune_updates": 10,
+    "analysis_results_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_rectangle_aspect_ratio/run_0/analysis_results.json"
+}

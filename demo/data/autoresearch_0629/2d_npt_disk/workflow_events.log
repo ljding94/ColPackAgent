@@ -1,0 +1,38 @@
+[2026-06-29T20:01:05.596861+00:00] [mcp] setup_simulation_problem_tool invoked
+[2026-06-29T20:01:31.891508+00:00] [mcp] plan_simulation_runs_tool invoked
+[2026-06-29T20:01:35.038795+00:00] [mcp] execute_simulation_workflow_tool invoked with continue_on_error=True
+[2026-06-29T20:01:35.049655+00:00] [mcp] started async workflow job wf_3fa023329864 with continue_on_error=True
+[2026-06-29T20:01:37.912728+00:00] [workflow] execute_simulation_workflow started with continue_on_error=True
+[2026-06-29T20:01:37.937348+00:00] [workflow] Loaded 6 planned run(s).
+[2026-06-29T20:01:40.746173+00:00] [workflow] Starting run 1/6 (run_0).
+[2026-06-29T20:01:40.770709+00:00] [workflow] Starting run 2/6 (run_1).
+[2026-06-29T20:01:40.812123+00:00] [workflow] Starting run 3/6 (run_2).
+[2026-06-29T20:01:40.838870+00:00] [workflow] Starting run 4/6 (run_3).
+[2026-06-29T20:01:40.857575+00:00] [workflow] Starting run 5/6 (run_4).
+[2026-06-29T20:01:40.887570+00:00] [workflow] Starting run 6/6 (run_5).
+[2026-06-29T20:04:17.528348+00:00] [workflow] Finished run 2/6 (run_1).
+[2026-06-29T20:04:18.611685+00:00] [workflow] Finished run 3/6 (run_2).
+[2026-06-29T20:04:24.508546+00:00] [workflow] Finished run 4/6 (run_3).
+[2026-06-29T20:04:27.825224+00:00] [workflow] Finished run 6/6 (run_5).
+[2026-06-29T20:04:28.441081+00:00] [workflow] Finished run 5/6 (run_4).
+[2026-06-29T20:04:28.619115+00:00] [workflow] Finished run 1/6 (run_0).
+[2026-06-29T20:04:29.285622+00:00] [workflow] Workflow finished: 6 planned run(s) processed.
+[2026-06-29T20:04:29.290662+00:00] [mcp] workflow job completed
+[2026-06-29T20:04:37.957224+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-06-29T20:04:37.967983+00:00] [mcp] started async analyze job az_1c769575b8c7 with continue_on_error=True
+[2026-06-29T20:04:40.477585+00:00] [workflow] analyze_simulation_runs started with continue_on_error=True
+[2026-06-29T20:04:46.451097+00:00] [workflow] analyze_simulation_runs: loaded 6 planned run(s).
+[2026-06-29T20:04:46.469426+00:00] [workflow] Running analyze for run 1/6 (run_0).
+[2026-06-29T20:04:50.314421+00:00] [workflow] Completed analyze for run 1/6 (run_0).
+[2026-06-29T20:04:50.374170+00:00] [workflow] Running analyze for run 2/6 (run_1).
+[2026-06-29T20:04:53.166674+00:00] [workflow] Completed analyze for run 2/6 (run_1).
+[2026-06-29T20:04:53.181721+00:00] [workflow] Running analyze for run 3/6 (run_2).
+[2026-06-29T20:04:55.846295+00:00] [workflow] Completed analyze for run 3/6 (run_2).
+[2026-06-29T20:04:55.863972+00:00] [workflow] Running analyze for run 4/6 (run_3).
+[2026-06-29T20:04:58.527408+00:00] [workflow] Completed analyze for run 4/6 (run_3).
+[2026-06-29T20:04:58.547839+00:00] [workflow] Running analyze for run 5/6 (run_4).
+[2026-06-29T20:05:01.186159+00:00] [workflow] Completed analyze for run 5/6 (run_4).
+[2026-06-29T20:05:01.206270+00:00] [workflow] Running analyze for run 6/6 (run_5).
+[2026-06-29T20:05:03.888351+00:00] [workflow] Completed analyze for run 6/6 (run_5).
+[2026-06-29T20:05:03.905572+00:00] [workflow] analyze_simulation_runs finished: 6 planned run(s) processed.
+[2026-06-29T20:05:03.909319+00:00] [mcp] analyze job completed

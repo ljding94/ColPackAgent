@@ -1,0 +1,23 @@
+{
+  "experiment_id": "colpack_setup_eval",
+  "stage": "setup",
+  "model_id": "openrouter/anthropic/claude-opus-4.7",
+  "model_label": "claude-opus-4.7",
+  "generated_at": "2026-05-13T19:25:31.714867+00:00",
+  "n_runs": 6,
+  "n_success": 6,
+  "success_rate": 1.0,
+  "n_off_rail": 0,
+  "off_rail_rate": 0.0,
+  "n_no_expected_tool_call": 2,
+  "no_expected_tool_call_rate": 0.3333333333333333,
+  "total_cost_usd": 1.2637330000000002,
+  "total_wall_time_seconds": 92.0256046251161,
+  "total_input_tokens": 16,
+  "total_cache_read_input_tokens": 158961,
+  "total_effective_input_tokens": 158977,
+  "total_output_tokens": 1189,
+  "provider_id": "openrouter",
+  "served_by_provider": "Google",
+  "label": "claude-opus-4.7"
+}

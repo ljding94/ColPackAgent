@@ -4,10 +4,6 @@ Locate the freezing transition pressure **P\*** for 2D hard disks in the
 NPT ensemble. Use the colpack skill autonomously: setup → plan → execute
 → analyze, no user-confirmation pauses.
 
-Literature anchor (Bernard & Krauth, 2011) for sanity-checking your
-final P\*: in reduced units P\* ≈ 9.185 with coexistence
-η_L ≈ 0.700 and η_H ≈ 0.716 (midpoint η ≈ 0.708).
-
 ---
 
 ## 1. Constraints (HARD)

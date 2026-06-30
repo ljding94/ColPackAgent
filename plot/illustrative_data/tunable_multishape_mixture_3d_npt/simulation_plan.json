@@ -1,0 +1,39 @@
+[
+    {
+        "dimension": 3,
+        "total_particle_number": 100,
+        "ensemble": "NPT",
+        "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_3d_npt",
+        "sampling_steps": 20000,
+        "P": 10.0,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "sphere",
+                "relative_volume_fraction": 1,
+                "diameter": 1.0
+            },
+            {
+                "type": 1,
+                "shape": "capsule",
+                "relative_volume_fraction": 1.0,
+                "length": 2.0,
+                "diameter": 0.6
+            },
+            {
+                "type": 2,
+                "shape": "tetrahedron",
+                "relative_volume_fraction": 1.0,
+                "side": 1.2
+            },
+            {
+                "type": 3,
+                "shape": "cube",
+                "relative_volume_fraction": 1.0,
+                "side": 1.0
+            }
+        ],
+        "run_number": 0,
+        "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_3d_npt/run_0"
+    }
+]

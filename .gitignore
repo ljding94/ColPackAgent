@@ -31,16 +31,49 @@
 /eval/**/__pycache__/
 /eval/data/
 /eval/runs/
+!/eval/data/
+/eval/data/**
+# Keep compact benchmark fixtures and run records available for reproduction.
+!/eval/data/fixtures/
+!/eval/data/fixtures/**
+!/eval/runs/
+!/eval/runs/**
 
 !/demo/
 !/demo/**
 /demo/**/__pycache__/
 /demo/data/
 /demo/runs/
+!/demo/data/
+/demo/data/**
+# Keep revised autoresearch analysis artifacts, but not the large raw trajectories.
+!/demo/data/autoresearch_0629/
+!/demo/data/autoresearch_0629/**/
+!/demo/data/autoresearch_0629/**/*.csv
+!/demo/data/autoresearch_0629/**/*.json
+!/demo/data/autoresearch_0629/**/*.log
+!/demo/data/autoresearch_0629/**/*.md
+!/demo/data/autoresearch_0629/**/*.pdf
+!/demo/data/autoresearch_0629/**/*.png
+!/demo/data/autoresearch_0629/**/*.py
+/demo/data/autoresearch_0629/**/*.gsd
 
 # plots
-!/plots/
-!/plots/*.py
+!/plot/
+!/plot/*.py
+!/plot/figures/
+!/plot/figures/**
+!/plot/illustrative_data/
+/plot/illustrative_data/**
+# Keep plot inputs/outputs used by the manuscript figures, excluding trajectories.
+!/plot/illustrative_data/**/
+!/plot/illustrative_data/**/*.csv
+!/plot/illustrative_data/**/*.json
+!/plot/illustrative_data/**/*.log
+!/plot/illustrative_data/**/*.md
+!/plot/illustrative_data/**/*.pdf
+!/plot/illustrative_data/**/*.png
+/plot/illustrative_data/**/*.gsd
 
 
 # test

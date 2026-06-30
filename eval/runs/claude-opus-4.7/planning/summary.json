@@ -1,0 +1,23 @@
+{
+  "experiment_id": "colpack_planning_eval",
+  "stage": "planning",
+  "model_id": "openrouter/anthropic/claude-opus-4.7",
+  "model_label": "claude-opus-4.7",
+  "generated_at": "2026-04-28T17:43:52.068001+00:00",
+  "n_runs": 6,
+  "n_success": 5,
+  "success_rate": 0.8333333333333334,
+  "n_off_rail": 0,
+  "off_rail_rate": 0.0,
+  "n_no_expected_tool_call": 1,
+  "no_expected_tool_call_rate": 0.16666666666666666,
+  "total_cost_usd": 0.8109569999999999,
+  "total_wall_time_seconds": 158.67831829200804,
+  "total_input_tokens": 5,
+  "total_cache_read_input_tokens": 125108,
+  "total_effective_input_tokens": 125113,
+  "total_output_tokens": 1448,
+  "provider_id": "openrouter",
+  "served_by_provider": "Google",
+  "label": "claude-opus-4.7"
+}

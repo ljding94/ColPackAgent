@@ -1,0 +1,16 @@
+{
+    "dimension": 3,
+    "total_particle_number": 300,
+    "ensemble": "NPT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube",
+    "sample_steps": 500000,
+    "P": 1.0,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "cube",
+            "relative_volume_fraction": 1,
+            "side": 1
+        }
+    ]
+}

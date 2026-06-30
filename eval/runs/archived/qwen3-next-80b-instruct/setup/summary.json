@@ -1,0 +1,23 @@
+{
+  "experiment_id": "colpack_setup_eval",
+  "stage": "setup",
+  "model_id": "openrouter/qwen/qwen3-next-80b-a3b-instruct",
+  "model_label": "qwen3-next-80b-instruct",
+  "generated_at": "2026-04-28T18:23:41.881928+00:00",
+  "n_runs": 6,
+  "n_success": 6,
+  "success_rate": 1.0,
+  "n_off_rail": 0,
+  "off_rail_rate": 0.0,
+  "n_no_expected_tool_call": 0,
+  "no_expected_tool_call_rate": 0.0,
+  "total_cost_usd": 0.05480874,
+  "total_wall_time_seconds": 95.18155866800225,
+  "total_input_tokens": 93503,
+  "total_cache_read_input_tokens": 0,
+  "total_effective_input_tokens": 93503,
+  "total_output_tokens": 179,
+  "provider_id": "openrouter",
+  "served_by_provider": "Google",
+  "label": "qwen3-next-80b-instruct"
+}

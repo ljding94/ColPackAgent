@@ -1,0 +1,6 @@
+run_number,dimension,total_particle_number,ensemble,initialize,compress,sample,analyze,status,execution_state,started_at,finished_at,output_dir,error
+0,3,300,NPT,O,O,O,O,success,finished,2026-04-26T03:00:37.566933+00:00,2026-04-26T03:19:05.790827+00:00,/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_0,
+1,3,300,NPT,O,O,O,O,success,finished,2026-04-26T03:00:37.566903+00:00,2026-04-26T03:19:10.087939+00:00,/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_1,
+2,3,300,NPT,O,O,O,O,success,finished,2026-04-26T03:00:37.567034+00:00,2026-04-26T03:19:14.252848+00:00,/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_2,
+3,3,300,NPT,O,O,O,O,success,finished,2026-04-26T03:00:37.566794+00:00,2026-04-26T03:19:18.430894+00:00,/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_3,
+4,3,300,NPT,O,O,O,O,success,finished,2026-04-26T03:00:37.566965+00:00,2026-04-26T03:19:22.581062+00:00,/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_4,

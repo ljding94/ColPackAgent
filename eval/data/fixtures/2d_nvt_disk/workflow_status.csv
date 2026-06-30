@@ -1,0 +1,5 @@
+run_number,dimension,total_particle_number,ensemble,initialize,compress,sample,analyze,status,execution_state,started_at,finished_at,output_dir,error
+0,2,100,NVT,O,O,O,O,success,running,2026-04-27T16:00:21.825509+00:00,2026-04-28T16:22:24.454534+00:00,/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk/run_0,
+1,2,100,NVT,O,O,O,X,success,running,2026-04-27T16:00:21.825504+00:00,2026-04-27T16:00:33.259079+00:00,/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk/run_1,
+2,2,100,NVT,O,O,O,X,success,finished,2026-04-27T16:00:21.825515+00:00,2026-04-27T16:00:33.746868+00:00,/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk/run_2,
+3,2,100,NVT,O,O,O,X,success,finished,2026-04-27T16:00:21.825511+00:00,2026-04-27T16:00:33.903274+00:00,/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk/run_3,

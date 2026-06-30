@@ -1,0 +1,77 @@
+{
+    "dimension": 2,
+    "total_particle_number": 40,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_relative_volume_fraction_disks",
+    "sampling_steps": 20000,
+    "volume_fraction": 0.6,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "disk",
+            "relative_volume_fraction": 1.0,
+            "diameter": 1.0,
+            "particle_volume": 0.7853981633974483,
+            "number": 13,
+            "realized_relative_volume_fraction": 1.0
+        },
+        {
+            "type": 1,
+            "shape": "disk",
+            "relative_volume_fraction": 0.5,
+            "diameter": 0.5,
+            "particle_volume": 0.19634954084936207,
+            "number": 27,
+            "realized_relative_volume_fraction": 0.5192307692307692
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_relative_volume_fraction_disks/run_0",
+    "sample_steps": 20000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 15.511613727099604,
+    "initial_box_length": 39.38478605641981,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "disk_0",
+            "pNum": 13,
+            "pIntegrator": "Sphere",
+            "pShape": {
+                "diameter": 1.0
+            },
+            "pDirector": null
+        },
+        {
+            "pType": "disk_1",
+            "pNum": 27,
+            "pIntegrator": "Sphere",
+            "pShape": {
+                "diameter": 0.5
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_relative_volume_fraction_disks/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_relative_volume_fraction_disks/run_0/compress.gsd",
+    "target_volume_fraction": 0.6,
+    "target_box_volume": 25.852689545166008,
+    "final_volume_fraction": 0.6,
+    "final_box_volume": 25.852689545166008,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_relative_volume_fraction_disks/run_0/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_relative_volume_fraction_disks/run_0/sample_final.gsd",
+    "sample_translation_moves": [
+        1146875,
+        2053125
+    ],
+    "sample_rotation_moves": [
+        0,
+        0
+    ],
+    "sample_overlaps": 0,
+    "sample_trajectory_trigger_period": 400,
+    "sample_move_tune_period": 50,
+    "min_move_tune_updates": 10
+}

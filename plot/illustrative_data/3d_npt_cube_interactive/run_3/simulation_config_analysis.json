@@ -1,0 +1,105 @@
+{
+    "dimension": 3,
+    "total_particle_number": 300,
+    "ensemble": "NPT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube",
+    "sample_steps": 500000,
+    "P": 8,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "cube",
+            "relative_volume_fraction": 1.0,
+            "side": 1,
+            "particle_volume": 1.0,
+            "number": 300,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 3,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_3",
+    "total_particle_volume": 300.0,
+    "initial_box_length": 31.07232505953858,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "cube_0",
+            "pNum": 300,
+            "pIntegrator": "ConvexSpheropolyhedron",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.5,
+                        -0.5,
+                        -0.5
+                    ],
+                    [
+                        0.5,
+                        -0.5,
+                        -0.5
+                    ],
+                    [
+                        0.5,
+                        0.5,
+                        -0.5
+                    ],
+                    [
+                        -0.5,
+                        0.5,
+                        -0.5
+                    ],
+                    [
+                        -0.5,
+                        -0.5,
+                        0.5
+                    ],
+                    [
+                        0.5,
+                        -0.5,
+                        0.5
+                    ],
+                    [
+                        0.5,
+                        0.5,
+                        0.5
+                    ],
+                    [
+                        -0.5,
+                        0.5,
+                        0.5
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_3/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_3/compress.gsd",
+    "final_box_volume": 749.8160173098233,
+    "final_volume_fraction": 0.400098148178182,
+    "npt_precompress_volume_fraction": 0.4,
+    "target_pressure": 8.0,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_3/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_3/sample_final.gsd",
+    "sample_translation_moves": [
+        40155514,
+        259830996
+    ],
+    "sample_rotation_moves": [
+        24245934,
+        275767556
+    ],
+    "sample_overlaps": 0,
+    "sample_trajectory_trigger_period": 100,
+    "sample_move_tune_period": 100,
+    "min_move_tune_updates": 10,
+    "sample_npt_boxmc_trigger_period": 10,
+    "min_npt_boxmc_updates": 10,
+    "sample_box_moves": [
+        16215,
+        33785
+    ],
+    "analysis_results_path": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_3/analysis_results.json"
+}

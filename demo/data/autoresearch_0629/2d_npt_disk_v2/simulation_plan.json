@@ -1,0 +1,164 @@
+[
+    {
+        "dimension": 2,
+        "total_particle_number": 512,
+        "ensemble": "NPT",
+        "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2",
+        "sample_steps": 1000000,
+        "P": 10,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "disk",
+                "relative_volume_fraction": 1,
+                "diameter": 1
+            }
+        ],
+        "run_number": 0,
+        "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_0"
+    },
+    {
+        "dimension": 2,
+        "total_particle_number": 512,
+        "ensemble": "NPT",
+        "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2",
+        "sample_steps": 1000000,
+        "P": 11,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "disk",
+                "relative_volume_fraction": 1,
+                "diameter": 1
+            }
+        ],
+        "run_number": 1,
+        "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_1"
+    },
+    {
+        "dimension": 2,
+        "total_particle_number": 512,
+        "ensemble": "NPT",
+        "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2",
+        "sample_steps": 1000000,
+        "P": 12,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "disk",
+                "relative_volume_fraction": 1,
+                "diameter": 1
+            }
+        ],
+        "run_number": 2,
+        "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_2"
+    },
+    {
+        "dimension": 2,
+        "total_particle_number": 512,
+        "ensemble": "NPT",
+        "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2",
+        "sample_steps": 1000000,
+        "P": 13,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "disk",
+                "relative_volume_fraction": 1,
+                "diameter": 1
+            }
+        ],
+        "run_number": 3,
+        "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_3"
+    },
+    {
+        "dimension": 2,
+        "total_particle_number": 512,
+        "ensemble": "NPT",
+        "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2",
+        "sample_steps": 1000000,
+        "P": 14,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "disk",
+                "relative_volume_fraction": 1,
+                "diameter": 1
+            }
+        ],
+        "run_number": 4,
+        "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_4"
+    },
+    {
+        "dimension": 2,
+        "total_particle_number": 512,
+        "ensemble": "NPT",
+        "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2",
+        "sample_steps": 1000000,
+        "P": 15,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "disk",
+                "relative_volume_fraction": 1,
+                "diameter": 1
+            }
+        ],
+        "run_number": 5,
+        "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_5"
+    },
+    {
+        "dimension": 2,
+        "total_particle_number": 512,
+        "ensemble": "NPT",
+        "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2",
+        "sample_steps": 1000000,
+        "P": 16,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "disk",
+                "relative_volume_fraction": 1,
+                "diameter": 1
+            }
+        ],
+        "run_number": 6,
+        "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_6"
+    },
+    {
+        "dimension": 2,
+        "total_particle_number": 512,
+        "ensemble": "NPT",
+        "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2",
+        "sample_steps": 1000000,
+        "P": 18,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "disk",
+                "relative_volume_fraction": 1,
+                "diameter": 1
+            }
+        ],
+        "run_number": 7,
+        "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_7"
+    },
+    {
+        "dimension": 2,
+        "total_particle_number": 512,
+        "ensemble": "NPT",
+        "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2",
+        "sample_steps": 1000000,
+        "P": 20,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "disk",
+                "relative_volume_fraction": 1,
+                "diameter": 1
+            }
+        ],
+        "run_number": 8,
+        "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v2/run_8"
+    }
+]

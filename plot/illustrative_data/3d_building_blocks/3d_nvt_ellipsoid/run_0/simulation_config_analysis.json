@@ -1,0 +1,65 @@
+{
+    "dimension": 3,
+    "total_particle_number": 30,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_ellipsoid",
+    "sampling_steps": 1000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "ellipsoid",
+            "relative_volume_fraction": 1.0,
+            "a": 1.0,
+            "b": 0.5,
+            "c": 0.5,
+            "particle_volume": 1.0471975511965976,
+            "number": 30,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_ellipsoid/run_0",
+    "sample_steps": 1000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 31.415926535897928,
+    "initial_box_length": 14.64591887561523,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "ellipsoid_0",
+            "pNum": 30,
+            "pIntegrator": "Ellipsoid",
+            "pShape": {
+                "a": 1.0,
+                "b": 0.5,
+                "c": 0.5
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_ellipsoid/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_ellipsoid/run_0/compress.gsd",
+    "target_volume_fraction": 0.5,
+    "target_box_volume": 62.831853071795855,
+    "final_volume_fraction": 0.5,
+    "final_box_volume": 62.831853071795855,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_ellipsoid/run_0/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_ellipsoid/run_0/sample_final.gsd",
+    "sample_translation_moves": [
+        14451,
+        45590
+    ],
+    "sample_rotation_moves": [
+        17158,
+        42801
+    ],
+    "sample_overlaps": 0,
+    "analysis_results_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_ellipsoid/run_0/analysis_results.json"
+}

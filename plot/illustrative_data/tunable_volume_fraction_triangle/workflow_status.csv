@@ -1,0 +1,3 @@
+run_number,dimension,total_particle_number,ensemble,initialize,compress,sample,analyze,status,execution_state,started_at,finished_at,output_dir,error
+0,2,40,NVT,O,O,O,O,success,finished,2026-04-08T20:25:38.968600+00:00,2026-04-08T20:25:44.676117+00:00,/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/run_0,
+1,2,40,NVT,O,O,O,O,success,finished,2026-04-08T20:25:44.676482+00:00,2026-04-08T20:25:50.170201+00:00,/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/run_1,

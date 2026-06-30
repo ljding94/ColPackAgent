@@ -1,0 +1,18 @@
+{
+    "dimension": 2,
+    "total_particle_number": 512,
+    "ensemble": "NPT",
+    "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v4",
+    "sample_steps": 2000000,
+    "P": 9.25,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "disk",
+            "relative_volume_fraction": 1,
+            "diameter": 1
+        }
+    ],
+    "run_number": 1,
+    "run_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk_v4/run_1"
+}

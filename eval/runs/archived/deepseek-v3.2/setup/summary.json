@@ -1,0 +1,23 @@
+{
+  "experiment_id": "colpack_setup_eval",
+  "stage": "setup",
+  "model_id": "openrouter/deepseek/deepseek-v3.2",
+  "model_label": "deepseek-v3.2",
+  "generated_at": "2026-04-28T18:09:23.545817+00:00",
+  "n_runs": 6,
+  "n_success": 6,
+  "success_rate": 1.0,
+  "n_off_rail": 0,
+  "off_rail_rate": 0.0,
+  "n_no_expected_tool_call": 0,
+  "no_expected_tool_call_rate": 0.0,
+  "total_cost_usd": 0.09645580000000001,
+  "total_wall_time_seconds": 157.2228737919977,
+  "total_input_tokens": 86836,
+  "total_cache_read_input_tokens": 10240,
+  "total_effective_input_tokens": 97076,
+  "total_output_tokens": 570,
+  "provider_id": "openrouter",
+  "served_by_provider": "Google",
+  "label": "deepseek-v3.2"
+}

@@ -1,0 +1,79 @@
+{
+    "dimension": 3,
+    "total_particle_number": 30,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_tetrahedron",
+    "sampling_steps": 1000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "tetrahedron",
+            "relative_volume_fraction": 1.0,
+            "side": 1.0,
+            "particle_volume": 0.1178511301977579,
+            "number": 30,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_tetrahedron/run_0",
+    "sample_steps": 1000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 3.5355339059327373,
+    "initial_box_length": 7.071067811865475,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "tetrahedron_0",
+            "pNum": 30,
+            "pIntegrator": "ConvexSpheropolyhedron",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.5,
+                        -0.28867513459481287,
+                        -0.2041241452319315
+                    ],
+                    [
+                        0.5,
+                        -0.28867513459481287,
+                        -0.2041241452319315
+                    ],
+                    [
+                        0.0,
+                        0.5773502691896257,
+                        -0.2041241452319315
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        0.6123724356957945
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_tetrahedron/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_tetrahedron/run_0/compress.gsd",
+    "target_volume_fraction": 0.5,
+    "target_box_volume": 7.071067811865475,
+    "final_volume_fraction": 0.5,
+    "final_box_volume": 7.071067811865475,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_tetrahedron/run_0/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_tetrahedron/run_0/sample_final.gsd",
+    "sample_translation_moves": [
+        4109,
+        55932
+    ],
+    "sample_rotation_moves": [
+        5302,
+        54657
+    ],
+    "sample_overlaps": 0,
+    "analysis_results_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_tetrahedron/run_0/analysis_results.json"
+}

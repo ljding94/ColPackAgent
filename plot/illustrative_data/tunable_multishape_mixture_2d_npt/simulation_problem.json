@@ -1,0 +1,36 @@
+{
+    "dimension": 2,
+    "total_particle_number": 100,
+    "ensemble": "NPT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_2d_npt",
+    "sampling_steps": 20000,
+    "P": 1.0,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "disk",
+            "relative_volume_fraction": 1,
+            "diameter": "Nan"
+        },
+        {
+            "type": 1,
+            "shape": "capsule",
+            "relative_volume_fraction": 0.5,
+            "length": "Nan",
+            "diameter": "Nan"
+        },
+        {
+            "type": 2,
+            "shape": "triangle",
+            "relative_volume_fraction": 0.5,
+            "side": "Nan"
+        },
+        {
+            "type": 3,
+            "shape": "rectangle",
+            "relative_volume_fraction": 0.5,
+            "length": "Nan",
+            "width": "Nan"
+        }
+    ]
+}

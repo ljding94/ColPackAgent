@@ -1,0 +1,74 @@
+{
+    "dimension": 2,
+    "total_particle_number": 40,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle",
+    "sampling_steps": 20000,
+    "volume_fraction": 0.2,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "triangle",
+            "relative_volume_fraction": 1.0,
+            "side": 1.0,
+            "particle_volume": 0.4330127018922193,
+            "number": 40,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/run_0",
+    "sample_steps": 20000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 17.32050807568877,
+    "initial_box_length": 41.617914502878165,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "triangle_0",
+            "pNum": 40,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.5,
+                        -0.28867513459481287
+                    ],
+                    [
+                        0.5,
+                        -0.28867513459481287
+                    ],
+                    [
+                        0.0,
+                        0.5773502691896257
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/run_0/compress.gsd",
+    "target_volume_fraction": 0.2,
+    "target_box_volume": 86.60254037844385,
+    "final_volume_fraction": 0.20000000000000004,
+    "final_box_volume": 86.60254037844383,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/run_0/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/run_0/sample_final.gsd",
+    "sample_translation_moves": [
+        1158734,
+        441934
+    ],
+    "sample_rotation_moves": [
+        1436843,
+        162489
+    ],
+    "sample_overlaps": 0,
+    "sample_trajectory_trigger_period": 400,
+    "sample_move_tune_period": 50,
+    "min_move_tune_updates": 10,
+    "analysis_results_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/run_0/analysis_results.json"
+}

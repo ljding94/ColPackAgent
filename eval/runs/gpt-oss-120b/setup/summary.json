@@ -1,0 +1,23 @@
+{
+  "experiment_id": "colpack_setup_eval",
+  "stage": "setup",
+  "model_id": "openrouter/openai/gpt-oss-120b",
+  "model_label": "gpt-oss-120b",
+  "generated_at": "2026-05-13T19:25:31.716166+00:00",
+  "n_runs": 6,
+  "n_success": 5,
+  "success_rate": 0.8333333333333334,
+  "n_off_rail": 0,
+  "off_rail_rate": 0.0,
+  "n_no_expected_tool_call": 2,
+  "no_expected_tool_call_rate": 0.3333333333333333,
+  "total_cost_usd": 0.05891851999999999,
+  "total_wall_time_seconds": 174.9001470830408,
+  "total_input_tokens": 107036,
+  "total_cache_read_input_tokens": 0,
+  "total_effective_input_tokens": 107036,
+  "total_output_tokens": 64,
+  "provider_id": "openrouter",
+  "served_by_provider": "Google",
+  "label": "gpt-oss-120b"
+}

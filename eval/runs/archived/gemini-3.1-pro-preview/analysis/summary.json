@@ -1,0 +1,23 @@
+{
+  "experiment_id": "colpack_analysis_eval",
+  "stage": "analysis",
+  "model_id": "openrouter/google/gemini-3.1-pro-preview",
+  "model_label": "gemini-3.1-pro-preview",
+  "generated_at": "2026-04-28T18:06:17.939100+00:00",
+  "n_runs": 5,
+  "n_success": 3,
+  "success_rate": 0.6,
+  "n_off_rail": 0,
+  "off_rail_rate": 0.0,
+  "n_no_expected_tool_call": 2,
+  "no_expected_tool_call_rate": 0.4,
+  "total_cost_usd": 0.11026200000000001,
+  "total_wall_time_seconds": 183.1744506649993,
+  "total_input_tokens": 11883,
+  "total_cache_read_input_tokens": 36440,
+  "total_effective_input_tokens": 48323,
+  "total_output_tokens": 324,
+  "provider_id": "openrouter",
+  "served_by_provider": "Google",
+  "label": "gemini-3.1-pro-preview"
+}

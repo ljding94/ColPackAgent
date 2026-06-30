@@ -1,0 +1,76 @@
+{
+    "dimension": 2,
+    "total_particle_number": 100,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk_capsule",
+    "sample_steps": 10000,
+    "volume_fraction": 0.4,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "disk",
+            "relative_volume_fraction": 1.0,
+            "diameter": 1.0,
+            "particle_volume": 0.7853981633974483,
+            "number": 83,
+            "realized_relative_volume_fraction": 1.0
+        },
+        {
+            "type": 1,
+            "shape": "capsule",
+            "relative_volume_fraction": 1.0,
+            "length": 3.0,
+            "diameter": 1.0,
+            "particle_volume": 3.7853981633974483,
+            "number": 17,
+            "realized_relative_volume_fraction": 0.9871712865240155
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk_capsule/run_0",
+    "total_particle_volume": 129.53981633974485,
+    "initial_box_length": 113.81555971823222,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "disk_0",
+            "pNum": 83,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        0.0,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.5
+            },
+            "pDirector": null
+        },
+        {
+            "pType": "capsule_0",
+            "pNum": 17,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -1.5,
+                        0.0
+                    ],
+                    [
+                        1.5,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.5
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk_capsule/run_0/initial.gsd"
+}

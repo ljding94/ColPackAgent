@@ -1,0 +1,26 @@
+{
+    "dimension": 2,
+    "total_particle_number": 40,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_rectangle_aspect_ratio",
+    "sampling_steps": 20000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "rectangle",
+            "relative_volume_fraction": 1.0,
+            "length": 1.5,
+            "width": 1.0,
+            "particle_volume": 1.5,
+            "number": 40,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_rectangle_aspect_ratio/run_0",
+    "sample_steps": 20000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 60.0
+}

@@ -1,0 +1,72 @@
+{
+    "dimension": 3,
+    "total_particle_number": 30,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_octahedron",
+    "sampling_steps": 1000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "octahedron",
+            "relative_volume_fraction": 1.0,
+            "side": 1.0,
+            "particle_volume": 0.47140452079103173,
+            "number": 30,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_octahedron/run_0",
+    "sample_steps": 1000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 14.142135623730953,
+    "initial_box_length": 11.224620483093728,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "octahedron_0",
+            "pNum": 30,
+            "pIntegrator": "ConvexSpheropolyhedron",
+            "pShape": {
+                "vertices": [
+                    [
+                        0.7071067811865475,
+                        0.0,
+                        0.0
+                    ],
+                    [
+                        -0.7071067811865475,
+                        0.0,
+                        0.0
+                    ],
+                    [
+                        0.0,
+                        0.7071067811865475,
+                        0.0
+                    ],
+                    [
+                        0.0,
+                        -0.7071067811865475,
+                        0.0
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        0.7071067811865475
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        -0.7071067811865475
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_octahedron/run_0/initial.gsd"
+}

@@ -1,0 +1,73 @@
+{
+    "dimension": 3,
+    "total_particle_number": 30,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_capsule",
+    "sampling_steps": 1000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "capsule",
+            "relative_volume_fraction": 1.0,
+            "length": 2.0,
+            "diameter": 1.0,
+            "particle_volume": 2.0943951023931953,
+            "number": 30,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_capsule/run_0",
+    "sample_steps": 1000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 62.831853071795855,
+    "initial_box_length": 18.45270148644028,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "capsule_0",
+            "pNum": 30,
+            "pIntegrator": "ConvexSpheropolyhedron",
+            "pShape": {
+                "vertices": [
+                    [
+                        -1.0,
+                        0.0,
+                        0.0
+                    ],
+                    [
+                        1.0,
+                        0.0,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.5
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_capsule/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_capsule/run_0/compress.gsd",
+    "target_volume_fraction": 0.5,
+    "target_box_volume": 125.66370614359171,
+    "final_volume_fraction": 0.49999999999999994,
+    "final_box_volume": 125.66370614359172,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_capsule/run_0/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_capsule/run_0/sample_final.gsd",
+    "sample_translation_moves": [
+        13520,
+        46521
+    ],
+    "sample_rotation_moves": [
+        11324,
+        48635
+    ],
+    "sample_overlaps": 0
+}

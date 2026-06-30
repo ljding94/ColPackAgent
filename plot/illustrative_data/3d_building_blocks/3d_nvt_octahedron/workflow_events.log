@@ -1,0 +1,12 @@
+[2026-04-08T18:20:54.841214+00:00] [workflow] execute_simulation_workflow started with continue_on_error=True
+[2026-04-08T18:20:54.843079+00:00] [workflow] Loaded 1 planned run(s).
+[2026-04-08T18:20:54.844997+00:00] [workflow] Starting run 1/1 (run_0).
+[2026-04-08T18:20:54.846748+00:00] [workflow] Running initialize for run 1/1 (run_0).
+[2026-04-08T18:20:56.971880+00:00] [workflow] Completed initialize for run 1/1 (run_0).
+[2026-04-08T18:20:56.972923+00:00] [workflow] Running compress for run 1/1 (run_0).
+[2026-04-08T18:21:04.962515+00:00] [workflow] Completed compress for run 1/1 (run_0).
+[2026-04-08T18:21:04.963590+00:00] [workflow] Running sample for run 1/1 (run_0).
+[2026-04-08T18:21:08.967837+00:00] [workflow] Completed sample for run 1/1 (run_0).
+[2026-04-08T18:21:08.984565+00:00] [workflow] Running analyze for run 1/1 (run_0).
+[2026-04-08T18:21:08.999471+00:00] [workflow] Run 1/1 (run_0) failed during workflow execution.
+[2026-04-08T18:21:09.002063+00:00] [workflow] Workflow finished with one or more failed runs.

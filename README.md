@@ -16,6 +16,33 @@ AI coding assistants were used for portions of the implementation and documentat
 pytest tests
 ```
 
+## Manuscript Artifacts and Reproduction Map
+
+The submitted manuscript sources and compiled PDFs are under
+`manuscript/ornl_latex/`. The table below maps the main paper figures and
+results to the repository artifacts used to prepare them. No new simulations are
+required to inspect the submitted results; the listed commands are only for
+regenerating plots or rerunning workflows. Large raw trajectory files (`.gsd`)
+are not tracked for the manuscript demo and autoresearch runs; the committed
+artifacts are the configurations, analysis JSON, logs, generated plots, reports,
+and benchmark transcripts needed to inspect the submitted results.
+
+| Paper item | Manuscript asset | Source data / script | Notes |
+| --- | --- | --- | --- |
+| Agent-platform comparison | `manuscript/ornl_latex/opencode_colpack.pdf` | `plot/figures/opencode_colpack.pdf`, `plot/figures/opencode_colpack.pptx`, screenshots in `plot/figures/opencode/` | Figure assembled from recorded agent-client screenshots. |
+| ColPackAgent architecture | `manuscript/ornl_latex/agent_architecture.pdf` | `plot/figures/agent_architecture.pdf`, `plot/figures/agent_architecture.pptx` | Schematic figure. |
+| Supported hard-particle shapes | `manuscript/ornl_latex/colpack_illustration.pdf` | `plot/figures/colpack_illustration.pdf`; illustrative setup data in `plot/illustrative_data/2d_building_blocks/` and `plot/illustrative_data/3d_building_blocks/`; generator `plot/run_illustrative_shapes.py` | Small illustrative cases used for the shape catalogue. |
+| Interactive cube NPT example | `manuscript/ornl_latex/demo_interactive.pdf` | Archived runs in `plot/illustrative_data/3d_npt_cube_interactive/`; plotting function `plot/demo_plot.py::plot_interactive_demo` | Contains setup/plan/status files and per-run analysis JSON. |
+| Autonomous disk-capsule NVT example | `manuscript/ornl_latex/demo_autonomous.pdf` | Archived runs in `plot/illustrative_data/2d_nvt_capsule_disk/`; plotting function `plot/demo_plot.py::plot_autonomous_demo` | Contains setup/plan/status files and per-run analysis JSON. |
+| Autoresearch hard-disk transition | `manuscript/ornl_latex/autoresearch.pdf`; SI plots `fig_eta_vs_P.png`, `fig_psi6_vs_P.png`, `fig_rdf.png`, `fig_eta_traces.png` | Research program `demo/specs/assisted_study_program.md`; archived run output in `demo/data/autoresearch_0629/`; agent report `demo/data/autoresearch_0629/freezing_transition_report.md`; analysis script `demo/data/autoresearch_0629/analyze_freezing.py` | This is the revised run reported in the manuscript. |
+| LLM benchmark figure | `manuscript/ornl_latex/llm_eval.pdf` | Benchmark summaries in `eval/runs/<model>/<stage>/summary.json`; raw records in `results.jsonl`; transcripts in `conversations/`; task/spec files in `eval/tasks/` and `eval/specs/`; plotter `plot/eval_plot.py` | Regenerate the figure from archived summaries with `cd plot && python -c "from eval_plot import plot_llm_eval; plot_llm_eval(show=False)"`. |
+
+The benchmark runner itself is documented in `eval/README.md`. For example,
+`python -m eval.run_experiments plan --all-specs --models qwen3-next-80b-instruct`
+prints the planned run matrix without making LLM calls, while `run` executes the
+same specs and writes `planned_runs.json`, `results.jsonl`, `summary.json`, and
+conversation transcripts under `eval/runs/`.
+
 ## 🚀 How to Use ColPackAgent
 
 All launch modes are managed by `run_colpack.sh`. Run it without arguments to see available options:
@@ -56,9 +83,11 @@ Launch ColPackAgent inside your preferred AI client. Each mode loads the MCP too
 
 ## Setup
 
-`colpack` depends on `hoomd-blue` and `ovito`, which are not on PyPI and must
-come from conda-forge. The recommended setup is a conda environment for those
-two, then `pip install colpack` on top.
+`colpack` depends on `hoomd-blue` and `ovito`, which are not on PyPI and are
+distributed through conda-forge. The commercial Anaconda distribution is not
+required; Miniforge, Mamba, micromamba, or another conda-forge-compatible
+environment manager is sufficient. The recommended setup is a conda-forge
+environment for those two dependencies, then `pip install colpack` on top.
 
 ### 1. Create and activate the conda environment
 

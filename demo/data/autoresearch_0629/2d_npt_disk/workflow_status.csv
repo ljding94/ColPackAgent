@@ -1,0 +1,7 @@
+run_number,dimension,total_particle_number,ensemble,initialize,compress,sample,analyze,status,execution_state,started_at,finished_at,output_dir,error
+0,2,512,NPT,O,O,O,O,success,finished,2026-06-29T20:01:55.735767+00:00,2026-06-29T20:04:50.302328+00:00,/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk/run_0,
+1,2,512,NPT,O,O,O,O,success,finished,2026-06-29T20:01:47.934147+00:00,2026-06-29T20:04:53.148711+00:00,/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk/run_1,
+2,2,512,NPT,O,O,O,O,success,finished,2026-06-29T20:01:49.991643+00:00,2026-06-29T20:04:55.830888+00:00,/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk/run_2,
+3,2,512,NPT,O,O,O,O,success,finished,2026-06-29T20:01:55.895894+00:00,2026-06-29T20:04:58.514101+00:00,/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk/run_3,
+4,2,512,NPT,O,O,O,O,success,finished,2026-06-29T20:02:01.577176+00:00,2026-06-29T20:05:01.171874+00:00,/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk/run_4,
+5,2,512,NPT,O,O,O,O,success,finished,2026-06-29T20:02:01.792285+00:00,2026-06-29T20:05:03.870532+00:00,/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk/run_5,

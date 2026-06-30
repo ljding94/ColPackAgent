@@ -1,0 +1,13 @@
+{
+    "working_dir": "/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk",
+    "n_runs": 4,
+    "n_success": 4,
+    "n_failed": 0,
+    "completed_steps": 13,
+    "total_steps": 16,
+    "progress_percent": 81.2,
+    "status": "running",
+    "message": "Running analyze for run 2/4 (run_1).",
+    "error": "",
+    "updated_at": "2026-04-28T16:22:24.481640+00:00"
+}

@@ -1,0 +1,23 @@
+{
+    "dimension": 2,
+    "total_particle_number": 500,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2",
+    "sample_steps": 100000,
+    "volume_fraction": 0.3,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "capsule",
+            "relative_volume_fraction": 1,
+            "length": 5,
+            "diameter": 0.3
+        },
+        {
+            "type": 1,
+            "shape": "disk",
+            "relative_volume_fraction": 1,
+            "diameter": 1.0
+        }
+    ]
+}

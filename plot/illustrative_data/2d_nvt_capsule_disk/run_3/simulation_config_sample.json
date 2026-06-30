@@ -1,0 +1,95 @@
+{
+    "dimension": 2,
+    "total_particle_number": 500,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2",
+    "sample_steps": 100000,
+    "volume_fraction": 0.7,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "capsule",
+            "relative_volume_fraction": 1.0,
+            "length": 5,
+            "diameter": 0.3,
+            "particle_volume": 1.5706858347057704,
+            "number": 167,
+            "realized_relative_volume_fraction": 1.0
+        },
+        {
+            "type": 1,
+            "shape": "disk",
+            "relative_volume_fraction": 1.0,
+            "diameter": 1.0,
+            "particle_volume": 0.7853981633974483,
+            "number": 333,
+            "realized_relative_volume_fraction": 0.9970761238028927
+        }
+    ],
+    "run_number": 3,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2/run_3",
+    "total_particle_volume": 523.8421228072139,
+    "initial_box_length": 228.87597576137472,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "capsule_0",
+            "pNum": 167,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -2.5,
+                        0.0
+                    ],
+                    [
+                        2.5,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.15
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        },
+        {
+            "pType": "disk_0",
+            "pNum": 333,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        0.0,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.5
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2/run_3/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2/run_3/compress.gsd",
+    "target_volume_fraction": 0.7,
+    "target_box_volume": 748.3458897245913,
+    "final_volume_fraction": 0.7000000000000001,
+    "final_box_volume": 748.3458897245912,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2/run_3/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2/run_3/sample_final.gsd",
+    "sample_translation_moves": [
+        37887948,
+        128707544
+    ],
+    "sample_rotation_moves": [
+        7079326,
+        26325182
+    ],
+    "sample_overlaps": 0,
+    "sample_trajectory_trigger_period": 100,
+    "sample_move_tune_period": 100,
+    "min_move_tune_updates": 10
+}

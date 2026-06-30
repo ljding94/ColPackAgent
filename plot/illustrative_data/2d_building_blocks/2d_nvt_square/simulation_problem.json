@@ -1,0 +1,16 @@
+{
+    "dimension": 2,
+    "total_particle_number": 30,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_square",
+    "sampling_steps": 20000,
+    "volume_fraction": 0.3,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "square",
+            "relative_volume_fraction": 1,
+            "side": "Nan"
+        }
+    ]
+}

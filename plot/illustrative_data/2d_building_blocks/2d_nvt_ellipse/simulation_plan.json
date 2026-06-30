@@ -1,0 +1,22 @@
+[
+    {
+        "dimension": 2,
+        "total_particle_number": 30,
+        "ensemble": "NVT",
+        "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_ellipse",
+        "sampling_steps": 20000,
+        "volume_fraction": 0.5,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "ellipse",
+                "relative_volume_fraction": 1,
+                "a": 1.0,
+                "b": 0.5,
+                "c": 0.25
+            }
+        ],
+        "run_number": 0,
+        "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_ellipse/run_0"
+    }
+]

@@ -1,0 +1,23 @@
+{
+  "experiment_id": "colpack_setup_eval",
+  "stage": "setup",
+  "model_id": "openrouter/google/gemini-2.5-flash",
+  "model_label": "gemini-2.5-flash",
+  "generated_at": "2026-04-28T17:50:09.835271+00:00",
+  "n_runs": 6,
+  "n_success": 3,
+  "success_rate": 0.5,
+  "n_off_rail": 0,
+  "off_rail_rate": 0.0,
+  "n_no_expected_tool_call": 4,
+  "no_expected_tool_call_rate": 0.6666666666666666,
+  "total_cost_usd": 0.0330601625,
+  "total_wall_time_seconds": 178.28792270900158,
+  "total_input_tokens": 14806,
+  "total_cache_read_input_tokens": 27631,
+  "total_effective_input_tokens": 42437,
+  "total_output_tokens": 132,
+  "provider_id": "openrouter",
+  "served_by_provider": "Google",
+  "label": "gemini-2.5-flash"
+}

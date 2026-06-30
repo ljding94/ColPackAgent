@@ -1,0 +1,5 @@
+run_number,dimension,total_particle_number,ensemble,initialize,compress,sample,analyze,status,execution_state,started_at,finished_at,output_dir,error
+0,2,500,NVT,O,O,O,O,success,finished,2026-04-21T19:56:09.747857+00:00,2026-04-21T20:11:27.678335+00:00,/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2/run_0,
+1,2,500,NVT,O,O,O,O,success,finished,2026-04-21T19:56:09.747904+00:00,2026-04-21T20:11:34.248190+00:00,/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2/run_1,
+2,2,500,NVT,O,O,O,O,success,finished,2026-04-21T19:56:09.747838+00:00,2026-04-21T20:11:41.001523+00:00,/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2/run_2,
+3,2,500,NVT,O,O,O,O,success,finished,2026-04-21T19:56:09.747943+00:00,2026-04-21T20:11:47.933189+00:00,/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2/run_3,

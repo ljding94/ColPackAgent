@@ -1,0 +1,58 @@
+[2026-04-27T16:00:20.907011+00:00] [workflow] execute_simulation_workflow started with continue_on_error=True
+[2026-04-27T16:00:20.908070+00:00] [workflow] Loaded 4 planned run(s).
+[2026-04-27T16:00:21.139568+00:00] [workflow] Starting run 1/4 (run_0).
+[2026-04-27T16:00:21.140031+00:00] [workflow] Starting run 2/4 (run_1).
+[2026-04-27T16:00:21.140411+00:00] [workflow] Starting run 3/4 (run_2).
+[2026-04-27T16:00:21.140805+00:00] [workflow] Starting run 4/4 (run_3).
+[2026-04-27T16:00:32.498533+00:00] [workflow] Finished run 1/4 (run_0).
+[2026-04-27T16:00:33.259840+00:00] [workflow] Finished run 2/4 (run_1).
+[2026-04-27T16:00:33.747684+00:00] [workflow] Finished run 3/4 (run_2).
+[2026-04-27T16:00:33.904075+00:00] [workflow] Finished run 4/4 (run_3).
+[2026-04-27T16:00:33.989799+00:00] [workflow] Workflow finished: 4 planned run(s) processed.
+[2026-04-28T16:22:21.249465+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T16:22:21.254130+00:00] [mcp] started async analyze job az_fe3eb1e3f5ea with continue_on_error=True
+[2026-04-28T16:22:22.121114+00:00] [workflow] analyze_simulation_runs started with continue_on_error=True
+[2026-04-28T16:22:23.631318+00:00] [workflow] analyze_simulation_runs: loaded 4 planned run(s).
+[2026-04-28T16:22:23.631901+00:00] [workflow] Running analyze for run 1/4 (run_0).
+[2026-04-28T16:22:24.481323+00:00] [workflow] Completed analyze for run 1/4 (run_0).
+[2026-04-28T16:22:24.481905+00:00] [workflow] Running analyze for run 2/4 (run_1).
+[2026-04-28T16:22:33.402019+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T16:36:46.019966+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T16:36:56.916894+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T16:37:21.628879+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'hexatic_4', 'type': 'Hexatic', 'params': {'k': 4}}, {'name': 'hexatic_3', 'type': 'Hexatic', 'params': {'k': 3}}]
+[2026-04-28T16:37:46.786693+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'cubatic', 'type': 'Cubatic', 'params': {'t_initial': 5, 't_final': 0.001, 'scale': 0.9}}]
+[2026-04-28T16:45:32.890454+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T16:45:47.382446+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T16:46:09.391591+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T16:47:57.344593+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T16:48:12.104888+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T16:48:50.174447+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'hexatic_4', 'type': 'Hexatic', 'params': {'k': 4}}, {'name': 'hexatic_3', 'type': 'Hexatic', 'params': {'k': 3}}]
+[2026-04-28T16:49:37.476662+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'cubatic', 'type': 'Cubatic', 'params': {'t_initial': 5, 't_final': 0.001, 'scale': 0.9}}]
+[2026-04-28T17:35:26.048309+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T17:35:39.771060+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T17:36:19.097813+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'hexatic_4', 'type': 'Hexatic', 'params': {'k': 4}}, {'name': 'hexatic_3', 'type': 'Hexatic', 'params': {'k': 3}}]
+[2026-04-28T17:37:12.579836+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'hexatic_6', 'type': 'Hexatic', 'params': {'k': 6}}]
+[2026-04-28T17:44:02.067656+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T17:44:16.122903+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T17:45:06.168322+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'hexatic_4', 'type': 'Hexatic', 'params': {'k': 4}}, {'name': 'hexatic_3', 'type': 'Hexatic', 'params': {'k': 3}}]
+[2026-04-28T17:45:33.385327+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'cubatic', 'type': 'Cubatic', 'params': {'t_initial': 5, 't_final': 0.001, 'scale': 0.9}}]
+[2026-04-28T17:52:07.290833+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T17:52:15.280208+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T17:53:05.872742+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'type': 'Hexatic', 'name': 'hexatic_4', 'params': {'k': 4}}, {'type': 'Hexatic', 'name': 'hexatic_3', 'params': {'k': 3}}]
+[2026-04-28T17:53:23.980047+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[]
+[2026-04-28T18:03:39.588692+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T18:04:07.296803+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T18:04:58.393109+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'type': 'Hexatic', 'name': 'hexatic_4', 'params': {'k': 4}}, {'type': 'Hexatic', 'name': 'hexatic_3', 'params': {'k': 3}}]
+[2026-04-28T18:05:58.743533+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'cubatic', 'type': 'Cubatic', 'params': {'scale': 0.9, 't_final': 0.001, 't_initial': 5}}]
+[2026-04-28T18:14:28.886108+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T18:14:48.224202+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T18:15:41.784517+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'hexatic_4', 'type': 'Hexatic', 'params': {'k': 4}}, {'name': 'hexatic_3', 'type': 'Hexatic', 'params': {'k': 3}}]
+[2026-04-28T18:16:50.898491+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'cubatic_disk', 'type': 'Cubatic', 'params': {'t_initial': 5, 't_final': 0.001, 'scale': 0.9, 'n_replicates': 1}}]
+[2026-04-28T18:25:19.322859+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T18:25:31.689752+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T18:26:08.561466+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'hexatic_4', 'type': 'Hexatic', 'params': {'k': 4}}, {'name': 'hexatic_3', 'type': 'Hexatic', 'params': {'k': 3}}]
+[2026-04-28T18:26:33.572303+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'cubatic', 'type': 'Cubatic', 'params': {'t_initial': 5, 't_final': 0.001, 'scale': 0.9}}]
+[2026-04-28T18:36:07.699377+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T18:36:57.673503+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=None
+[2026-04-28T18:38:01.736108+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'hexatic_4', 'type': 'Hexatic', 'params': {'k': 4}}, {'name': 'hexatic_3', 'type': 'Hexatic', 'params': {'k': 3}}]
+[2026-04-28T18:39:42.354702+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'cubatic', 'type': 'Cubatic', 'params': {'t_initial': 5, 't_final': 0.001, 'scale': 0.9, 'n_replicates': 1}}]

@@ -1,0 +1,79 @@
+{
+    "dimension": 3,
+    "total_particle_number": 300,
+    "ensemble": "NPT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube",
+    "sample_steps": 500000,
+    "P": 4,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "cube",
+            "relative_volume_fraction": 1.0,
+            "side": 1,
+            "particle_volume": 1.0,
+            "number": 300,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 1,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_1",
+    "total_particle_volume": 300.0,
+    "initial_box_length": 31.07232505953858,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "cube_0",
+            "pNum": 300,
+            "pIntegrator": "ConvexSpheropolyhedron",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.5,
+                        -0.5,
+                        -0.5
+                    ],
+                    [
+                        0.5,
+                        -0.5,
+                        -0.5
+                    ],
+                    [
+                        0.5,
+                        0.5,
+                        -0.5
+                    ],
+                    [
+                        -0.5,
+                        0.5,
+                        -0.5
+                    ],
+                    [
+                        -0.5,
+                        -0.5,
+                        0.5
+                    ],
+                    [
+                        0.5,
+                        -0.5,
+                        0.5
+                    ],
+                    [
+                        0.5,
+                        0.5,
+                        0.5
+                    ],
+                    [
+                        -0.5,
+                        0.5,
+                        0.5
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/data/3d_npt_cube/run_1/initial.gsd"
+}

@@ -1,0 +1,95 @@
+{
+  "2d_nvt_disk": {
+    "description": "2D NVT, 100 hard disks, volume_fraction sweep at [0.3, 0.5, 0.7, 0.8] \u2014 chosen to span the 2D hard-disk freezing transition (~0.7) so analysis tasks can interpret order-parameter trends.",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk",
+    "setup": {
+      "dimension": 2,
+      "total_particle_number": 100,
+      "particle_shape_list": [
+        "disk"
+      ],
+      "ensemble": "NVT"
+    },
+    "baseline_parameters": {
+      "sample_steps": 10000,
+      "particle_specs.0.diameter": 1.0
+    },
+    "tunable_parameters": {
+      "volume_fraction": [
+        0.3,
+        0.5,
+        0.7,
+        0.8
+      ]
+    }
+  },
+  "2d_nvt_disk_capsule": {
+    "description": "2D NVT, 100 particles in a disk+capsule mixture, volume_fraction sweep at [0.4, 0.6].",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk_capsule",
+    "setup": {
+      "dimension": 2,
+      "total_particle_number": 100,
+      "particle_shape_list": [
+        "disk",
+        "capsule"
+      ],
+      "ensemble": "NVT"
+    },
+    "baseline_parameters": {
+      "sample_steps": 10000,
+      "particle_specs.0.diameter": 1.0,
+      "particle_specs.0.relative_volume_fraction": 1.0,
+      "particle_specs.1.diameter": 1.0,
+      "particle_specs.1.length": 3.0,
+      "particle_specs.1.relative_volume_fraction": 1.0
+    },
+    "tunable_parameters": {
+      "volume_fraction": [
+        0.4,
+        0.6
+      ]
+    }
+  },
+  "2d_nvt_disk_capsule_setup": {
+    "description": "Setup-only fixture: 2D NVT, 500 particles in a disk+capsule mixture. Planning tasks build sweeps on top of this simulation_problem.json without redoing setup.",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk_capsule_setup",
+    "setup_only": true,
+    "setup": {
+      "dimension": 2,
+      "total_particle_number": 500,
+      "particle_shape_list": [
+        "disk",
+        "capsule"
+      ],
+      "ensemble": "NVT"
+    }
+  },
+  "2d_npt_disk_capsule_setup": {
+    "description": "Setup-only fixture: 2D NPT, 500 particles in a disk+capsule mixture. Used by NPT pressure-sweep planning tasks.",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_npt_disk_capsule_setup",
+    "setup_only": true,
+    "setup": {
+      "dimension": 2,
+      "total_particle_number": 500,
+      "particle_shape_list": [
+        "disk",
+        "capsule"
+      ],
+      "ensemble": "NPT"
+    }
+  },
+  "2d_nvt_disk_disk_setup": {
+    "description": "Setup-only fixture: 2D NVT, 1000 particles as a bidisperse disk mixture (two disk components). Used by diameter-sweep planning tasks.",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_nvt_disk_disk_setup",
+    "setup_only": true,
+    "setup": {
+      "dimension": 2,
+      "total_particle_number": 1000,
+      "particle_shape_list": [
+        "disk",
+        "disk"
+      ],
+      "ensemble": "NVT"
+    }
+  }
+}

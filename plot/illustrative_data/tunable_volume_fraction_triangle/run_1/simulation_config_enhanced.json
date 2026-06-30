@@ -1,0 +1,25 @@
+{
+    "dimension": 2,
+    "total_particle_number": 40,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle",
+    "sampling_steps": 20000,
+    "volume_fraction": 0.6,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "triangle",
+            "relative_volume_fraction": 1.0,
+            "side": 1.0,
+            "particle_volume": 0.4330127018922193,
+            "number": 40,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 1,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_volume_fraction_triangle/run_1",
+    "sample_steps": 20000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 17.32050807568877
+}

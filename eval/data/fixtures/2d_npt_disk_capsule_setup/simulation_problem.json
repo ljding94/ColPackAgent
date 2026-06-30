@@ -1,0 +1,23 @@
+{
+    "dimension": 2,
+    "total_particle_number": 500,
+    "ensemble": "NPT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/eval/data/fixtures/2d_npt_disk_capsule_setup",
+    "sample_steps": 20000,
+    "P": 1.0,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "disk",
+            "relative_volume_fraction": 1,
+            "diameter": "Nan"
+        },
+        {
+            "type": 1,
+            "shape": "capsule",
+            "relative_volume_fraction": 0.5,
+            "length": "Nan",
+            "diameter": "Nan"
+        }
+    ]
+}

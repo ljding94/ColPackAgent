@@ -1,0 +1,20 @@
+[
+    {
+        "dimension": 3,
+        "total_particle_number": 30,
+        "ensemble": "NVT",
+        "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_sphere",
+        "sampling_steps": 20000,
+        "volume_fraction": 0.5,
+        "particle_specs": [
+            {
+                "type": 0,
+                "shape": "sphere",
+                "relative_volume_fraction": 1,
+                "diameter": 1.0
+            }
+        ],
+        "run_number": 0,
+        "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/3d_building_blocks/3d_nvt_sphere/run_0"
+    }
+]

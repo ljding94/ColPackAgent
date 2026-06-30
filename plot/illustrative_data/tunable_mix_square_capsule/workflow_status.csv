@@ -1,0 +1,2 @@
+run_number,dimension,total_particle_number,ensemble,initialize,compress,sample,analyze,status,execution_state,started_at,finished_at,output_dir,error
+0,2,40,NVT,O,O,O,O,success,finished,2026-04-08T20:27:45.972408+00:00,2026-04-08T20:28:09.098354+00:00,/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_square_capsule/run_0,

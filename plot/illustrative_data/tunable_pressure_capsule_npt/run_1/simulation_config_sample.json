@@ -1,0 +1,80 @@
+{
+    "dimension": 2,
+    "total_particle_number": 40,
+    "ensemble": "NPT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_pressure_capsule_npt",
+    "sampling_steps": 1000000,
+    "P": 10.0,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "capsule",
+            "relative_volume_fraction": 1.0,
+            "length": 2.5,
+            "diameter": 1.0,
+            "particle_volume": 3.2853981633974483,
+            "number": 40,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 1,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_pressure_capsule_npt/run_1",
+    "sample_steps": 1000000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 131.41592653589794,
+    "initial_box_length": 114.6367857783434,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "capsule_0",
+            "pNum": 40,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -1.25,
+                        0.0
+                    ],
+                    [
+                        1.25,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.5
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_pressure_capsule_npt/run_1/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_pressure_capsule_npt/run_1/compress.gsd",
+    "final_box_volume": 327.1716919157144,
+    "final_volume_fraction": 0.4016726684585938,
+    "npt_precompress_volume_fraction": 0.3,
+    "target_pressure": 10.0,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_pressure_capsule_npt/run_1/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_pressure_capsule_npt/run_1/sample_final.gsd",
+    "sample_translation_moves": [
+        39683616,
+        40305244
+    ],
+    "sample_rotation_moves": [
+        43136099,
+        36875041
+    ],
+    "sample_overlaps": 0,
+    "sample_trajectory_trigger_period": 1000,
+    "sample_move_tune_period": 50,
+    "min_move_tune_updates": 10,
+    "sample_npt_boxmc_trigger_period": 10,
+    "min_npt_boxmc_updates": 10,
+    "sample_box_moves": [
+        92044,
+        7956
+    ]
+}

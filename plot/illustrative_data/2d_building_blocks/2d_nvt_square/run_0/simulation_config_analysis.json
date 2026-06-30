@@ -1,0 +1,75 @@
+{
+    "dimension": 2,
+    "total_particle_number": 30,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_square",
+    "sampling_steps": 1000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "square",
+            "relative_volume_fraction": 1.0,
+            "side": 1.0,
+            "particle_volume": 1.0,
+            "number": 30,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_square/run_0",
+    "sample_steps": 1000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 30.0,
+    "initial_box_length": 54.772255750516614,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "square_0",
+            "pNum": 30,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.5,
+                        -0.5
+                    ],
+                    [
+                        0.5,
+                        -0.5
+                    ],
+                    [
+                        0.5,
+                        0.5
+                    ],
+                    [
+                        -0.5,
+                        0.5
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_square/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_square/run_0/compress.gsd",
+    "target_volume_fraction": 0.5,
+    "target_box_volume": 60.0,
+    "final_volume_fraction": 0.49999999999999994,
+    "final_box_volume": 60.00000000000001,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_square/run_0/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_square/run_0/sample_final.gsd",
+    "sample_translation_moves": [
+        28288,
+        31820
+    ],
+    "sample_rotation_moves": [
+        44198,
+        15694
+    ],
+    "sample_overlaps": 0,
+    "analysis_results_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_square/run_0/analysis_results.json"
+}

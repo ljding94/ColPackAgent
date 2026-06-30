@@ -1,0 +1,13 @@
+{
+    "working_dir": "/Users/ldq/Work/ColPackAgent/demo/data/2d_nvt_capsule_disk_v2",
+    "n_runs": 4,
+    "n_success": 4,
+    "n_failed": 0,
+    "completed_steps": 16,
+    "total_steps": 16,
+    "progress_percent": 100.0,
+    "status": "completed",
+    "message": "analyze_simulation_runs finished: 4 planned run(s) processed.",
+    "error": "",
+    "updated_at": "2026-04-21T20:11:47.934857+00:00"
+}

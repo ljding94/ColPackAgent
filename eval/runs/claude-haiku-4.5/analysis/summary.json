@@ -1,0 +1,22 @@
+{
+  "experiment_id": "colpack_analysis_eval",
+  "stage": "analysis",
+  "model_id": "openrouter/anthropic/claude-haiku-4.5",
+  "model_label": "claude-haiku-4.5",
+  "generated_at": "2026-04-28T17:37:25.574582+00:00",
+  "n_runs": 5,
+  "n_success": 2,
+  "success_rate": 0.4,
+  "n_off_rail": 0,
+  "off_rail_rate": 0.0,
+  "n_no_expected_tool_call": 3,
+  "no_expected_tool_call_rate": 0.6,
+  "total_cost_usd": 0.06352165,
+  "total_wall_time_seconds": 129.00945962600235,
+  "total_input_tokens": 8,
+  "total_cache_read_input_tokens": 34975,
+  "total_effective_input_tokens": 34983,
+  "total_output_tokens": 238,
+  "provider_id": "openrouter",
+  "label": "claude-haiku-4.5"
+}

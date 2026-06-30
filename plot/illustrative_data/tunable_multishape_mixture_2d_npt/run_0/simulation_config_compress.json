@@ -1,0 +1,157 @@
+{
+    "dimension": 2,
+    "total_particle_number": 100,
+    "ensemble": "NPT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_2d_npt",
+    "sampling_steps": 10000,
+    "P": 10.0,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "disk",
+            "relative_volume_fraction": 1.0,
+            "diameter": 1.0,
+            "particle_volume": 0.7853981633974483,
+            "number": 23,
+            "realized_relative_volume_fraction": 1.0
+        },
+        {
+            "type": 1,
+            "shape": "capsule",
+            "relative_volume_fraction": 1.0,
+            "length": 1.5,
+            "diameter": 0.5,
+            "particle_volume": 0.9463495408493621,
+            "number": 19,
+            "realized_relative_volume_fraction": 0.9953766744554814
+        },
+        {
+            "type": 2,
+            "shape": "triangle",
+            "relative_volume_fraction": 1.0,
+            "side": 1.0,
+            "particle_volume": 0.4330127018922193,
+            "number": 43,
+            "realized_relative_volume_fraction": 1.0307453262233504
+        },
+        {
+            "type": 3,
+            "shape": "rectangle",
+            "relative_volume_fraction": 1.0,
+            "length": 2.5,
+            "width": 0.5,
+            "particle_volume": 1.25,
+            "number": 15,
+            "realized_relative_volume_fraction": 1.0379670201645348
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_2d_npt/run_0",
+    "sample_steps": 10000,
+    "tune_warmup_steps": 2000,
+    "move_tune_period": 50,
+    "total_particle_volume": 73.41434521564463,
+    "initial_box_length": 85.68217155023828,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "disk_0",
+            "pNum": 23,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        0.0,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.5
+            },
+            "pDirector": null
+        },
+        {
+            "pType": "capsule_0",
+            "pNum": 19,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.75,
+                        0.0
+                    ],
+                    [
+                        0.75,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.25
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        },
+        {
+            "pType": "triangle_0",
+            "pNum": 43,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.5,
+                        -0.28867513459481287
+                    ],
+                    [
+                        0.5,
+                        -0.28867513459481287
+                    ],
+                    [
+                        0.0,
+                        0.5773502691896257
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        },
+        {
+            "pType": "rectangle_0",
+            "pNum": 15,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -1.25,
+                        -0.25
+                    ],
+                    [
+                        1.25,
+                        -0.25
+                    ],
+                    [
+                        1.25,
+                        0.25
+                    ],
+                    [
+                        -1.25,
+                        0.25
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_2d_npt/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_2d_npt/run_0/compress.gsd",
+    "final_box_volume": 211.1503243034342,
+    "final_volume_fraction": 0.34768757972705894,
+    "npt_precompress_volume_fraction": 0.3,
+    "target_pressure": 10.0
+}

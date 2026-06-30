@@ -1,0 +1,13 @@
+{
+    "working_dir": "/SNS/users/ldq/Work/ColPackAgent/data/2d_npt_disk",
+    "n_runs": 6,
+    "n_success": 6,
+    "n_failed": 0,
+    "completed_steps": 24,
+    "total_steps": 24,
+    "progress_percent": 100.0,
+    "status": "completed",
+    "message": "analyze_simulation_runs finished: 6 planned run(s) processed.",
+    "error": "",
+    "updated_at": "2026-06-29T20:05:03.896431+00:00"
+}

@@ -1,0 +1,13 @@
+{
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_multishape_mixture_3d_npt",
+    "n_runs": 1,
+    "n_success": 1,
+    "n_failed": 0,
+    "completed_steps": 4,
+    "total_steps": 4,
+    "progress_percent": 100.0,
+    "status": "completed",
+    "message": "Workflow finished: 1 planned run(s) processed.",
+    "error": "",
+    "updated_at": "2026-04-08T21:07:23.045020+00:00"
+}

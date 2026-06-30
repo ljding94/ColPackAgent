@@ -1,0 +1,64 @@
+{
+    "dimension": 2,
+    "total_particle_number": 30,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_ellipse",
+    "sampling_steps": 1000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "ellipse",
+            "relative_volume_fraction": 1.0,
+            "a": 1.0,
+            "b": 0.5,
+            "c": 0.25,
+            "particle_volume": 1.5707963267948966,
+            "number": 30,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_ellipse/run_0",
+    "sample_steps": 1000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 47.12388980384689,
+    "initial_box_length": 68.64684246478268,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "ellipse_0",
+            "pNum": 30,
+            "pIntegrator": "Ellipsoid",
+            "pShape": {
+                "a": 1.0,
+                "b": 0.5,
+                "c": 0.25
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_ellipse/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_ellipse/run_0/compress.gsd",
+    "target_volume_fraction": 0.5,
+    "target_box_volume": 94.24777960769379,
+    "final_volume_fraction": 0.5,
+    "final_box_volume": 94.24777960769379,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_ellipse/run_0/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_ellipse/run_0/sample_final.gsd",
+    "sample_translation_moves": [
+        32772,
+        27336
+    ],
+    "sample_rotation_moves": [
+        45273,
+        14619
+    ],
+    "sample_overlaps": 0
+}

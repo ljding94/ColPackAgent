@@ -1,0 +1,96 @@
+{
+    "dimension": 2,
+    "total_particle_number": 40,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_square_capsule",
+    "sampling_steps": 20000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "square",
+            "relative_volume_fraction": 1.0,
+            "side": 1.0,
+            "particle_volume": 1.0,
+            "number": 25,
+            "realized_relative_volume_fraction": 1.0
+        },
+        {
+            "type": 1,
+            "shape": "capsule",
+            "relative_volume_fraction": 2.0,
+            "length": 2.5,
+            "diameter": 1.0,
+            "particle_volume": 3.2853981633974483,
+            "number": 15,
+            "realized_relative_volume_fraction": 1.971238898038469
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_square_capsule/run_0",
+    "sample_steps": 20000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 74.28097245096173,
+    "initial_box_length": 86.1864098631343,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "square_0",
+            "pNum": 25,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.5,
+                        -0.5
+                    ],
+                    [
+                        0.5,
+                        -0.5
+                    ],
+                    [
+                        0.5,
+                        0.5
+                    ],
+                    [
+                        -0.5,
+                        0.5
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        },
+        {
+            "pType": "capsule_0",
+            "pNum": 15,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -1.25,
+                        0.0
+                    ],
+                    [
+                        1.25,
+                        0.0
+                    ]
+                ],
+                "sweep_radius": 0.5
+            },
+            "pDirector": [
+                1,
+                0,
+                0
+            ]
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_square_capsule/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/tunable_mix_square_capsule/run_0/compress.gsd",
+    "target_volume_fraction": 0.5,
+    "target_box_volume": 148.56194490192345,
+    "final_volume_fraction": 0.5000000000000001,
+    "final_box_volume": 148.56194490192343
+}

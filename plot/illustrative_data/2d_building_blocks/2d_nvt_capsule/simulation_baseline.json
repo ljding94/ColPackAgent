@@ -1,0 +1,17 @@
+{
+    "dimension": 2,
+    "total_particle_number": 30,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_capsule",
+    "sampling_steps": 20000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "capsule",
+            "relative_volume_fraction": 1,
+            "length": 2.0,
+            "diameter": 1.0
+        }
+    ]
+}

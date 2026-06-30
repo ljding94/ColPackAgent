@@ -1,0 +1,70 @@
+{
+    "dimension": 2,
+    "total_particle_number": 30,
+    "ensemble": "NVT",
+    "working_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_triangle",
+    "sampling_steps": 1000,
+    "volume_fraction": 0.5,
+    "particle_specs": [
+        {
+            "type": 0,
+            "shape": "triangle",
+            "relative_volume_fraction": 1.0,
+            "side": 1.0,
+            "particle_volume": 0.4330127018922193,
+            "number": 30,
+            "realized_relative_volume_fraction": 1.0
+        }
+    ],
+    "run_number": 0,
+    "run_dir": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_triangle/run_0",
+    "sample_steps": 1000,
+    "tune_warmup_steps": 200,
+    "move_tune_period": 50,
+    "total_particle_volume": 12.990381056766578,
+    "initial_box_length": 36.04217121202131,
+    "initial_volume_fraction": 0.01,
+    "initial_overlaps": 0,
+    "particle_list": [
+        {
+            "pType": "triangle_0",
+            "pNum": 30,
+            "pIntegrator": "ConvexSpheropolygon",
+            "pShape": {
+                "vertices": [
+                    [
+                        -0.5,
+                        -0.28867513459481287
+                    ],
+                    [
+                        0.5,
+                        -0.28867513459481287
+                    ],
+                    [
+                        0.0,
+                        0.5773502691896257
+                    ]
+                ],
+                "sweep_radius": 0.0
+            },
+            "pDirector": null
+        }
+    ],
+    "initial_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_triangle/run_0/initial.gsd",
+    "compress_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_triangle/run_0/compress.gsd",
+    "target_volume_fraction": 0.5,
+    "target_box_volume": 25.980762113533157,
+    "final_volume_fraction": 0.49999999999999994,
+    "final_box_volume": 25.98076211353316,
+    "sample_trajectory_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_triangle/run_0/sample_trajectory.gsd",
+    "sample_gsd_path": "/Users/ldq/Work/ColPackAgent/plot/illustrative_data/2d_building_blocks/2d_nvt_triangle/run_0/sample_final.gsd",
+    "sample_translation_moves": [
+        21844,
+        38264
+    ],
+    "sample_rotation_moves": [
+        35316,
+        24576
+    ],
+    "sample_overlaps": 0
+}

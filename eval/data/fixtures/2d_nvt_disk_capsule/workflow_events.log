@@ -1,0 +1,24 @@
+[2026-04-27T15:54:21.026338+00:00] [workflow] execute_simulation_workflow started with continue_on_error=True
+[2026-04-27T15:54:21.027088+00:00] [workflow] Loaded 2 planned run(s).
+[2026-04-27T15:54:21.284377+00:00] [workflow] Starting run 1/2 (run_0).
+[2026-04-27T15:54:21.284813+00:00] [workflow] Starting run 2/2 (run_1).
+[2026-04-27T15:54:32.124126+00:00] [workflow] Finished run 1/2 (run_0).
+[2026-04-27T15:54:33.203965+00:00] [workflow] Finished run 2/2 (run_1).
+[2026-04-27T15:54:33.266710+00:00] [workflow] Workflow finished: 2 planned run(s) processed.
+[2026-04-28T16:37:32.058278+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'continuous_coordination', 'type': 'ContinuousCoordination', 'params': {'powers': None, 'compute_log': True, 'compute_exp': True}}]
+[2026-04-28T16:37:32.062652+00:00] [mcp] started async analyze job az_b3b2c56d6486 with continue_on_error=True
+[2026-04-28T16:37:32.737623+00:00] [workflow] analyze_simulation_runs started with continue_on_error=True
+[2026-04-28T16:37:33.769894+00:00] [workflow] analyze_simulation_runs: loaded 2 planned run(s).
+[2026-04-28T16:37:33.770402+00:00] [workflow] Running analyze for run 1/2 (run_0).
+[2026-04-28T16:37:35.945929+00:00] [workflow] Completed analyze for run 1/2 (run_0).
+[2026-04-28T16:37:35.946394+00:00] [workflow] Running analyze for run 2/2 (run_1).
+[2026-04-28T16:46:28.644009+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'ContinuousCoordination', 'params': {'compute_exp': True, 'compute_log': True, 'powers': None}, 'type': 'ContinuousCoordination'}]
+[2026-04-28T16:49:06.026483+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'continuous_coordination', 'type': 'ContinuousCoordination', 'params': {'powers': None, 'compute_log': True, 'compute_exp': True}}]
+[2026-04-28T17:36:36.300202+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'continuous_coordination', 'type': 'ContinuousCoordination', 'params': {'compute_log': True, 'compute_exp': True}}]
+[2026-04-28T17:45:18.828778+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'continuous_coordination', 'type': 'ContinuousCoordination', 'params': {'compute_log': True, 'compute_exp': True}}]
+[2026-04-28T17:53:14.470556+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'continuous_coordination', 'type': 'ContinuousCoordination', 'params': {}}]
+[2026-04-28T18:05:22.154244+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'continuous_coordination', 'type': 'ContinuousCoordination', 'params': {'compute_exp': True, 'compute_log': True, 'powers': None}}]
+[2026-04-28T18:16:02.674214+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'continuous_coordination', 'type': 'ContinuousCoordination', 'params': {'powers': None, 'compute_log': True, 'compute_exp': True}}]
+[2026-04-28T18:26:20.670656+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'continuous_coordination', 'type': 'ContinuousCoordination', 'params': {}}]
+[2026-04-28T18:26:20.675718+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'continuous_coordination', 'type': 'ContinuousCoordination', 'params': {}}]
+[2026-04-28T18:38:31.429724+00:00] [mcp] analyze_simulation_runs_tool invoked with continue_on_error=True, extra_order_params=[{'name': 'continuous_coordination', 'type': 'ContinuousCoordination', 'params': {}}]
