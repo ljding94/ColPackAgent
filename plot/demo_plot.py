@@ -190,7 +190,8 @@ def plot_autoresearch_demo():
     sweep generated each point.
     """
     repo_root = Path(__file__).resolve().parents[1]
-    research_dir = repo_root / "demo" / "data" / "autoresearch_0505" / "research_outputs"
+    #research_dir = repo_root / "demo" / "data" / "autoresearch_0505" / "research_outputs"
+    research_dir = repo_root / "demo" / "data" / "autoresearch_0629" / "research_outputs"
 
     with (research_dir / "pstar_estimates.json").open("r", encoding="utf-8") as handle:
         pstar = json.load(handle)
@@ -222,15 +223,13 @@ def plot_autoresearch_demo():
     axes[1].axvline(pstar_op, color="0.4", linestyle="--", linewidth=0.6, zorder=0)
     axes[0].annotate(
         rf"$P^*_\phi = {pstar_eta:.2f}$",
-        xy=(pstar_eta, 0.98), xycoords=("data", "axes fraction"),
-        xytext=(-2, -2), textcoords="offset points",
-        fontsize=7, ha="right", va="top", color="0.2",
+        xy=(0.03, 0.97), xycoords="axes fraction",
+        fontsize=7, ha="left", va="top", color="0.2",
     )
     axes[1].annotate(
         rf"$P^*_{{\psi_6}} = {pstar_op:.2f}$",
-        xy=(pstar_op, 0.98), xycoords=("data", "axes fraction"),
-        xytext=(-2, -2), textcoords="offset points",
-        fontsize=7, ha="right", va="top", color="0.2",
+        xy=(0.03, 0.97), xycoords="axes fraction",
+        fontsize=7, ha="left", va="top", color="0.2",
     )
 
     sp = pstar["point_estimates"]["sigmoid_params"]
@@ -267,14 +266,17 @@ def plot_autoresearch_demo():
     for ax in axes:
         ax.set_xlabel(r"$P$", fontsize=9, labelpad=0)
         ax.tick_params(axis="both", which="both", direction="in", top=True, right=True, labelsize=7)
-        ax.xaxis.set_major_locator(MultipleLocator(1))
+        ax.xaxis.set_major_locator(MultipleLocator(4))
+        ax.xaxis.set_minor_locator(MultipleLocator(1))
+    axes[0].yaxis.set_major_locator(MultipleLocator(0.1))
+    axes[0].yaxis.set_minor_locator(MultipleLocator(0.05))
 
     axes[0].legend(
         frameon=False, fontsize=7, loc="lower right", ncol=1,
         handletextpad=0.3, labelspacing=0.2, borderaxespad=0.3, handlelength=0.8,
     )
 
-    fig.tight_layout(pad=0.1)
+    fig.tight_layout(pad=0.15)
     fig.savefig("./figures/demo_autoresearch.png", dpi=600)
     fig.savefig("./figures/demo_autoresearch.pdf", format="pdf")
     plt.show()

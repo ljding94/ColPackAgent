@@ -6,8 +6,8 @@ from eval_plot import plot_llm_eval
 def main():
     #plot_autonomous_demo()
     #plot_interactive_demo()
-    plot_llm_eval()
-    #plot_autoresearch_demo()
+    #plot_llm_eval()
+    plot_autoresearch_demo()
 
 
 if __name__ == "__main__":
